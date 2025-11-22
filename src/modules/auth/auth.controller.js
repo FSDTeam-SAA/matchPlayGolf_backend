@@ -12,7 +12,7 @@ dotenv.config();
 
 
 export const registerUser = async (req, res, next) => {
-  const { fullName, email, password, phone } = req.body;
+  const { fullName, email, password, phone, clubName, handicap } = req.body;
   try {
 
     const data = await registerUserService({ fullName, email, password, phone });
@@ -126,8 +126,10 @@ export const verifyCode = async (req, res, next) => {
 
 
 export const resetPassword = async (req, res, next) => {
+
   const { email, newPassword } = req.body;
   try {
+
     await resetPasswordService({ email, newPassword });
     generateResponse(res, 200, true, 'Password reset successfully', null);
   }
@@ -153,6 +155,7 @@ export const resetPassword = async (req, res, next) => {
 
 
 export const changePassword = async (req, res, next) => {
+  
   const { oldPassword, newPassword } = req.body;
   const userId = req.user._id;
   console.log('User ID in changePassword controller:', userId);

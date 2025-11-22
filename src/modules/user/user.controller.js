@@ -1,41 +1,102 @@
+// ==================== controllers/user.controller.js ====================
+import { 
+  getUserProfile,
+  updateUserProfile,
+  uploadUserProfileImage
 
+ } from './user.service.js';
+// import logger from '../utils/logger.js';
 
-export const updateProfile = async(req, res, next) =>{
-  try{
-
-    const { fullName, email, phone } = req.body;
-    const file = req?.file;
-    const userId = req.user._id;
-
-    const result = await updateProfileService( fullName, email, phone, file, userId);
-    generateResponse( res, 201, true, "Update profile successfully", result);
-
-  }catch(err){
-    generateResponse(res, 404, false, "Provide correct image or file or text", null);
-  }
-}
-
-
-export const getAllUsers = async (req, res, next) => {
+// ==================== GET PROFILE ====================  
+export const getProfile = async (req, res) => {
   try {
-    
-    // const users = await User.find();
-    const currentUserId = req.user._id;
-    const users = await User.find({ _id: { $ne: currentUserId } });
+    console.log(req.user);
+    const user = await getUserProfile(req.user.userId);
 
-    generateResponse(res, 200, true, "Get all user successfully", users);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user
+    });
 
   } catch (error) {
-    if (['users not found'].includes(error.message)) {
-      res.status(400).json({
-        success: false,
-        message: error.message
-      });
-    } else {
-      next(error);
-    }
+    // logger.error('Get profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
   }
 };
 
+// ==================== UPDATE PROFILE ====================  
+export const updateProfile = async (req, res) => {
+  try {
+    const updatedUser = await updateUserProfile(
+      req.user.userId,
+      req.body
+    );
 
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
 
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: updatedUser
+    });
+
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
+
+// ==================== UPLOAD PROFILE IMAGE ====================  
+export const uploadProfileImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No image file provided'
+      });
+    }
+
+    const imageUrl = await uploadUserProfileImage(
+      req.user.userId,
+      req.file.buffer
+    );
+
+    if (!imageUrl) {
+      return res.status(500).json({
+        success: false,
+        message: 'Image upload failed'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Profile image uploaded successfully',
+      data: { profileImage: imageUrl }
+    });
+
+  } catch (error) {
+    // logger.error('Upload profile image error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+};
