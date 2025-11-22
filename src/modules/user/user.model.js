@@ -31,9 +31,16 @@ const UserSchema = new mongoose.Schema(
       role: {
         type: String,
         default: "USER",
-        enum: ['USER', 'ADMIN'],
+        enum: ['USER', 'ADMIN', 'ORGANIZATION'],
       },
-
+      clubName:{
+        type:String,
+        default: null
+      },
+      handicap:{
+        type:String,
+        default: null
+      },
       stripeAccountId: { type: String, default: null },
 
       bio: { type: String, default: '' },
@@ -85,7 +92,7 @@ const UserSchema = new mongoose.Schema(
 
     isVerified: {
       type: Boolean,
-      default: false,
+      default: true,
     },
 
     refreshToken: {

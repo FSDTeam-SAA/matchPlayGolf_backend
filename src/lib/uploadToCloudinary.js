@@ -1,7 +1,7 @@
 import { Readable } from 'stream';
 import cloudinary from '../config/cloudinary.js';
 
-const uploadToCloudinary = async (buffer, filename, folder, resourceType = 'auto') => {
+export const uploadToCloudinary = async (buffer, filename, folder, resourceType = 'auto') => {
     return new Promise((resolve, reject) => {
         // Validate buffer
         if (!buffer || !(buffer instanceof Buffer) && !Buffer.isBuffer(buffer)) {
@@ -57,5 +57,3 @@ const uploadToCloudinary = async (buffer, filename, folder, resourceType = 'auto
         readableStream.pipe(uploadStream);
     });
 };
-
- export default uploadToCloudinary;
