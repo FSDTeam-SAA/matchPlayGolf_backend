@@ -1,8 +1,8 @@
 import User from '../user/user.model.js';
 import jwt from 'jsonwebtoken';
-// import { refreshTokenSecrete, emailExpires } from '../../core/config/config.js';
-// import sendEmail from '../../lib/sendEmail.js';
-// import verificationCodeTemplate from '../../lib/emailTemplates.js';
+import { emailExpires } from '../../config/config.js';
+import sendEmail from '../../lib/sendEmail.js';
+import { verificationCodeTemplate } from '../../lib/emailTemplates.js';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -12,9 +12,13 @@ export const registerUserService = async ({
   email,
   password, 
   phone,
+  clubName,
+  handicap
 }) => {
+
   const existingUser1 = await User.findOne({ email });
   const existingUser2 = await User.findOne({ phone });
+
   if (existingUser1 || existingUser2) throw new Error('User already registered.');
 
   const newUser = new User({
@@ -22,7 +26,8 @@ export const registerUserService = async ({
     email,
     password,
     phone,
-    isVerified: true ,
+    clubName,
+    handicap
   });
 
   const user = await newUser.save();
@@ -95,6 +100,7 @@ export const refreshAccessTokenService = async (refreshToken) => {
 
 
 export const forgetPasswordService = async (email) => {
+
   if (!email) throw new Error('Email is required');
 
   const user = await User.findOne({ email });
@@ -149,6 +155,7 @@ export const verifyCodeService = async ({ email, otp }) => {
 
 
 export const resetPasswordService = async ({ email, newPassword }) => {
+
   if (!email || !newPassword)
     throw new Error('Email and new password are required');
 
@@ -171,6 +178,7 @@ export const resetPasswordService = async ({ email, newPassword }) => {
 
 
 export const changePasswordService = async ({ userId, oldPassword, newPassword }) => {
+  
   if (!userId || !oldPassword || !newPassword) throw new Error('User id, old password and new password are required');
 
   const user = await User.findById(userId);
