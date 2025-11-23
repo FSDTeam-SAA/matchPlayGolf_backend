@@ -13,7 +13,8 @@ export const registerUserService = async ({
   password, 
   phone,
   clubName,
-  handicap
+  handicap,
+  role
 }) => {
 
   const existingUser1 = await User.findOne({ email });
@@ -27,7 +28,8 @@ export const registerUserService = async ({
     password,
     phone,
     clubName,
-    handicap
+    handicap,
+    role
   });
 
   const user = await newUser.save();
