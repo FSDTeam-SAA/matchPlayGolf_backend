@@ -1,102 +1,106 @@
-// ==================== controllers/user.controller.js ====================
-import { 
+// src/modules/user/user.controller.js
+import {
   getUserProfile,
   updateUserProfile,
-  uploadUserProfileImage
+  uploadUserProfileImage,
+} from './user.service.js';
 
- } from './user.service.js';
-// import logger from '../utils/logger.js';
-
-// ==================== GET PROFILE ====================  
+// =============== GET PROFILE ===============
 export const getProfile = async (req, res) => {
   try {
-    console.log(req.user);
-    const user = await getUserProfile(req.user.userId);
+    const userId = req.user?._id; // set by verifyToken middleware
+
+    const user = await getUserProfile(userId);
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'User not found',
       });
     }
 
-    res.json({
+    return res.status(200).json({
       success: true,
-      data: user
+      message: 'Profile fetched successfully',
+      data: user,
     });
-
   } catch (error) {
-    // logger.error('Get profile error:', error);
-    res.status(500).json({
+    console.error('Get profile error:', error);
+    return res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Internal server error',
     });
   }
 };
 
-// ==================== UPDATE PROFILE ====================  
+// =============== UPDATE PROFILE (TEXT FIELDS ONLY) ===============
 export const updateProfile = async (req, res) => {
   try {
-    const updatedUser = await updateUserProfile(
-      req.user.userId,
-      req.body
-    );
+    const userId = req.user?._id;
+    const updateData = req.body; // JSON body
+
+    const updatedUser = await updateUserProfile(userId, updateData);
 
     if (!updatedUser) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'User not found',
       });
     }
 
-    res.json({
+    return res.status(200).json({
       success: true,
       message: 'Profile updated successfully',
-      data: updatedUser
+      data: updatedUser,
     });
-
   } catch (error) {
     console.error('Update profile error:', error);
-    res.status(500).json({
+
+    if (error.code === 'EMAIL_IN_USE') {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already in use',
+      });
+    }
+
+    return res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Internal server error',
     });
   }
 };
 
-// ==================== UPLOAD PROFILE IMAGE ====================  
+// =============== UPLOAD PROFILE IMAGE (IMAGE ONLY) ===============
 export const uploadProfileImage = async (req, res) => {
   try {
-    if (!req.file) {
+    const userId = req.user?._id;
+
+    if (!req.file || !req.file.buffer) {
       return res.status(400).json({
         success: false,
-        message: 'No image file provided'
+        message: 'No file uploaded',
       });
     }
 
-    const imageUrl = await uploadUserProfileImage(
-      req.user.userId,
-      req.file.buffer
-    );
+    const imageUrl = await uploadUserProfileImage(userId, req.file.buffer);
 
     if (!imageUrl) {
       return res.status(500).json({
         success: false,
-        message: 'Image upload failed'
+        message: 'Failed to upload image',
       });
     }
 
-    res.json({
+    return res.status(200).json({
       success: true,
       message: 'Profile image uploaded successfully',
-      data: { profileImage: imageUrl }
+      data: { profileImage: imageUrl },
     });
-
   } catch (error) {
-    // logger.error('Upload profile image error:', error);
-    res.status(500).json({
+    console.error('Upload profile image error:', error);
+    return res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Internal server error',
     });
   }
 };
