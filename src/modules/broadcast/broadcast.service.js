@@ -1,5 +1,27 @@
+// src/modules/broadcast/broadcast.service.js
 import { Subscribe, Brodcast } from "./broadcast.model.js";
 import sendEmail from "../../lib/sendEmail.js";
+
+/** Helper: build date range filter */
+const buildDateFilter = (date) => {
+  if (!date) return {};
+  const start = new Date(`${date}T00:00:00.000Z`);
+  const end = new Date(`${date}T23:59:59.999Z`);
+  return { createdAt: { $gte: start, $lte: end } };
+};
+
+/** Helper: build pagination object */
+const buildPagination = (page, limit, total) => {
+  const totalPages = Math.ceil(total / limit) || 1;
+  return {
+    page,
+    limit,
+    total,
+    totalPages,
+    hasNextPage: page < totalPages,
+    hasPrevPage: page > 1,
+  };
+};
 
 /**
  * Create subscriber
@@ -14,10 +36,35 @@ export const createSubscriberService = async ({ email }) => {
 };
 
 /**
- * Get all subscribers (no pagination)
+ * Get all subscribers (with pagination + optional search/date)
  */
-export const getAllSubscribersService = async () => {
-  return await Subscribe.find().sort("-createdAt");
+export const getAllSubscribersService = async ({
+  search,
+  date,
+  page = 1,
+  limit = 10,
+  sort = "-createdAt",
+}) => {
+  const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+  const limitNum = Math.max(parseInt(limit, 10) || 10, 1);
+
+  const filter = {
+    ...(search
+      ? { email: { $regex: search, $options: "i" } }
+      : {}),
+    ...buildDateFilter(date),
+  };
+
+  const total = await Subscribe.countDocuments(filter);
+
+  const subscribers = await Subscribe.find(filter)
+    .sort(sort)
+    .skip((pageNum - 1) * limitNum)
+    .limit(limitNum);
+
+  const pagination = buildPagination(pageNum, limitNum, total);
+
+  return { subscribers, pagination };
 };
 
 /**
@@ -79,10 +126,40 @@ export const sendBroadcastToAllService = async ({ subject, html }) => {
 };
 
 /**
- * Get all broadcasts (no pagination)
+ * Get all broadcasts (with pagination + optional search/date)
  */
-export const getAllBroadcastsService = async () => {
-  return await Brodcast.find().sort("-createdAt");
+export const getAllBroadcastsService = async ({
+  search,
+  date,
+  page = 1,
+  limit = 10,
+  sort = "-createdAt",
+}) => {
+  const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+  const limitNum = Math.max(parseInt(limit, 10) || 10, 1);
+
+  const filter = {
+    ...(search
+      ? {
+          $or: [
+            { email: { $regex: search, $options: "i" } },
+            { subject: { $regex: search, $options: "i" } },
+          ],
+        }
+      : {}),
+    ...buildDateFilter(date),
+  };
+
+  const total = await Brodcast.countDocuments(filter);
+
+  const broadcasts = await Brodcast.find(filter)
+    .sort(sort)
+    .skip((pageNum - 1) * limitNum)
+    .limit(limitNum);
+
+  const pagination = buildPagination(pageNum, limitNum, total);
+
+  return { broadcasts, pagination };
 };
 
 /**
