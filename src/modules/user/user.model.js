@@ -37,6 +37,10 @@ const UserSchema = new mongoose.Schema(
         type:String,
         default: null
       },
+      tournamentId:{
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User"
+      },
       handicap:{
         type:String,
         default: null
