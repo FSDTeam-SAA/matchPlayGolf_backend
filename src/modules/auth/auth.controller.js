@@ -12,10 +12,10 @@ dotenv.config();
 
 
 export const registerUser = async (req, res, next) => {
-  const { fullName, email, password, phone, clubName, handicap, role } = req.body;
+  const { fullName, email, password, phone, clubName, handicap, role, organizationName } = req.body;
   try {
 
-    const data = await registerUserService({ fullName, email, password, phone, clubName, handicap, role });
+    const data = await registerUserService({ fullName, email, password, phone, clubName, handicap, role, organizationName });
     generateResponse(res, 201, true, 'Registered user successfully!', data);
   }
 
