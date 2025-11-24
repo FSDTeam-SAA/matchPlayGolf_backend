@@ -7,12 +7,25 @@ import dotenv from 'dotenv';
 import { applyMiddleware } from './middleware/security.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
-import  routes  from './routes/index.js';
+import routes from './routes/index.js';
+import { handleStripeWebhook } from './modules/payment/webhook.controller.js';
+
 dotenv.config();
 
 const app = express();
 
-// Apply security and parsing middleware
+// ------------------------------------------------------------
+// 1️⃣ Stripe Webhook (MUST COME FIRST - before JSON middleware)
+// ------------------------------------------------------------
+app.post(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json" }), // RAW BODY ONLY FOR WEBHOOK
+  handleStripeWebhook
+);
+
+// ------------------------------------------------------------
+// 2️⃣ Now apply normal middleware for all other routes
+// ------------------------------------------------------------
 applyMiddleware(app);
 
 // Health check

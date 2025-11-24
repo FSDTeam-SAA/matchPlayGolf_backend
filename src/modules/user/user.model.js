@@ -11,14 +11,63 @@ import {
 
 const UserSchema = new mongoose.Schema(
   {
-    // Core identity
-    fullName: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
 
-    // PERSONAL INFORMATION (matches red UI section)
-    phone: { type: String, default: '' },
-    gender: {
+      fullName: { type: String, required: true },
+      email: { type: String, required: true, unique: true },
+      password: { type: String, required: true },
+      username: { type: String },
+      phone: {type: String},
+      dob: { type: Date, default: null },
+      gender: {
+        type: String,
+        enum: ['male', 'female', 'other'],
+        default: 'male'
+      },
+
+      role: {
+        type: String,
+        default: "USER",
+        enum: ['user', 'admin', 'organizer'],
+      },
+      clubName:{
+        type:String,
+        default: null
+      },
+      handicap:{
+        type:String,
+        default: null
+      },
+      stripeAccountId: { type: String, default: null },
+
+      bio: { type: String, default: '' },
+      address: { type: AddressSchema, default: () => ({}) },
+
+      profileImage: { type: String, default: '' },
+      multiProfileImage: { type: [String], default: [] },
+      pdfFile: { type: String, default: '' },
+      about: {
+      type: String,
+      default: 'Hey there! I am using WhatsApp'
+    },
+    isOnline: {
+      type: Boolean,
+      default: false
+    },
+    lastSeen: {
+      type: Date,
+      default: Date.now
+    },
+    contacts: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }],
+    blockedUsers: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }],
+
+    otp: {
+
       type: String,
       enum: ['male', 'female', 'other'],
       default: 'male',
