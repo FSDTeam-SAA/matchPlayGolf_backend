@@ -1,120 +1,94 @@
 // src/modules/user/user.model.js
-import mongoose from 'mongoose';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 import {
   accessTokenExpires,
   accessTokenSecrete,
   refreshTokenExpires,
   refreshTokenSecrete,
-} from '../../config/config.js';
+} from "../../config/config.js";
 
 const UserSchema = new mongoose.Schema(
   {
+    fullName: { type: String, required: true },
+    email:    { type: String, required: true, unique: true },
+    password: { type: String, required: true },
 
-      fullName: { type: String, required: true },
-      email: { type: String, required: true, unique: true },
-      password: { type: String, required: true },
-      username: { type: String },
-      phone: {type: String},
-      dob: { type: Date, default: null },
-      gender: {
-        type: String,
-        enum: ['male', 'female', 'other'],
-        default: 'male'
-      },
+    username: { type: String },
+    phone:    { type: String },
 
-      role: {
-        type: String,
-        default: "USER",
-        enum: ['user', 'admin', 'organizer'],
-      },
-      clubName:{
-        type:String,
-        default: null
-      },
-      tournamentId:{
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "User"
-      },
-      handicap:{
-        type:String,
-        default: null
-      },
-      stripeAccountId: { type: String, default: null },
+    dob: { type: Date, default: null },
 
-      bio: { type: String, default: '' },
-      address: { type: AddressSchema, default: () => ({}) },
-
-      profileImage: { type: String, default: '' },
-      multiProfileImage: { type: [String], default: [] },
-      pdfFile: { type: String, default: '' },
-      about: {
+    gender: {
       type: String,
-      default: 'Hey there! I am using WhatsApp'
+      enum: ["male", "female", "other"],
+      default: "male",
     },
-    isOnline: {
-      type: Boolean,
-      default: false
-    },
-    lastSeen: {
-      type: Date,
-      default: Date.now
-    },
-    contacts: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }],
-    blockedUsers: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }],
 
-    otp: {
-
-      type: String,
-      enum: ['male', 'female', 'other'],
-      default: 'male',
-    },
-    clubName: { type: String, default: '' },
-    handicap: { type: String, default: '' },
-    whsNumber: { type: String, default: '' },
-
-    // PROFILE IMAGE
-    profileImage: { type: String, default: '' },
-
-    // Auth / verification helpers (used by auth module)
-    otp: { type: String, default: null },
-    otpExpires: { type: Date, default: null },
-    otpVerified: { type: Boolean, default: false },
-    resetExpires: { type: Date, default: null },
-    isVerified: { type: Boolean, default: true },
-
-    // Role & tokens
+    // FIXED ROLE ENUM
     role: {
       type: String,
-      enum: ['user', 'admin', 'organizer'],
-      default: 'user',
+      enum: ["User", "Admin", "Organizer"],
+      default: "User",
     },
-    refreshToken: { type: String, default: '' },
+
+    clubName:  { type: String, default: "" },
+    handicap:  { type: String, default: "" },
+    whsNumber: { type: String, default: "" },
+
+    tournamentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+
+    stripeAccountId: { type: String, default: null },
+
+    bio:   { type: String, default: "" },
+    about: { type: String, default: "Hey there! I am using WhatsApp" },
+
+    profileImage:      { type: String, default: "" },
+    multiProfileImage: { type: [String], default: [] },
+    pdfFile:           { type: String, default: "" },
+
+    isOnline: { type: Boolean, default: false },
+    lastSeen: { type: Date, default: Date.now },
+
+    contacts: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
+    blockedUsers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+
+    otp:         { type: String, default: null },
+    otpExpires:  { type: Date, default: null },
+    otpVerified: { type: Boolean, default: false },
+    resetExpires:{ type: Date, default: null },
+    isVerified:  { type: Boolean, default: true },
+
+    refreshToken: { type: String, default: "" },
   },
   { timestamps: true }
 );
 
-// Hash password before save
-UserSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  try {
-    this.password = await bcrypt.hash(this.password, 10);
-    next();
-  } catch (err) {
-    next(err);
-  }
+// Hash password
+UserSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) return next();
+  this.password = await bcrypt.hash(this.password, 10);
+  next();
 });
 
-// Compare password (used in change-password flow)
+// Compare password
 UserSchema.methods.comparePassword = async function (id, plainPassword) {
-  const user = await this.model('User').findById(id).select('password');
+  const user = await this.model("User").findById(id).select("password");
   if (!user) return false;
   return bcrypt.compare(plainPassword, user.password);
 };
@@ -133,5 +107,5 @@ UserSchema.methods.generateRefreshToken = function (payload) {
   });
 };
 
-const User = mongoose.models.User || mongoose.model('User', UserSchema);
+const User = mongoose.models.User || mongoose.model("User", UserSchema);
 export default User;
