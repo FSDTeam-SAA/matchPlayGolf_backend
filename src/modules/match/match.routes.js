@@ -20,7 +20,7 @@ router.get("/round/:roundId", getTournamentMatchesByRound);
 // Protected routes
 router.post("/", verifyToken, createTournamentMatch);
 router.put("/:id", verifyToken, updateTournamentMatch);
-router.patch("/:id/scores", verifyToken, updateTournamentMatchScores);
-router.delete("/:id", verifyToken, deleteTournamentMatch);
+router.put("/:matchId/scores", verifyToken, updateTournamentMatchScores);
+router.delete("/:matchId", verifyToken, deleteTournamentMatch);
 
 export default router;
