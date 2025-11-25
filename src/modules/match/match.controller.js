@@ -193,7 +193,7 @@ export const updateTournamentMatchScores = async (req, res) => {
   try {
     const scoresData = req.body;
     const match = await matchService.updateTournamentMatchScores(
-      req.params.id,
+      req.params.matchId,
       scoresData,
       req.user._id
     );
@@ -221,7 +221,7 @@ export const updateTournamentMatchScores = async (req, res) => {
 export const deleteTournamentMatch = async (req, res) => {
   try {
     const result = await matchService.deleteTournamentMatch(
-      req.params.id,
+      req.params.matchId,
       req.user._id,
       req.user.role
     );
