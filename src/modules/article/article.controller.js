@@ -28,8 +28,8 @@ export const createArticle = async (req, res) => {
 
 export const getArticles = async (req, res) => {
   try {
-    const { page, limit, type, search } = req.query;
-    const result = await getArticlesService({ page, limit, type, search });
+    const { page, limit, type, search, status } = req.query;
+    const result = await getArticlesService({ page, limit, type, search, status });
 
     return res.status(200).json({
       success: true,
@@ -38,6 +38,9 @@ export const getArticles = async (req, res) => {
       pagination: result.pagination,
     });
   } catch (error) {
+    if (error.code === 'VALIDATION_ERROR') {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     console.error('Get articles error:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
   }

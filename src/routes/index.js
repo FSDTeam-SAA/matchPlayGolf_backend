@@ -23,7 +23,7 @@ router.use('/auth', authRoutes);
 router.use('/user', userRoutes);
 
 router.use('/match-result', matchRoutes);
-
+router.use('/article', articleRoutes);
 router.use('/tournament', tournamentRoutes);
 router.use("/round", roundRoutes);
 router.use('/match', matchTournamentRoutes)
