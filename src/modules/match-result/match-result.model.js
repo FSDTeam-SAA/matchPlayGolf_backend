@@ -1,4 +1,5 @@
 // src/modules/match/match.model.js
+import { Result } from 'express-validator';
 import mongoose from 'mongoose';
 
 const MatchSchema = new mongoose.Schema(
@@ -74,6 +75,6 @@ const MatchSchema = new mongoose.Schema(
 );
 
 const Match =
-  mongoose.models.Match || mongoose.model('Match', MatchSchema);
+  mongoose.models.Match-Result || mongoose.model('Match-Result', MatchSchema);
 
 export default Match;
