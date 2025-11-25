@@ -1,4 +1,5 @@
 import User from '../user/user.model.js';
+import RegisterUser from '../tournamentResgisterUser/registerUser.model.js';
 import jwt from 'jsonwebtoken';
 import { emailExpires } from '../../config/config.js';
 import sendEmail from '../../lib/sendEmail.js';
@@ -10,33 +11,40 @@ dotenv.config();
 export const registerUserService = async ({
   fullName,
   email,
-  password, 
+  password,
   phone,
   clubName,
   handicap,
   role,
-  organizationName
+  organizationName,
+  tournamentId,
+  createdBy
 }) => {
 
-  const existingUser1 = await User.findOne({ email });
-  const existingUser2 = await User.findOne({ phone });
+  // Check existing user by email OR phone
+  const existingUser = await User.findOne({
+    $or: [{ email }, { phone }]
+  });
 
-  if (existingUser1 || existingUser2) throw new Error('User already registered.');
+  if (existingUser) {
+    throw new Error("User already registered.");
+  }
 
+  // Create new user
   const newUser = new User({
     fullName,
     email,
-    password,
+    password: password || null, // prevent bcrypt error if empty
     phone,
     clubName,
     handicap,
-    role,
+    role: role || "User",
     organizationName
   });
 
   const user = await newUser.save();
-   
-  // ❗ If password is NOT set, send password setup link
+
+  /** Send Set Password Email if no password provided */
   if (!password) {
     const token = jwt.sign(
       { userId: user._id },
@@ -51,17 +59,128 @@ export const registerUserService = async ({
       subject: "Set Your Password",
       html: `
         <p>Hello ${fullName},</p>
-        <p>Your account was created. Please click the link below to set your password:</p>
+        <p>Your account has been created. Click below to set your password:</p>
         <a href="${setupUrl}" target="_blank">Set Password</a>
         <p>This link expires in 1 hour.</p>
-      `,
+      `
     });
   }
 
-  const { _id, profileImage } = user;
-  return { _id, fullName, email, profileImage };
+  /** Add user to tournament */
+  let added = null;
+
+  if (tournamentId) {
+    added = await new RegisterUser({
+      tournamentId,
+      userId: user._id,
+      createdBy
+    }).save();
+  }
+
+  return {
+    _id: user._id,
+    fullName,
+    email,
+    profileImage: user.profileImage,
+    added
+  };
+};
+;
+
+/** -----------------------------------------------------
+ *  Multiple user import (bulk)
+ * ----------------------------------------------------- */
+export const importMultipleUsersService = async (users, tournamentId, createdBy) => {
+  const results = [];
+
+  for (const u of users) {
+    try {
+      const { fullName, email, phone } = u;
+
+      // Validate
+      if (!fullName || !email || !phone) {
+        results.push({
+          email,
+          status: "failed",
+          error: "fullName, email & phone are required"
+        });
+        continue;
+      }
+
+      // Check if already registered
+      const existing = await User.findOne({ email });
+
+      if (existing) {
+        let added = null;
+
+        if (tournamentId) {
+          added = await new RegisterUser({
+            tournamentId,
+            userId: existing._id,
+            createdBy
+          }).save();
+        }
+
+        results.push({
+          email,
+          status: "skipped",
+          message: "User already registered",
+          added
+        });
+
+        continue;
+      }
+
+      // Register new user
+      const createdUser = await registerUserService({
+        fullName,
+        email,
+        phone,
+        password: null,
+        tournamentId,
+        createdBy
+      });
+
+      results.push({
+        email,
+        status: "success",
+        user: createdUser
+      });
+
+    } catch (err) {
+      results.push({
+        email: u.email,
+        status: "failed",
+        error: err.message
+      });
+    }
+  }
+
+  return results;
 };
 
+/** -----------------------------------------------------
+ * Set new password after token verification
+ * ----------------------------------------------------- */
+export const setPasswordService = async ({ token, password }) => {
+  if (!token || !password)
+    throw new Error("Token and password are required");
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (err) {
+    throw new Error("Invalid or expired token");
+  }
+
+  const user = await User.findById(decoded.userId);
+  if (!user) throw new Error("User not found");
+
+  user.password = password;
+  await user.save();
+
+  return { message: "Password set successfully" };
+};
 
 export const loginUserService = async ({ email, password }) => {
   if (!email || !password) throw new Error('Email and password are required');
