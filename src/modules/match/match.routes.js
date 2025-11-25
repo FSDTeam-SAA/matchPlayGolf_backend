@@ -1,26 +1,26 @@
 import express from "express";
 import {
-  createMatch,
-  getAllMatches,
-  getMatchById,
-  getMatchesByRound,
-  updateMatch,
-  updateMatchScores,
-  deleteMatch
+  createTournamentMatch,
+  getAllTournamentMatches,
+  getTournamentMatchById,
+  getTournamentMatchesByRound,
+  updateTournamentMatch,
+  updateTournamentMatchScores,
+  deleteTournamentMatch
 } from "./match.controller.js";
 import { verifyToken } from "../../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // Public routes
-router.get("/", getAllMatches);
-router.get("/:id", getMatchById);
-router.get("/round/:roundId", getMatchesByRound);
+router.get("/", getAllTournamentMatches);
+router.get("/:id", getTournamentMatchById);
+router.get("/round/:roundId", getTournamentMatchesByRound);
 
 // Protected routes
-router.post("/", verifyToken, createMatch);
-router.put("/:id", verifyToken, updateMatch);
-router.patch("/:id/scores", verifyToken, updateMatchScores);
-router.delete("/:id", verifyToken, deleteMatch);
+router.post("/", verifyToken, createTournamentMatch);
+router.put("/:id", verifyToken, updateTournamentMatch);
+router.patch("/:id/scores", verifyToken, updateTournamentMatchScores);
+router.delete("/:id", verifyToken, deleteTournamentMatch);
 
 export default router;

@@ -11,7 +11,7 @@ import matchRoutes from '../modules/match-result/match-result.routes.js';
 
 import tournamentRoutes from '../modules/tournament/tournament.routes.js';
 import roundRoutes from '../modules/round/round.routes.js';
-import matchRoutes from '../modules/match/match.routes.js';
+import matchTournamentRoutes from '../modules/match/match.routes.js';
 import articleRoutes from '../modules/article/article.routes.js';
 import contactRoutes from '../modules/contact/contact.routes.js';
 
@@ -26,7 +26,7 @@ router.use('/match-result', matchRoutes);
 
 router.use('/tournament', tournamentRoutes);
 router.use("/round", roundRoutes);
-router.use('/match', matchRoutes)
+router.use('/match', matchTournamentRoutes)
 router.use('/broadcast', broadcastRoutes);
 router.use('/contact', contactRoutes);
 
