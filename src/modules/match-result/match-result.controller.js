@@ -5,7 +5,7 @@ import {
   getMatchByIdService,
   updateMatchService,
   deleteMatchService,
-} from './match.service.js';
+} from './match-result.service.js';
 
 // ======= CREATE MATCH =======
 export const createMatch = async (req, res) => {

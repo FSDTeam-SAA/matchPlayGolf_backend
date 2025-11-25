@@ -6,7 +6,7 @@ import {
   getMatchById,
   updateMatch,
   deleteMatch,
-} from './match.controller.js';
+} from './match-result.controller.js';
 import { verifyToken } from '../../middleware/authMiddleware.js';
 import { multerUpload } from '../../config/multer.js';
 

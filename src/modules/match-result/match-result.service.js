@@ -1,5 +1,5 @@
 // src/modules/match/match.service.js
-import Match from './match.model.js';
+import Match from './match-result.model.js';
 import { uploadToCloudinary } from '../../lib/uploadToCloudinary.js';
 
 // Require non-empty strings for core fields
