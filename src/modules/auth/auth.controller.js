@@ -6,6 +6,8 @@ import {
   resetPasswordService,
   verifyCodeService,
   forgetPasswordService,
+  setPasswordService,
+  importMultipleUsersService
 } from './auth.service.js';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -28,6 +30,27 @@ export const registerUser = async (req, res, next) => {
     else {
       next(error)
     }
+  }
+};
+/** Import multiple players */
+export const importPlayers = async (req, res) => {
+  try {
+    const createdBy = req.user._id
+    const results = await importMultipleUsersService(req.body.users, req.body.tournamentId, createdBy);
+    res.status(200).json({ success: true, results });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+
+/** Set password */
+export const setPassword = async (req, res) => {
+  try {
+    await setPasswordService(req.body);
+    res.status(200).json({ success: true, message: "Password set" });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
   }
 };
 
