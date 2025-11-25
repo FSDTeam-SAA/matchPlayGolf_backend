@@ -35,6 +35,28 @@ export const registerUserService = async ({
   });
 
   const user = await newUser.save();
+   
+  // ❗ If password is NOT set, send password setup link
+  if (!password) {
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+
+    const setupUrl = `${process.env.CLIENT_URL}/set-password?token=${token}`;
+
+    await sendEmail({
+      to: email,
+      subject: "Set Your Password",
+      html: `
+        <p>Hello ${fullName},</p>
+        <p>Your account was created. Please click the link below to set your password:</p>
+        <a href="${setupUrl}" target="_blank">Set Password</a>
+        <p>This link expires in 1 hour.</p>
+      `,
+    });
+  }
 
   const { _id, profileImage } = user;
   return { _id, fullName, email, profileImage };
