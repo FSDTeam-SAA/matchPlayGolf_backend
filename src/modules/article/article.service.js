@@ -3,6 +3,23 @@ import Article from './article.model.js';
 import { uploadToCloudinary } from '../../lib/uploadToCloudinary.js';
 
 const isNonEmptyString = (val) => typeof val === 'string' && val.trim().length > 0;
+const ARTICLE_STATUSES = ['draft', 'published'];
+
+const normalizeStatus = (status) => {
+  if (status === undefined) return undefined;
+  if (!isNonEmptyString(status)) {
+    const err = new Error('Status cannot be empty');
+    err.code = 'VALIDATION_ERROR';
+    throw err;
+  }
+  const normalized = status.trim().toLowerCase();
+  if (!ARTICLE_STATUSES.includes(normalized)) {
+    const err = new Error('Invalid status. Use draft or published');
+    err.code = 'VALIDATION_ERROR';
+    throw err;
+  }
+  return normalized;
+};
 
 const parsePagination = (page, limit) => {
   const safePage = Number.isFinite(Number(page)) && Number(page) > 0 ? Number(page) : 1;
@@ -11,7 +28,7 @@ const parsePagination = (page, limit) => {
 };
 
 export const createArticleService = async (user, data, file) => {
-  const { title, description, type } = data;
+  const { title, description, type, status } = data;
 
   if (!isNonEmptyString(title) || !isNonEmptyString(description) || !isNonEmptyString(type)) {
     const err = new Error('Title, description, and type are required');
@@ -30,22 +47,34 @@ export const createArticleService = async (user, data, file) => {
     coverImage = upload?.secure_url || coverImage;
   }
 
-  return Article.create({
+  const articleData = {
     title: title.trim(),
     description: description.trim(),
     type: type.trim(),
     coverImage,
     createdBy: user._id,
-  });
+  };
+
+  const normalizedStatus = normalizeStatus(status);
+  if (normalizedStatus) {
+    articleData.status = normalizedStatus;
+  }
+
+  return Article.create(articleData);
 };
 
-export const getArticlesService = async ({ page = 1, limit = 10, type, search }) => {
+export const getArticlesService = async ({ page = 1, limit = 10, type, search, status }) => {
   const { page: safePage, limit: safeLimit } = parsePagination(page, limit);
 
   const filter = {};
 
   if (isNonEmptyString(type)) {
     filter.type = { $regex: type.trim(), $options: 'i' };
+  }
+
+  const normalizedStatus = normalizeStatus(status);
+  if (normalizedStatus) {
+    filter.status = normalizedStatus;
   }
 
   if (isNonEmptyString(search)) {
@@ -127,6 +156,11 @@ export const updateArticleService = async (articleId, user, data, file) => {
     if (upload?.secure_url) {
       article.coverImage = upload.secure_url;
     }
+  }
+
+  if (data.status !== undefined) {
+    const normalizedStatus = normalizeStatus(data.status);
+    article.status = normalizedStatus;
   }
 
   await article.save();
