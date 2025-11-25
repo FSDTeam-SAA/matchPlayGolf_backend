@@ -1,22 +1,27 @@
+// src/modules/user/user.routes.js
 import express from 'express';
 import {
-getProfile,
-updateProfile,
-uploadProfileImage
+  getProfile,
+  updateProfile,
+  uploadProfileImage,
 } from './user.controller.js';
 import { verifyToken } from '../../middleware/authMiddleware.js';
-
+import { multerUpload } from '../../config/multer.js';
 
 const router = express.Router();
 
-
+// GET /api/user  → fetch current user's profile
 router.get('/', verifyToken, getProfile);
-router.put('/profile',verifyToken, updateProfile);
-router.put('/profile/image', verifyToken, uploadProfileImage);
-// router.post('/verify-code', verifyCode);
-// router.post('/reset-password', resetPassword);
-// router.post('/change-password',verifyToken, changePassword);
-// // router.post('/logout', verifyToken, logoutUser);
 
+// PUT /api/user/profile  → update personal info (JSON only)
+router.put('/profile', verifyToken, updateProfile);
+
+// PUT /api/user/profile/image  → upload profile picture (FormData with "file")
+router.put(
+  '/profile/image',
+  verifyToken,
+  multerUpload.single('profileImage'),
+  uploadProfileImage
+);
 
 export default router;

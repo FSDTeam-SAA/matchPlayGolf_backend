@@ -1,50 +1,83 @@
-// ==================== services/user.service.js ====================
+// src/modules/user/user.service.js
 import User from './user.model.js';
-import { uploadToCloudinary }  from '../../lib/uploadToCloudinary.js';
+import { uploadToCloudinary } from '../../lib/uploadToCloudinary.js';
 
-// ==================== GET PROFILE SERVICE ====================
+// Fields we allow returning in profile responses (keeps address out)
+const profileProjection =
+  'fullName email phone gender clubName handicap whsNumber organizationName profileImage role isVerified createdAt updatedAt';
+
+// =============== GET PROFILE SERVICE ===============
 export const getUserProfile = async (userId) => {
-  const user = await User.findById(userId).select('-password');
+  const user = await User.findById(userId).select(profileProjection);
   return user || null;
 };
 
-// ==================== UPDATE PROFILE SERVICE ====================
+// =============== UPDATE PROFILE SERVICE ===============
+// Only updates: fullName, email, phone, gender, clubName, handicap, whsNumber
 export const updateUserProfile = async (userId, updateData) => {
   const allowedFields = [
     'fullName',
     'email',
-    'phoneNumber',
-    'country',
-    'city',
-    'state',
-    'zipcode',
-    'street_address'
+    'phone',
+    'gender',
+    'clubName',
+    'handicap',
+    'whsNumber',
+    'organizationName',
   ];
 
-  // Filter allowed fields only
+  const user = await User.findById(userId).select(profileProjection);
+  if (!user) return null;
+
   const updates = {};
-  for (const key of allowedFields) {
-    if (updateData[key]) updates[key] = updateData[key];
+
+  for (const field of allowedFields) {
+    // handle email specially (duplicate check + skip if same)
+    if (field === 'email' && updateData.email) {
+      if (updateData.email === user.email) {
+        // same email, no change
+        continue;
+      }
+
+      const existing = await User.findOne({ email: updateData.email });
+      if (existing && existing._id.toString() !== user._id.toString()) {
+        const err = new Error('Email already in use');
+        err.code = 'EMAIL_IN_USE';
+        throw err;
+      }
+
+      updates.email = updateData.email;
+      continue;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(updateData, field)) {
+      updates[field] = updateData[field];
+    }
   }
 
-  const user = await User.findByIdAndUpdate(
+  const updatedUser = await User.findByIdAndUpdate(
     userId,
-    updates,
+    { $set: updates },
     { new: true }
-  ).select('-password');
+  ).select(profileProjection);
 
-  return user || null;
+  return updatedUser;
 };
 
-// ==================== UPLOAD PROFILE IMAGE SERVICE ====================
+// =============== UPLOAD PROFILE IMAGE SERVICE ===============
 export const uploadUserProfileImage = async (userId, fileBuffer) => {
-  const uploadResult = await uploadToCloudinary (fileBuffer, 'profile_images');
+  if (!fileBuffer) return null;
+
+  const uploadResult = await uploadToCloudinary(
+    fileBuffer,
+    'profile_image',
+    'profile_images'
+  );
 
   if (!uploadResult?.secure_url) return null;
 
-  // Update image URL in DB
   await User.findByIdAndUpdate(userId, {
-    profileImage: uploadResult.secure_url
+    profileImage: uploadResult.secure_url,
   });
 
   return uploadResult.secure_url;

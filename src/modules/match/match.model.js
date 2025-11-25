@@ -105,6 +105,29 @@ const MatchSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User"
     }
+// src/modules/match/match.model.js
+import mongoose from 'mongoose';
+
+const MatchSchema = new mongoose.Schema(
+  {
+    
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+
+    
+    matchDate: {
+      type: Date,
+      required: true,
+    },
+
+
+    matchTime: {
+      type: String,
+      default: '',
+    }
   },
   { timestamps: true }
 );
@@ -116,3 +139,4 @@ MatchSchema.index({ tournamentId: 1 });
 const Match = mongoose.models.Match || mongoose.model("Match", MatchSchema);
 
 export default Match;
+
