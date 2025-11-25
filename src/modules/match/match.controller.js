@@ -5,7 +5,7 @@ import matchService from "./match.service.js";
  * @route   POST /api/matches
  * @access  Private
  */
-export const createMatch = async (req, res) => {
+export const createTournamentMatch = async (req, res) => {
   try {
     const {
       tournamentId,
@@ -50,7 +50,7 @@ export const createMatch = async (req, res) => {
       createdBy: req.user._id
     };
 
-    const match = await matchService.createMatch(matchData);
+    const match = await matchService.createTournamentMatch(matchData);
 
     res.status(201).json({
       success: true,
@@ -70,7 +70,7 @@ export const createMatch = async (req, res) => {
  * @route   GET /api/matches
  * @access  Public
  */
-export const getAllMatches = async (req, res) => {
+export const getAllTournamentMatches = async (req, res) => {
   try {
     const {
       page = 1,
@@ -88,7 +88,7 @@ export const getAllMatches = async (req, res) => {
       status
     };
 
-    const result = await matchService.getAllMatches(filters, parseInt(page), parseInt(limit));
+    const result = await matchService.getAllTournamentMatches(filters, parseInt(page), parseInt(limit));
 
     res.status(200).json({
       success: true,
@@ -107,9 +107,9 @@ export const getAllMatches = async (req, res) => {
  * @route   GET /api/matches/:id
  * @access  Public
  */
-export const getMatchById = async (req, res) => {
+export const getTournamentMatchById = async (req, res) => {
   try {
-    const match = await matchService.getMatchById(req.params.id);
+    const match = await matchService.getTournamentMatchById(req.params.id);
 
     res.status(200).json({
       success: true,
@@ -129,10 +129,10 @@ export const getMatchById = async (req, res) => {
  * @route   GET /api/matches/round/:roundId
  * @access  Public
  */
-export const getMatchesByRound = async (req, res) => {
+export const getTournamentMatchesByRound = async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
-    const result = await matchService.getMatchesByRound(
+    const result = await matchService.getTournamentMatchesByRound(
       req.params.roundId,
       parseInt(page),
       parseInt(limit)
@@ -155,10 +155,10 @@ export const getMatchesByRound = async (req, res) => {
  * @route   PUT /api/matches/:id
  * @access  Private
  */
-export const updateMatch = async (req, res) => {
+export const updateTournamentMatch = async (req, res) => {
   try {
     const updateData = req.body;
-    const match = await matchService.updateMatch(
+    const match = await matchService.updateTournamentMatch(
       req.params.id,
       updateData,
       req.user._id,
@@ -189,10 +189,10 @@ export const updateMatch = async (req, res) => {
  * @route   PATCH /api/matches/:id/scores
  * @access  Private
  */
-export const updateMatchScores = async (req, res) => {
+export const updateTournamentMatchScores = async (req, res) => {
   try {
     const scoresData = req.body;
-    const match = await matchService.updateMatchScores(
+    const match = await matchService.updateTournamentMatchScores(
       req.params.id,
       scoresData,
       req.user._id
@@ -218,9 +218,9 @@ export const updateMatchScores = async (req, res) => {
  * @access  Private
  */
 //Bismillah
-export const deleteMatch = async (req, res) => {
+export const deleteTournamentMatch = async (req, res) => {
   try {
-    const result = await matchService.deleteMatch(
+    const result = await matchService.deleteTournamentMatch(
       req.params.id,
       req.user._id,
       req.user.role

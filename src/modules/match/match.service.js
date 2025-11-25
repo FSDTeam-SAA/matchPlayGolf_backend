@@ -7,7 +7,7 @@ class MatchService {
   /**
    * Create a new match
    */
-  async createMatch(matchData) {
+  async createTournamentMatch(matchData) {
     try {
       // Validate tournament exists
       if (!mongoose.Types.ObjectId.isValid(matchData.tournamentId)) {
@@ -63,7 +63,7 @@ class MatchService {
   /**
    * Get all matches with filters and pagination
    */
-  async getAllMatches(filters = {}, page = 1, limit = 10) {
+  async getAllTournamentMatches(filters = {}, page = 1, limit = 10) {
     try {
       const query = {};
 
@@ -116,7 +116,7 @@ class MatchService {
   /**
    * Get match by ID
    */
-  async getMatchById(id) {
+  async getTournamentMatchById(id) {
     try {
       if (!mongoose.Types.ObjectId.isValid(id)) {
         throw new Error("Invalid match ID");
@@ -143,7 +143,7 @@ class MatchService {
   /**
    * Get matches by round
    */
-  async getMatchesByRound(roundId, page = 1, limit = 10) {
+  async getTournamentMatchesByRound(roundId, page = 1, limit = 10) {
     try {
       if (!mongoose.Types.ObjectId.isValid(roundId)) {
         throw new Error("Invalid round ID");
@@ -176,7 +176,7 @@ class MatchService {
   /**
    * Update match
    */
-  async updateMatch(id, updateData, userId, role) {
+  async updateTournamentMatch(id, updateData, userId, role) {
     try {
       if (!mongoose.Types.ObjectId.isValid(id)) {
         throw new Error("Invalid match ID");
@@ -226,7 +226,7 @@ class MatchService {
   /**
    * Update match scores
    */
-  async updateMatchScores(id, scoresData, userId) {
+  async updateTournamentMatchScores(id, scoresData, userId) {
     try {
       if (!mongoose.Types.ObjectId.isValid(id)) {
         throw new Error("Invalid match ID");
@@ -270,7 +270,7 @@ class MatchService {
   /**
    * Delete match
    */
-  async deleteMatch(id, userId, role) {
+  async deleteTournamentMatch(id, userId, role) {
     try {
       if (!mongoose.Types.ObjectId.isValid(id)) {
         throw new Error("Invalid match ID");
@@ -300,4 +300,3 @@ class MatchService {
 }
 
 export default new MatchService();
-
