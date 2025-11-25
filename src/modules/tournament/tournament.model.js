@@ -48,6 +48,30 @@ const TournamentSchema = new mongoose.Schema(
       type: String,
       default: "pending"
     },
+    startDate:{
+      type:Date,
+      default:Date.now
+    },
+    endDate:{
+      type: String,
+      default: Date.now
+    },
+    location:{
+      type:String
+    },
+    numberOfSeeds:{
+      type: Number
+    },
+    description:{
+      type:String
+    },
+    status:{
+      type:String,
+      default: "Upcoming"
+    },
+    rules:{
+      type: String
+    },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
