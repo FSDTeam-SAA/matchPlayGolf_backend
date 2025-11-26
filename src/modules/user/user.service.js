@@ -4,7 +4,7 @@ import { uploadToCloudinary } from '../../lib/uploadToCloudinary.js';
 
 // Fields we allow returning in profile responses (keeps address out)
 const profileProjection =
-  'fullName email phone gender clubName handicap whsNumber organizationName profileImage role isVerified createdAt updatedAt';
+  'fullName email phone gender clubName handicap whsNumber organizationName sportNationalId profileImage organizerLogo role isVerified createdAt updatedAt';
 
 // =============== GET PROFILE SERVICE ===============
 export const getUserProfile = async (userId) => {
@@ -24,6 +24,8 @@ export const updateUserProfile = async (userId, updateData) => {
     'handicap',
     'whsNumber',
     'organizationName',
+    'sportNationalId',
+    'organizerLogo',
   ];
 
   const user = await User.findById(userId).select(profileProjection);
@@ -78,6 +80,25 @@ export const uploadUserProfileImage = async (userId, fileBuffer) => {
 
   await User.findByIdAndUpdate(userId, {
     profileImage: uploadResult.secure_url,
+  });
+
+  return uploadResult.secure_url;
+};
+
+// =============== UPLOAD ORGANIZER LOGO SERVICE ===============
+export const uploadOrganizerLogo = async (userId, fileBuffer) => {
+  if (!fileBuffer) return null;
+
+  const uploadResult = await uploadToCloudinary(
+    fileBuffer,
+    'organizer_logo',
+    'organizer_logos'
+  );
+
+  if (!uploadResult?.secure_url) return null;
+
+  await User.findByIdAndUpdate(userId, {
+    organizerLogo: uploadResult.secure_url,
   });
 
   return uploadResult.secure_url;

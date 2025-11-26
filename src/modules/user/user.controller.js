@@ -3,6 +3,7 @@ import {
   getUserProfile,
   updateUserProfile,
   uploadUserProfileImage,
+  uploadOrganizerLogo,
 } from './user.service.js';
 
 // =============== GET PROFILE ===============
@@ -98,6 +99,41 @@ export const uploadProfileImage = async (req, res) => {
     });
   } catch (error) {
     console.error('Upload profile image error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+};
+
+// =============== UPLOAD ORGANIZER LOGO (IMAGE ONLY) ===============
+export const uploadOrganizerLogoController = async (req, res) => {
+  try {
+    const userId = req.user?._id;
+
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded',
+      });
+    }
+
+    const imageUrl = await uploadOrganizerLogo(userId, req.file.buffer);
+
+    if (!imageUrl) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to upload organizer logo',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Organizer logo uploaded successfully',
+      data: { organizerLogo: imageUrl },
+    });
+  } catch (error) {
+    console.error('Upload organizer logo error:', error);
     return res.status(500).json({
       success: false,
       message: 'Internal server error',
