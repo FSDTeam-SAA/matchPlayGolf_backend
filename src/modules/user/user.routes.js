@@ -4,6 +4,7 @@ import {
   getProfile,
   updateProfile,
   uploadProfileImage,
+  uploadOrganizerLogoController,
 } from './user.controller.js';
 import { verifyToken } from '../../middleware/authMiddleware.js';
 import { multerUpload } from '../../config/multer.js';
@@ -22,6 +23,14 @@ router.put(
   verifyToken,
   multerUpload.single('profileImage'),
   uploadProfileImage
+);
+
+// PUT /api/user/profile/organizer-logo  → upload organizer logo (FormData with "organizerLogo")
+router.put(
+  '/profile/organizer-logo',
+  verifyToken,
+  multerUpload.single('organizerLogo'),
+  uploadOrganizerLogoController
 );
 
 export default router;

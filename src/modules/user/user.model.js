@@ -52,6 +52,8 @@ const UserSchema = new mongoose.Schema(
     about: { type: String, default: "Hey there! I am using WhatsApp" },
 
     profileImage:      { type: String, default: "" },
+    organizerLogo:     { type: String, default: "" },
+    sportNationalId:   { type: String, default: "" },
     multiProfileImage: { type: [String], default: [] },
     pdfFile:           { type: String, default: "" },
 
