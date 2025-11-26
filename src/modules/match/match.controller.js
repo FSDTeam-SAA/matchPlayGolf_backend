@@ -1,4 +1,9 @@
+// ============================================
+// FILE: src/features/match/match.controller.js (UPDATED)
+// ============================================
+
 import matchService from "./match.service.js";
+import  { emitMatchNotification }  from "../notification/notification.controller.js";
 
 /**
  * @desc    Create a new match
@@ -20,11 +25,10 @@ export const createTournamentMatch = async (req, res) => {
     if (!tournamentId || !roundId || !matchType) {
       return res.status(400).json({
         success: false,
-        message: "Tournament ID, round ID, match type, and tee time are required"
+        message: "Tournament ID, round ID, match type are required"
       });
     }
 
-    // Validate matchType
     if (!["single", "pair", "team"].includes(matchType)) {
       return res.status(400).json({
         success: false,
@@ -32,11 +36,10 @@ export const createTournamentMatch = async (req, res) => {
       });
     }
 
-    // Validate status
     if (status && !["Scheduled", "In Progress", "Completed", "Cancelled"].includes(status)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid status. Must be Scheduled, In Progress, Completed, or Cancelled"
+        message: "Invalid status"
       });
     }
 
@@ -52,6 +55,12 @@ export const createTournamentMatch = async (req, res) => {
 
     const match = await matchService.createTournamentMatch(matchData);
 
+    // 🔥 EMIT SOCKET NOTIFICATION - ONLY TO MATCH PARTICIPANTS
+    const io = req.app.get('io');
+    if (io) {
+      emitMatchNotification(io, 'MATCH_CREATED', match);
+    }
+
     res.status(201).json({
       success: true,
       data: match,
@@ -59,6 +68,86 @@ export const createTournamentMatch = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Update match
+ * @route   PUT /api/matches/:id
+ * @access  Private
+ */
+export const updateTournamentMatch = async (req, res) => {
+  try {
+    const updateData = req.body;
+    const match = await matchService.updateTournamentMatch(
+      req.params.id,
+      updateData,
+      req.user._id,
+      req.user.role
+    );
+
+    // 🔥 EMIT SOCKET NOTIFICATION - ONLY TO MATCH PARTICIPANTS
+    const io = req.app.get('io');
+    if (io) {
+      emitMatchNotification(io, 'MATCH_UPDATED', match);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: match,
+      message: "Match updated successfully"
+    });
+  } catch (error) {
+    const statusCode = error.message.includes("not found")
+      ? 404
+      : error.message.includes("Not authorized")
+      ? 403
+      : 500;
+
+    res.status(statusCode).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+/**
+ * @desc    Delete match
+ * @route   DELETE /api/matches/:id
+ * @access  Private
+ */
+export const deleteTournamentMatch = async (req, res) => {
+  try {
+    // 🔥 GET MATCH BEFORE DELETING (to get participant IDs)
+    const match = await matchService.getTournamentMatchById(req.params.matchId);
+
+    const result = await matchService.deleteTournamentMatch(
+      req.params.matchId,
+      req.user._id,
+      req.user.role
+    );
+
+    // 🔥 EMIT SOCKET NOTIFICATION - ONLY TO MATCH PARTICIPANTS
+    const io = req.app.get('io');
+    if (io) {
+      emitMatchNotification(io, 'MATCH_DELETED', match);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: result.message
+    });
+  } catch (error) {
+    const statusCode = error.message.includes("not found")
+      ? 404
+      : error.message.includes("Not authorized")
+      ? 403
+      : 500;
+
+    res.status(statusCode).json({
       success: false,
       message: error.message
     });
@@ -155,34 +244,34 @@ export const getTournamentMatchesByRound = async (req, res) => {
  * @route   PUT /api/matches/:id
  * @access  Private
  */
-export const updateTournamentMatch = async (req, res) => {
-  try {
-    const updateData = req.body;
-    const match = await matchService.updateTournamentMatch(
-      req.params.id,
-      updateData,
-      req.user._id,
-      req.user.role
-    );
+// export const updateTournamentMatch = async (req, res) => {
+//   try {
+//     const updateData = req.body;
+//     const match = await matchService.updateTournamentMatch(
+//       req.params.id,
+//       updateData,
+//       req.user._id,
+//       req.user.role
+//     );
 
-    res.status(200).json({
-      success: true,
-      data: match,
-      message: "Match updated successfully"
-    });
-  } catch (error) {
-    const statusCode = error.message.includes("not found")
-      ? 404
-      : error.message.includes("Not authorized")
-      ? 403
-      : 500;
+//     res.status(200).json({
+//       success: true,
+//       data: match,
+//       message: "Match updated successfully"
+//     });
+//   } catch (error) {
+//     const statusCode = error.message.includes("not found")
+//       ? 404
+//       : error.message.includes("Not authorized")
+//       ? 403
+//       : 500;
 
-    res.status(statusCode).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
+//     res.status(statusCode).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };
 
 /**
  * @desc    Update match scores
@@ -197,6 +286,12 @@ export const updateTournamentMatchScores = async (req, res) => {
       scoresData,
       req.user._id
     );
+
+    // 🔥 EMIT SOCKET NOTIFICATION - ONLY TO MATCH PARTICIPANTS
+    const io = req.app.get('io');
+    if (io) {
+      emitMatchNotification(io, 'MATCH_UPDATED', match);
+    }
 
     res.status(200).json({
       success: true,
@@ -218,28 +313,28 @@ export const updateTournamentMatchScores = async (req, res) => {
  * @access  Private
  */
 //Bismillah
-export const deleteTournamentMatch = async (req, res) => {
-  try {
-    const result = await matchService.deleteTournamentMatch(
-      req.params.matchId,
-      req.user._id,
-      req.user.role
-    );
+// export const deleteTournamentMatch = async (req, res) => {
+//   try {
+//     const result = await matchService.deleteTournamentMatch(
+//       req.params.matchId,
+//       req.user._id,
+//       req.user.role
+//     );
 
-    res.status(200).json({
-      success: true,
-      message: result.message
-    });
-  } catch (error) {
-    const statusCode = error.message.includes("not found")
-      ? 404
-      : error.message.includes("Not authorized")
-      ? 403
-      : 500;
+//     res.status(200).json({
+//       success: true,
+//       message: result.message
+//     });
+//   } catch (error) {
+//     const statusCode = error.message.includes("not found")
+//       ? 404
+//       : error.message.includes("Not authorized")
+//       ? 403
+//       : 500;
 
-    res.status(statusCode).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
+//     res.status(statusCode).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };

@@ -3,42 +3,102 @@ import Tournament from "../tournament/tournament.model.js";
 import mongoose from "mongoose";
 
 class RoundService {
+ 
   /**
-   * Create a new round
-   */
-  async createRound(roundData) {
-    try {
-      // Check if tournament exists
-      if (!mongoose.Types.ObjectId.isValid(roundData.tournamentId)) {
-        throw new Error("Invalid tournament ID");
-      }
+ * Create or update a round
+ */
+async createOrUpdateRound (
+  tournamentId,
+  roundName,
+  roundNumber,
+  date,
+  status,
+  createdBy
+){
+  try {
+    // Validation
+    if (!tournamentId || !roundName || !roundNumber || !date) {
+      throw new Error("Tournament ID, round name, round number, and date are required");
+    }
 
-      const tournament = await Tournament.findById(roundData.tournamentId);
-      if (!tournament) {
-        throw new Error("Tournament not found");
-      }
+    // Validate tournament exists
+    if (!mongoose.Types.ObjectId.isValid(tournamentId)) {
+      throw new Error("Invalid tournament ID");
+    }
 
-      // Check if round number already exists for this tournament
-      const existingRound = await Round.findOne({
-        tournamentId: roundData.tournamentId,
-        roundNumber: roundData.roundNumber
-      });
+    const tournament = await Tournament.findById(tournamentId);
+    if (!tournament) {
+      throw new Error("Tournament not found");
+    }
 
-      if (existingRound) {
-        throw new Error("Round number already exists for this tournament");
-      }
+    // Validate status
+    const validStatuses = ["Scheduled", "In Progress", "Completed", "Cancelled"];
+    if (status && !validStatuses.includes(status)) {
+      throw new Error(`Invalid status. Must be one of: ${validStatuses.join(", ")}`);
+    }
 
-      const round = await Round.create(roundData);
-      const populatedRound = await round.populate([
+    // Check if round already exists
+    const existingRound = await Round.findOne({
+      tournamentId,
+      roundNumber
+    });
+
+    if (existingRound) {
+      // Update existing round
+      existingRound.roundName = roundName;
+      existingRound.date = date;
+      existingRound.status = status || existingRound.status;
+      await existingRound.save();
+
+      const populatedRound = await existingRound.populate([
         { path: "tournamentId", select: "tournamentName sportName location" },
         { path: "createdBy", select: "fullName email" }
       ]);
 
-      return populatedRound;
-    } catch (error) {
-      throw new Error(`Failed to create round: ${error.message}`);
+      return {
+        ...populatedRound.toObject(),
+        isNew: false
+      };
     }
+
+    // Create new round
+    const roundData = {
+      tournamentId,
+      roundName,
+      roundNumber,
+      date,
+      status: status || "Scheduled",
+      createdBy
+    };
+
+    const round = await Round.create(roundData);
+    const populatedRound = await round.populate([
+      { path: "tournamentId", select: "tournamentName sportName location" },
+      { path: "createdBy", select: "fullName email" }
+    ]);
+
+    return {
+      ...populatedRound.toObject(),
+      isNew: true
+    };
+  } catch (error) {
+    throw new Error(`Failed to create/update round: ${error.message}`);
   }
+};
+
+/**
+ * Create a new round (original function - kept for compatibility)
+ */
+async createRound(roundData) {
+  return createOrUpdateRound(
+    roundData.tournamentId,
+    roundData.roundName,
+    roundData.roundNumber,
+    roundData.date,
+    roundData.status,
+    roundData.createdBy
+  );
+};
 
   /**
    * Get all rounds with filters and pagination
