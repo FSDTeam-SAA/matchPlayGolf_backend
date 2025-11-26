@@ -8,6 +8,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 
+/**
+ * Register a single user
+ */
 export const registerUserService = async ({
   fullName,
   email,
@@ -20,21 +23,47 @@ export const registerUserService = async ({
   tournamentId,
   createdBy
 }) => {
-
   // Check existing user by email OR phone
   const existingUser = await User.findOne({
     $or: [{ email }, { phone }]
   });
 
   if (existingUser) {
-    throw new Error("User already registered.");
+    // If tournament registration requested, add to tournament
+    let added = null;
+    if (tournamentId) {
+      // Check if already registered in tournament
+      const alreadyRegistered = await RegisterUser.findOne({
+        tournamentId,
+        userId: existingUser._id
+      });
+
+      if (!alreadyRegistered) {
+        added = await new RegisterUser({
+          tournamentId,
+          userId: existingUser._id,
+          createdBy
+        }).save();
+      } else {
+        added = alreadyRegistered;
+      }
+    }
+
+    return {
+      _id: existingUser._id,
+      fullName: existingUser.fullName,
+      email: existingUser.email,
+      profileImage: existingUser.profileImage,
+      isExisting: true,
+      added
+    };
   }
 
   // Create new user
   const newUser = new User({
     fullName,
     email,
-    password: password || null, // prevent bcrypt error if empty
+    password: password || null,
     phone,
     clubName,
     handicap,
@@ -68,7 +97,6 @@ export const registerUserService = async ({
 
   /** Add user to tournament */
   let added = null;
-
   if (tournamentId) {
     added = await new RegisterUser({
       tournamentId,
@@ -82,22 +110,25 @@ export const registerUserService = async ({
     fullName,
     email,
     profileImage: user.profileImage,
+    isExisting: false,
     added
   };
 };
-;
 
 /** -----------------------------------------------------
  *  Multiple user import (bulk)
  * ----------------------------------------------------- */
+/**
+ * Import multiple users (bulk)
+ */
 export const importMultipleUsersService = async (users, tournamentId, createdBy) => {
   const results = [];
 
   for (const u of users) {
     try {
-      const { fullName, email, phone } = u;
+      const { fullName, email, phone, clubName, handicap, organizationName } = u;
 
-      // Validate
+      // Validate required fields
       if (!fullName || !email || !phone) {
         results.push({
           email,
@@ -107,35 +138,14 @@ export const importMultipleUsersService = async (users, tournamentId, createdBy)
         continue;
       }
 
-      // Check if already registered
-      const existing = await User.findOne({ email });
-
-      if (existing) {
-        let added = null;
-
-        if (tournamentId) {
-          added = await new RegisterUser({
-            tournamentId,
-            userId: existing._id,
-            createdBy
-          }).save();
-        }
-
-        results.push({
-          email,
-          status: "skipped",
-          message: "User already registered",
-          added
-        });
-
-        continue;
-      }
-
-      // Register new user
+      // Register or update user
       const createdUser = await registerUserService({
         fullName,
         email,
         phone,
+        clubName,
+        handicap,
+        organizationName,
         password: null,
         tournamentId,
         createdBy
@@ -143,7 +153,7 @@ export const importMultipleUsersService = async (users, tournamentId, createdBy)
 
       results.push({
         email,
-        status: "success",
+        status: createdUser.isExisting ? "updated" : "created",
         user: createdUser
       });
 

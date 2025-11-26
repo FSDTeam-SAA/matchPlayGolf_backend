@@ -69,8 +69,9 @@ const TournamentSchema = new mongoose.Schema(
       type:String,
       default: "Upcoming"
     },
-    rules:{
-      type: String
+   rules: {
+      type: [String],
+      default: []
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

@@ -33,10 +33,10 @@ export const registerUser = async (req, res, next) => {
   }
 };
 /** Import multiple players */
-export const importPlayers = async (req, res) => {
+export const importPlayers = async (players, tournamentId, userId, res) => {
   try {
     const createdBy = req.user._id
-    const results = await importMultipleUsersService(req.body.users, req.body.tournamentId, createdBy);
+    const results = await importMultipleUsersService(players, tournamentId, userId);
     res.status(200).json({ success: true, results });
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
