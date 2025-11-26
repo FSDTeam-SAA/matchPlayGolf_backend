@@ -77,8 +77,8 @@ const MatchSchema = new mongoose.Schema(
     teams: [TeamSchema],
     status: {
       type: String,
-      enum: ["Scheduled", "In Progress", "Completed", "Cancelled"],
-      default: "Scheduled"
+      enum: ["Upcoming", "In Progress", "Completed", "Cancelled"],
+      default: "Upcoming"
     },
     teeTime: {
       type: Date,
