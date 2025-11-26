@@ -2,6 +2,8 @@ import Tournament from "./tournament.model.js";
 import mongoose from "mongoose";
 import paymentService from "../payment/payment.service.js";
 import { createCheckoutSession } from "../payment/payment.controller.js";
+import { importMultipleUsersService } from "../auth/auth.service.js";
+import  roundService from "../round/round.service.js";
 
 class TournamentService {
   /**
@@ -10,6 +12,16 @@ class TournamentService {
   async createTournament(tournamentData) {
     try {
       const tournament = await Tournament.create(tournamentData);
+
+      let players = [];
+      if(tournamentData.importPlayer){
+        players = await importPlayers(importPlayer);
+      }
+
+      let setRounds = [];
+      if(tournamentData.rounds){
+        setRounds = await createRound(rounds);
+      }
 
       // Call checkout session using the created tournament record
       const payment = await createCheckoutSession(
@@ -96,53 +108,100 @@ class TournamentService {
     }
   }
 
-  /**
-   * Update tournament
-   */
-  async updateTournament(id, updateData, userId, role) {
-    try {
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        throw new Error("Invalid tournament ID");
-      }
-
-      const tournament = await Tournament.findById(id);
-
-      if (!tournament) {
-        throw new Error("Tournament not found");
-      }
-
-      const isOwner = tournament.createdBy.toString() === userId.toString();
-      const isAdmin = role === "admin";
-
-      // Check if user is authorized
-      if (!isAdmin && !isOwner) {
-        throw new Error("Not authorized to update this tournament");
-      }
-
-      // Validate drawFormat if provided
-      if (
-        updateData.drawFormat &&
-        !["Matrix", "Knockout", "Teams"].includes(updateData.drawFormat)
-      ) {
-        throw new Error("Invalid draw format");
-      }
-
-      // Validate format if provided
-      if (
-        updateData.format &&
-        !["Single", "Pair", "Team"].includes(updateData.format)
-      ) {
-        throw new Error("Invalid format");
-      }
-
-      Object.assign(tournament, updateData);
-      await tournament.save();
-
-      return await tournament.populate("createdBy", "fullName email");
-    } catch (error) {
-      throw new Error(`Failed to update tournament: ${error.message}`);
+ /**
+ * Update tournament
+ */
+async updateTournament(id, updateData, userId, role) {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new Error("Invalid tournament ID");
     }
+
+    const tournament = await Tournament.findById(id);
+
+    if (!tournament) {
+      throw new Error("Tournament not found");
+    }
+
+    const isOwner = tournament.createdBy.toString() === userId.toString();
+    const isAdmin = role === "admin";
+
+    // Check if user is authorized
+    if (!isAdmin && !isOwner) {
+      throw new Error("Not authorized to update this tournament");
+    }
+
+    // Validate drawFormat if provided
+    if (
+      updateData.drawFormat &&
+      !["Matrix", "Knockout", "Teams"].includes(updateData.drawFormat)
+    ) {
+      throw new Error("Invalid draw format");
+    }
+
+    // Validate format if provided
+    if (
+      updateData.format &&
+      !["Single", "Pair", "Team"].includes(updateData.format)
+    ) {
+      throw new Error("Invalid format");
+    }
+
+    let players = [];
+    let setRounds = [];
+
+    // Handle player imports
+    if (updateData.importPlayers && Array.isArray(updateData.importPlayers)) {
+      players = await importMultipleUsersService(
+        updateData.importPlayers, 
+        id, 
+        userId
+      );
+    }
+
+    // Handle rounds creation/update
+    if (updateData.rounds) {
+      if (Array.isArray(updateData.rounds)) {
+        // Multiple rounds
+        for (const round of updateData.rounds) {
+          const roundResult = await roundService.createOrUpdateRound(
+            id,
+            round.roundName,
+            round.roundNumber,
+            round.date,
+            round.status || "Scheduled",
+            userId
+          );
+          setRounds.push(roundResult);
+        }
+      } else {
+        // Single round
+        const roundResult = await createOrUpdateRound(
+          id,
+          updateData.rounds.roundName,
+          updateData.rounds.roundNumber,
+          updateData.rounds.date,
+          updateData.rounds.status || "Scheduled",
+          userId
+        );
+        setRounds.push(roundResult);
+      }
+    }
+
+    // Remove non-model fields before saving
+    const { importPlayers, rounds, ...tournamentUpdates } = updateData;
+    
+    // Update tournament fields
+    Object.assign(tournament, tournamentUpdates);
+    await tournament.save();
+
+    const tournamentData = await tournament.populate("createdBy", "fullName email");
+    
+    return { tournamentData, players, setRounds };
+  } catch (error) {
+    throw new Error(`Failed to update tournament: ${error.message}`);
   }
+}
 
   /**
    * Delete tournament

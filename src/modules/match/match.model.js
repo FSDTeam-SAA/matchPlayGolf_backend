@@ -19,6 +19,9 @@ const PlayerStatSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    result:{
+      type: String
+    },
     holeStats: [
       {
         hole: { type: Number },
@@ -45,6 +48,9 @@ const TeamSchema = new mongoose.Schema(
     totalScore: {
       type: Number,
       default: 0
+    },
+    result:{
+      type:String
     },
     handicap: {
       type: Number
