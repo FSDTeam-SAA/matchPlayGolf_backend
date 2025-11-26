@@ -5,9 +5,8 @@ import roundService from "./round.service.js";
  * @route   POST /api/rounds
  * @access  Private
  */
-export const createRound = async (req, res) => {
+export const createRound = async (tournamentId, roundName, roundNumber, date, status, res) => {
   try {
-    const { tournamentId, roundName, roundNumber, date, status } = req.body;
 
     // Validation
     if (!tournamentId || !roundName || !roundNumber || !date) {

@@ -1,5 +1,7 @@
 import tournamentService from "./tournament.service.js";
 import Tournament from "./tournament.model.js";
+import RegisterUser from "../tournamentResgisterUser/registerUser.model.js";
+import sendEmail from '../../lib/sendEmail.js';
 
 /**
  * @desc    Create a new tournament
@@ -144,7 +146,7 @@ export const getTournamentById = async (req, res) => {
 export const updateTournament = async (req, res) => {
   try {
     const updateData = req.body;
-    const tournament = await tournamentService.updateTournament(
+    const result = await tournamentService.updateTournament(
       req.params.id,
       updateData,
       req.user._id,
@@ -153,7 +155,9 @@ export const updateTournament = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: tournament,
+      data: result.tournamentData,
+      players: result.players,
+      rounds: result.setRounds,
       message: "Tournament updated successfully"
     });
   } catch (error) {
@@ -249,3 +253,66 @@ export const generateUniqueOrderCode = async () => {
 
     return orderCode;
   };
+
+
+  export const sendInvitationRegisteredUsers = async (req, res) => {
+  try {
+    const tournamentId  = req.params.id;
+
+    // ✅ Check tournament exists
+    const tournament = await Tournament.findById(tournamentId);
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: "Tournament not found",
+      });
+    }
+
+    // ✅ Find all registered users for this tournament
+    const registeredUsers = await RegisterUser
+      .find({ tournamentId })
+      .populate("userId", "fullName email");
+
+    if (registeredUsers.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No users registered for this tournament",
+      });
+    }
+
+    // ===============================
+    //  EMAIL SENDING FOR EACH USER
+    // ===============================
+    for (const regUser of registeredUsers) {
+      const user = regUser.userId;
+
+      if (user?.email) {
+        // 👇 Replace with your actual email sending logic
+        await sendEmail({
+          to: user.email,
+          subject: `Tournament Invitation: ${tournament.name}`,
+          html: `
+            <h3>Hello ${user.fullName},</h3>
+            <p>You are invited to participate in the tournament <strong>${tournament.name}</strong>.</p>
+            <p>Date: ${tournament.date}</p>
+          `,
+        });
+      }
+    }
+
+    // ===============================
+    //  SUCCESS RESPONSE
+    // ===============================
+    res.json({
+      success: true,
+      message: "Invitations sent to all registered users",
+      totalUsers: registeredUsers.length,
+    });
+  } catch (error) {
+    console.error("Send Invitation Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
