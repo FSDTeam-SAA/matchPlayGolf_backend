@@ -59,6 +59,12 @@ const MatchSchema = new mongoose.Schema(
       required: true,
     },
 
+    matchResult: {
+      type: String,
+      enum: ['win', 'lose'],
+      default: 'win',
+    },
+
    
     comments: {
       type: String,
