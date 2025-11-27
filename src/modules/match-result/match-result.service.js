@@ -13,6 +13,17 @@ const toNumberOrNull = (value) => {
   return Number.isNaN(n) ? null : n;
 };
 
+// Helper to validate match result
+const normalizeResult = (value) => {
+  // default to win when not provided
+  if (value === undefined || value === null || value === '') return 'win';
+  if (typeof value !== 'string') return null;
+  const lowered = value.trim().toLowerCase();
+  if (['win', 'won'].includes(lowered)) return 'win';
+  if (['lose', 'loss', 'lost'].includes(lowered)) return 'lose';
+  return null;
+};
+
 // Helper to parse date from string (YYYY-MM-DD or any JS Date-parseable string)
 const toDateOrNull = (value) => {
   if (!value) return null;
@@ -33,6 +44,7 @@ export const createMatchService = async (userId, data, file) => {
     matchName,
     yourScore,
     opponentScore,
+    matchResult,
     comments,
   } = data;
 
@@ -62,6 +74,13 @@ export const createMatchService = async (userId, data, file) => {
     throw err;
   }
 
+  const normalizedResult = normalizeResult(matchResult);
+  if (!normalizedResult) {
+    const err = new Error('Invalid matchResult (use win or lose)');
+    err.code = 'INVALID_RESULT';
+    throw err;
+  }
+
   let photoUrl = '';
 
   if (file && file.buffer) {
@@ -86,6 +105,7 @@ export const createMatchService = async (userId, data, file) => {
     matchName,
     yourScore: yourScoreNum,
     opponentScore: opponentScoreNum,
+    matchResult: normalizedResult,
     comments: comments || '',
     photo: photoUrl,
   });
@@ -151,6 +171,7 @@ export const updateMatchService = async (userId, matchId, data, file) => {
     'matchName',
     'yourScore',
     'opponentScore',
+    'matchResult',
     'comments',
   ];
 
@@ -181,6 +202,14 @@ export const updateMatchService = async (userId, matchId, data, file) => {
           throw err;
         }
         match[field] = data[field];
+      } else if (field === 'matchResult') {
+        const normalized = normalizeResult(data[field]);
+        if (!normalized) {
+          const err = new Error('Invalid matchResult (use win or lose)');
+          err.code = 'INVALID_RESULT';
+          throw err;
+        }
+        match.matchResult = normalized;
       } else {
         match[field] = data[field];
       }
