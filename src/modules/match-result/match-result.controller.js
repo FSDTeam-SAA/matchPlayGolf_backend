@@ -21,7 +21,11 @@ export const createMatch = async (req, res) => {
   } catch (error) {
     console.error('Create match error:', error);
 
-    if (error.code === 'INVALID_DATE' || error.code === 'INVALID_SCORE') {
+    if (
+      error.code === 'INVALID_DATE' ||
+      error.code === 'INVALID_SCORE' ||
+      error.code === 'INVALID_RESULT'
+    ) {
       return res.status(400).json({
         success: false,
         message: error.message,
@@ -115,7 +119,11 @@ export const updateMatch = async (req, res) => {
   } catch (error) {
     console.error('Update match error:', error);
 
-    if (error.code === 'INVALID_DATE' || error.code === 'INVALID_SCORE') {
+    if (
+      error.code === 'INVALID_DATE' ||
+      error.code === 'INVALID_SCORE' ||
+      error.code === 'INVALID_RESULT'
+    ) {
       return res.status(400).json({
         success: false,
         message: error.message,
