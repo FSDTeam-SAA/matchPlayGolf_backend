@@ -134,7 +134,7 @@ async updateTournament(id, updateData, userId, role) {
     // Validate drawFormat if provided
     if (
       updateData.drawFormat &&
-      !["Matrix", "Knockout", "Teams"].includes(updateData.drawFormat)
+      !["Knockout", "Teams"].includes(updateData.drawFormat)
     ) {
       throw new Error("Invalid draw format");
     }
@@ -142,7 +142,7 @@ async updateTournament(id, updateData, userId, role) {
     // Validate format if provided
     if (
       updateData.format &&
-      !["Single", "Pair", "Team"].includes(updateData.format)
+      !["Single", "Pair"].includes(updateData.format)
     ) {
       throw new Error("Invalid format");
     }
