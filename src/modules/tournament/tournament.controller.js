@@ -145,6 +145,7 @@ export const getTournamentById = async (req, res) => {
  */
 export const updateTournament = async (req, res) => {
   try {
+    
     const updateData = req.body;
     const result = await tournamentService.updateTournament(
       req.params.id,
