@@ -20,6 +20,10 @@ export const registerUserService = async ({
   handicap,
   role,
   organizationName,
+  color,
+  dob,
+  newsletterPreference,
+  receiveOrderUpdates,
   tournamentId,
   createdBy
 }) => {
@@ -54,6 +58,10 @@ export const registerUserService = async ({
       fullName: existingUser.fullName,
       email: existingUser.email,
       profileImage: existingUser.profileImage,
+      color: existingUser.color,
+      dob: existingUser.dob,
+      newsletterPreference: existingUser.newsletterPreference,
+      receiveOrderUpdates: existingUser.receiveOrderUpdates,
       isExisting: true,
       added
     };
@@ -68,7 +76,11 @@ export const registerUserService = async ({
     clubName,
     handicap,
     role: role || "User",
-    organizationName
+    organizationName,
+    color,
+    dob,
+    newsletterPreference,
+    receiveOrderUpdates
   });
 
   const user = await newUser.save();
@@ -110,6 +122,10 @@ export const registerUserService = async ({
     fullName,
     email,
     profileImage: user.profileImage,
+    color: user.color,
+    dob: user.dob,
+    newsletterPreference: user.newsletterPreference,
+    receiveOrderUpdates: user.receiveOrderUpdates,
     isExisting: false,
     added
   };
@@ -126,7 +142,18 @@ export const importMultipleUsersService = async (users, tournamentId, createdBy)
 
   for (const u of users) {
     try {
-      const { fullName, email, phone, clubName, handicap, organizationName } = u;
+      const {
+        fullName,
+        email,
+        phone,
+        clubName,
+        handicap,
+        organizationName,
+        color,
+        dob,
+        newsletterPreference,
+        receiveOrderUpdates,
+      } = u;
 
       // Validate required fields
       if (!fullName || !email || !phone) {
@@ -146,6 +173,10 @@ export const importMultipleUsersService = async (users, tournamentId, createdBy)
         clubName,
         handicap,
         organizationName,
+        color,
+        dob,
+        newsletterPreference,
+        receiveOrderUpdates,
         password: null,
         tournamentId,
         createdBy
@@ -195,7 +226,7 @@ export const setPasswordService = async ({ token, password }) => {
 export const loginUserService = async ({ email, password }) => {
   if (!email || !password) throw new Error('Email and password are required');
 
-  const user = await User.findOne({ email }).select("_id fullName email role profileImage");
+  const user = await User.findOne({ email }).select("_id fullName email role profileImage color dob newsletterPreference receiveOrderUpdates");
 
   if (!user) throw new Error('User not found');
 
@@ -217,7 +248,11 @@ export const loginUserService = async ({ email, password }) => {
       fullName: user.fullName,  
       email: user.email,
       role: user.role,
-      profileImage: user.profileImage
+      profileImage: user.profileImage,
+      color: user.color,
+      dob: user.dob,
+      newsletterPreference: user.newsletterPreference,
+      receiveOrderUpdates: user.receiveOrderUpdates
     }
   };
 };
