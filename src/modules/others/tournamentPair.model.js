@@ -1,5 +1,5 @@
 // src/models/TournamentPair.model.js
-const mongoose = require('mongoose');
+import  mongoose from 'mongoose';
 
 const tournamentPairSchema = new mongoose.Schema({
   tournamentId: {
@@ -9,14 +9,12 @@ const tournamentPairSchema = new mongoose.Schema({
   },
   teamName: String,
   player1: {
-    fullName:String,
-    email:String,
-    Phone:String
+    type: mongoose.Schema.Types.ObjectId,
+    ref:"User"
   },
   player2: {
-    fullName:String,
-    email:String,
-    Phone:String
+    type: mongoose.Schema.Types.ObjectId,
+    ref:"User"
   },
   isActive: {
     type: Boolean,
