@@ -27,45 +27,45 @@ export const registerUserService = async ({
   tournamentId,
   createdBy
 }) => {
-  // Check existing user by email OR phone
-  const existingUser = await User.findOne({
-    $or: [{ email }, { phone }]
-  });
 
-  if (existingUser) {
-    // If tournament registration requested, add to tournament
-    let added = null;
-    if (tournamentId) {
-      // Check if already registered in tournament
-      const alreadyRegistered = await RegisterUser.findOne({
-        tournamentId,
-        userId: existingUser._id
-      });
+  // // Check existing user by email OR phone
+  // const existingUser = await User.findOne({
+  //   $or: [{ email }, { phone }]
+  // });
 
-      if (!alreadyRegistered) {
-        added = await new RegisterUser({
-          tournamentId,
-          userId: existingUser._id,
-          createdBy
-        }).save();
-      } else {
-        added = alreadyRegistered;
-      }
-    }
+  // console.log()
 
-    return {
-      _id: existingUser._id,
-      fullName: existingUser.fullName,
-      email: existingUser.email,
-      profileImage: existingUser.profileImage,
-      color: existingUser.color,
-      dob: existingUser.dob,
-      newsletterPreference: existingUser.newsletterPreference,
-      receiveOrderUpdates: existingUser.receiveOrderUpdates,
-      isExisting: true,
-      added
-    };
-  }
+  // if (existingUser) {
+  //   // If tournament registration requested, add to tournament
+  //   let added = null;
+  //   if (tournamentId) {
+  //     // Check if already registered in tournament
+  //     const alreadyRegistered = await RegisterUser.findOne({
+  //       tournamentId,
+  //       userId: existingUser._id
+  //     });
+
+  //     if (!alreadyRegistered) {
+  //       added = await new RegisterUser({
+  //         tournamentId,
+  //         userId: existingUser._id,
+  //         createdBy
+  //       }).save();
+  //     } else {
+  //       added = alreadyRegistered;
+  //     }
+  //   }
+
+  //   return {
+  //     _id: existingUser._id,
+  //     fullName: existingUser.fullName,
+  //     email: existingUser.email,
+  //     profileImage: existingUser.profileImage,
+  //     isExisting: true,
+  //     added
+  //   };
+  // }
+
 
   // Create new user
   const newUser = new User({
@@ -85,37 +85,37 @@ export const registerUserService = async ({
 
   const user = await newUser.save();
 
-  /** Send Set Password Email if no password provided */
-  if (!password) {
-    const token = jwt.sign(
-      { userId: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
+  // /** Send Set Password Email if no password provided */
+  // if (!password) {
+  //   const token = jwt.sign(
+  //     { userId: user._id },
+  //     process.env.JWT_SECRET,
+  //     { expiresIn: "1h" }
+  //   );
 
-    const setupUrl = `${process.env.CLIENT_URL}/set-password?token=${token}`;
+  //   const setupUrl = `${process.env.CLIENT_URL}/set-password?token=${token}`;
 
-    await sendEmail({
-      to: email,
-      subject: "Set Your Password",
-      html: `
-        <p>Hello ${fullName},</p>
-        <p>Your account has been created. Click below to set your password:</p>
-        <a href="${setupUrl}" target="_blank">Set Password</a>
-        <p>This link expires in 1 hour.</p>
-      `
-    });
-  }
+  //   await sendEmail({
+  //     to: email,
+  //     subject: "Set Your Password",
+  //     html: `
+  //       <p>Hello ${fullName},</p>
+  //       <p>Your account has been created. Click below to set your password:</p>
+  //       <a href="${setupUrl}" target="_blank">Set Password</a>
+  //       <p>This link expires in 1 hour.</p>
+  //     `
+  //   });
+  // }
 
-  /** Add user to tournament */
-  let added = null;
-  if (tournamentId) {
-    added = await new RegisterUser({
-      tournamentId,
-      userId: user._id,
-      createdBy
-    }).save();
-  }
+  // /** Add user to tournament */
+  // let added = null;
+  // if (tournamentId) {
+  //   added = await new RegisterUser({
+  //     tournamentId,
+  //     userId: user._id,
+  //     createdBy
+  //   }).save();
+  // }
 
   return {
     _id: user._id,
@@ -127,7 +127,7 @@ export const registerUserService = async ({
     newsletterPreference: user.newsletterPreference,
     receiveOrderUpdates: user.receiveOrderUpdates,
     isExisting: false,
-    added
+    // added
   };
 };
 

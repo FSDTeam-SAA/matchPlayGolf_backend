@@ -9,12 +9,10 @@ const RoundSchema = new mongoose.Schema(
     },
     roundName: {
       type: String,
-      required: true,
       trim: true
     },
     roundNumber: {
       type: Number,
-      required: true
     },
     date: {
       type: Date,
