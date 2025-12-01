@@ -10,15 +10,15 @@ const MONGODB_URI = process.env.MONGODB_URI ||
 
 export const connectDatabase = async () => {
   try {
-    const options = {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    };
+    // const options = {
+    //   useNewUrlParser: true,
+    //   useUnifiedTopology: true,
+    //   maxPoolSize: 10,
+    //   serverSelectionTimeoutMS: 5000,
+    //   socketTimeoutMS: 45000,
+    // };
 
-    await mongoose.connect(MONGODB_URI, options);
+    await mongoose.connect(MONGODB_URI);
     
     mongoose.connection.on('error', (err) => {
       logger.error('MongoDB connection error:', err);

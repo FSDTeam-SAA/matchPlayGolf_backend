@@ -52,6 +52,7 @@ export const registerUser = async (req, res, next) => {
       newsletterPreference,
       receiveOrderUpdates,
     });
+    console.log(data);
     generateResponse(res, 201, true, 'Registered user successfully!', data);
   }
 
