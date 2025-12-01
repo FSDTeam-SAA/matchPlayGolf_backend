@@ -1,68 +1,5 @@
-// // ============================================
-// // FILE: src/app.js (Main Application)
-// // ============================================
-
-// import express from 'express';
-// import dotenv from 'dotenv';
-// import { applyMiddleware } from './middleware/security.js';
-// import { errorHandler } from './middleware/errorHandler.js';
-// import { notFound } from './middleware/notFound.js';
-// import routes from './routes/index.js';
-// import { handleStripeWebhook } from './modules/payment/webhook.controller.js';
-// import helmet from 'helmet';
-// import cors from 'cors';
-// import xssClean from 'xss-clean';
-// import mongoSanitize from 'express-mongo-sanitize';
-
-// dotenv.config();
-
-// const app = express();
-
-// app.use(helmet());
-// app.use(
-//     cors({
-//       origin: "*",
-//       credentials: true,
-//       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-//     })
-//   );
-// app.use(xssClean());
-// app.use(mongoSanitize());
-
-// // ------------------------------------------------------------
-// // 1️⃣ Stripe Webhook (MUST COME FIRST - before JSON middleware)
-// // ------------------------------------------------------------
-// app.post(
-//   "/api/stripe/webhook",
-//   express.raw({ type: "application/json" }), // RAW BODY ONLY FOR WEBHOOK
-//   handleStripeWebhook
-// );
-
-// // ------------------------------------------------------------
-// // 2️⃣ Now apply normal middleware for all other routes
-// // ------------------------------------------------------------
-// applyMiddleware(app);
-
-// // Health check
-// app.get('/health', (req, res) => {
-//   res.status(200).json({
-//     status: 'success',
-//     message: 'Server is healthy',
-//     timestamp: new Date().toISOString(),
-//   });
-// });
-
-// // API routes
-// app.use('/api', routes);
-
-// // Error handling
-// app.use(notFound);
-// app.use(errorHandler);
-
-// export default app;
-
 // ============================================
-// FILE: src/app.js (Main Application)
+// FILE: src/app.js (Fixed CORS Configuration)
 // ============================================
 
 import express from 'express';
@@ -82,32 +19,28 @@ dotenv.config();
 const app = express();
 
 // ---------------------------------------------
-// 1️⃣ Security Middleware
-// ---------------------------------------------
-app.use(helmet());           // Secure HTTP headers
-app.use(xssClean());         // Prevent XSS attacks
-app.use(mongoSanitize());    // Prevent NoSQL injection
-
-// ---------------------------------------------
-// 2️⃣ CORS Setup
+// 1️⃣ CORS Setup (MUST BE FIRST!)
 // ---------------------------------------------
 const allowedOrigins = [
   "http://localhost:3000",
+  "http://localhost:5173", // Add Vite default port if using Vite
   "https://your-frontend-domain.com",
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // allow requests with no origin (like mobile apps, Postman)
+      // Allow requests with no origin (mobile apps, Postman, etc.)
       if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) === -1) {
-        const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
-        return callback(new Error(msg), false);
+      
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.log(`⚠️ Blocked CORS request from origin: ${origin}`);
+        callback(null, false); // Don't throw error, just reject
       }
-      return callback(null, true);
     },
-    credentials: true, // Allow cookies, authorization headers
+    credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: [
       "Origin",
@@ -116,13 +49,26 @@ app.use(
       "Accept",
       "Authorization",
     ],
+    exposedHeaders: ["Content-Range", "X-Content-Range"],
     preflightContinue: false,
     optionsSuccessStatus: 204,
   })
 );
 
 // ---------------------------------------------
-// 3️⃣ Stripe Webhook (must be before JSON middleware)
+// 2️⃣ Security Middleware (after CORS)
+// ---------------------------------------------
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }, // Important for CORS
+    contentSecurityPolicy: false, // Disable if it's blocking requests
+  })
+);
+app.use(xssClean());
+app.use(mongoSanitize());
+
+// ---------------------------------------------
+// 3️⃣ Stripe Webhook (before body parsers)
 // ---------------------------------------------
 app.post(
   "/api/stripe/webhook",
@@ -131,15 +77,17 @@ app.post(
 );
 
 // ---------------------------------------------
-// 4️⃣ Body parser for normal routes
+// 4️⃣ Body Parsers (for all other routes)
 // ---------------------------------------------
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Apply additional middleware
+// Apply additional middleware (make sure this doesn't add another body parser!)
 applyMiddleware(app);
 
-// Health check
+// ---------------------------------------------
+// 5️⃣ Health Check
+// ---------------------------------------------
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'success',
@@ -148,12 +96,15 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API routes
+// ---------------------------------------------
+// 6️⃣ API Routes
+// ---------------------------------------------
 app.use('/api', routes);
 
-// Error handling
+// ---------------------------------------------
+// 7️⃣ Error Handling
+// ---------------------------------------------
 app.use(notFound);
 app.use(errorHandler);
 
 export default app;
-
