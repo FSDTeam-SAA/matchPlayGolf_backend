@@ -1,5 +1,5 @@
 import Tournament from "../tournament/tournament.model.js";
-import RegisterUser from "../tournamentResgisterUser/registerUser.model.js";
+import RegisterUser from "../others/tournamentPlayer.model.js";
 import TournamentMatch from "../match/match.model.js";
 import User from "../user/user.model.js";
 import Payment from "../payment/payment.model.js";

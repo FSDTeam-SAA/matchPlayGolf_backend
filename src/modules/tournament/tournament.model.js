@@ -16,8 +16,8 @@ const TournamentSchema = new mongoose.Schema(
     },
     drawFormat: {
       type: String,
-      enum: ["Matrix", "Knockout", "Teams"],
-      default: "Matrix"
+      enum: ["Knockout", "Teams"],
+      default: "Knockout"
     },
     format: {
       type: String,
