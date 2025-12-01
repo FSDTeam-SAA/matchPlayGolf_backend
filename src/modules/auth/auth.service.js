@@ -1,5 +1,5 @@
 import User from '../user/user.model.js';
-import RegisterUser from '../tournamentResgisterUser/registerUser.model.js';
+import RegisterUser from '../others/tournamentPlayer.model.js';
 import jwt from 'jsonwebtoken';
 import { emailExpires } from '../../config/config.js';
 import sendEmail from '../../lib/sendEmail.js';
