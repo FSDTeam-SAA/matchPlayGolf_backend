@@ -13,6 +13,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
 import routes from './routes/index.js';
 import { handleStripeWebhook } from './modules/payment/webhook.controller.js';
+import cookieParser from 'cookie-parser';
 
 dotenv.config();
 
@@ -21,49 +22,20 @@ const app = express();
 // ---------------------------------------------
 // 1️⃣ CORS Setup (MUST BE FIRST!)
 // ---------------------------------------------
-const allowedOrigins = [
- "*"
-];
-
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (mobile apps, Postman, etc.)
-      if (!origin) return callback(null, true);
-      
-      if (allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.log(`⚠️ Blocked CORS request from origin: ${origin}`);
-        callback(null, false); // Don't throw error, just reject
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: [
-      "Origin",
-      "X-Requested-With",
-      "Content-Type",
-      "Accept",
-      "Authorization",
-    ],
-    exposedHeaders: ["Content-Range", "X-Content-Range"],
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
+    origin: "*",
+    credentials:true
   })
 );
 
 // ---------------------------------------------
 // 2️⃣ Security Middleware (after CORS)
 // ---------------------------------------------
-app.use(
-  helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" }, // Important for CORS
-    contentSecurityPolicy: false, // Disable if it's blocking requests
-  })
-);
+
 app.use(xssClean());
 app.use(mongoSanitize());
+app.use(cookieParser());
 
 // ---------------------------------------------
 // 3️⃣ Stripe Webhook (before body parsers)
