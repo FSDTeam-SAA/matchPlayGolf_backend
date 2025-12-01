@@ -51,6 +51,14 @@ const UserSchema = new mongoose.Schema(
 
     bio:   { type: String, default: "" },
     about: { type: String, default: "Hey there! I am using WhatsApp" },
+    color: { type: String, default: "" },
+
+    newsletterPreference: {
+      type: String,
+      enum: ["subscribe", "unsubscribe", "none"],
+      default: "none",
+    },
+    receiveOrderUpdates: { type: Boolean, default: false },
 
     profileImage:      { type: String, default: "" },
     organizerLogo:     { type: String, default: "" },
