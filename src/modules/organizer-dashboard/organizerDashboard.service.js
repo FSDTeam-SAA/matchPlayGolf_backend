@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import Tournament from "../tournament/tournament.model.js";
-import RegisterUser from "../tournamentResgisterUser/registerUser.model.js";
+import RegisterUser from "../others/tournamentPlayer.model.js";
 import TournamentMatch from "../match/match.model.js";
 
 const { ObjectId } = mongoose.Types;

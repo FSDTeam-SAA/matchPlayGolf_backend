@@ -1,6 +1,6 @@
 import tournamentService from "./tournament.service.js";
 import Tournament from "./tournament.model.js";
-import RegisterUser from "../tournamentResgisterUser/registerUser.model.js";
+import RegisterUser from "../others/tournamentPlayer.model.js";
 import sendEmail from '../../lib/sendEmail.js';
 
 /**

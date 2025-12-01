@@ -9,13 +9,14 @@ const tournamentPairSchema = new mongoose.Schema({
   },
   teamName: String,
   player1: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'TournamentPlayer',
-    required: true,
+    fullName:String,
+    email:String,
+    Phone:String
   },
   player2: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'TournamentPlayer',
+    fullName:String,
+    email:String,
+    Phone:String
   },
   isActive: {
     type: Boolean,
@@ -25,4 +26,5 @@ const tournamentPairSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-module.exports = mongoose.model('TournamentPair', tournamentPairSchema);
+const tournamentPair = mongoose.models.TournamentPair || mongoose.model("TournamentPair", tournamentPairSchema);
+export default tournamentPair;
