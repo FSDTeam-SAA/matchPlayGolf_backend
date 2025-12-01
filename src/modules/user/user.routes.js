@@ -14,6 +14,9 @@ const router = express.Router();
 // GET /api/user  → fetch current user's profile
 router.get('/', verifyToken, getProfile);
 
+// GET /api/user/profile  → fetch current user's profile (alias)
+router.get('/profile', verifyToken, getProfile);
+
 // PUT /api/user/profile  → update personal info (JSON only)
 router.put('/profile', verifyToken, updateProfile);
 
