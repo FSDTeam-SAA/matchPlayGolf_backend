@@ -9,10 +9,25 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
 import routes from './routes/index.js';
 import { handleStripeWebhook } from './modules/payment/webhook.controller.js';
+import helmet from 'helmet';
+import cors from 'cors';
+import xssClean from 'xss-clean';
+import mongoSanitize from 'express-mongo-sanitize';
 
 dotenv.config();
 
 const app = express();
+
+app.use(helmet());
+app.use(
+    cors({
+      origin: "*",
+      credentials: true,
+      methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    })
+  );
+app.use(xssClean());
+app.use(mongoSanitize());
 
 // ------------------------------------------------------------
 // 1️⃣ Stripe Webhook (MUST COME FIRST - before JSON middleware)

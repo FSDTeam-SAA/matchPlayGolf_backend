@@ -16,7 +16,7 @@ router.post("/", verifyToken, createTournament);
 router.get("/", getAllTournaments);
 router.get("/creator", verifyToken, getTournamentsByCreator);
 router.post("/:id", verifyToken, sendInvitationRegisteredUsers);
-router.put("/:id", verifyToken, updateTournament);
+router.put("/:tournamentId", verifyToken, updateTournament);
 router.delete("/:id", verifyToken, deleteTournament);
 router.get("/:id", getTournamentById);
 

@@ -180,7 +180,46 @@ export const getTournamentById = async (req, res) => {
 
 export const updateTournament = async (req, res) => {
   try {
-    const { tournamentId, status, rules, round, players } = req.body;
+    const { status, rules, round, players } = req.body;
+    const tournamentId = req.params.tournamentId;
+
+    // if (!players || players.length === 0) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "At least one player is required.",
+    //   });
+    // }
+
+    // -----------------------------------
+    // STEP 0: Get Tournament and check format
+    // -----------------------------------
+    const tournament = await Tournament.findById(tournamentId);
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: "Tournament not found",
+      });
+    }
+
+    const format = tournament.format; // "Single" or "Pair"
+
+    // -----------------------------------
+    // STEP 0B: Validate number of players
+    // -----------------------------------
+    if (format === "Single" && players.length !== 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Single format tournament allows only 1 player at a time",
+      });
+    }
+
+    if (format === "Pair" && players.length !== 2) {
+      return res.status(400).json({
+        success: false,
+        message: "Pair format tournament requires exactly 2 players",
+      });
+    }
+
     const createdUserIds = [];
 
     // -----------------------------------
@@ -202,25 +241,32 @@ export const updateTournament = async (req, res) => {
     let pair = null;
 
     // -----------------------------------
-    // STEP 2: PAIR REGISTRATION
+    // STEP 2: PAIR REGISTRATION (2 players only)
     // -----------------------------------
-    if (players.length === 2) {
+    if (format === "Pair") {
       pair = await TournamentPair.create({
         tournamentId,
         teamName: `${players[0].fullName} & ${players[1].fullName}`,
         player1: createdUserIds[0],
         player2: createdUserIds[1],
       });
+
+      // INSERT ONLY PAIR ID in TournamentPlayer
+      await TournamentPlayer.create({
+        tournamentId,
+        playerId: null,
+        pairId: pair._id,
+      });
     }
 
     // -----------------------------------
-    // STEP 3: INSERT INTO TournamentPlayer
+    // STEP 3: SINGLE PLAYER REGISTRATION
     // -----------------------------------
-    for (const uid of createdUserIds) {
+    if (format === "Single") {
       await TournamentPlayer.create({
         tournamentId,
-        playerId: uid,
-        pairId: pair ? pair._id : null,
+        playerId: createdUserIds[0],
+        pairId: null,
       });
     }
 
@@ -228,18 +274,16 @@ export const updateTournament = async (req, res) => {
     // STEP 4: UPDATE TOURNAMENT TABLE
     // -----------------------------------
     const updateData = {
-      status: status || "Active",
+      status: status || tournament.status || "Active",
     };
 
-    if (rules) {
-      updateData.rules = rules;
-    }
+    if (rules) updateData.rules = rules;
 
-    if (players.length === 1) {
+    if (format === "Single") {
       updateData.$addToSet = { players: createdUserIds[0] };
     }
 
-    if (players.length === 2 && pair) {
+    if (format === "Pair" && pair) {
       updateData.$addToSet = { pairs: pair._id };
     }
 
@@ -254,9 +298,9 @@ export const updateTournament = async (req, res) => {
           tournamentId,
           roundName: "Round 1",
           roundNumber: 1,
-          date: new Date(r.Date),
+          date: r.date,
           status: "Scheduled",
-          createdBy: createdUserIds[0], // default first user
+          createdBy: createdUserIds[0],
         });
       }
     }
@@ -264,7 +308,7 @@ export const updateTournament = async (req, res) => {
     return res.status(201).json({
       success: true,
       message:
-        players.length === 2
+        format === "Pair"
           ? "Pair registration + Tournament updated successfully"
           : "Single player registration + Tournament updated successfully",
       data: {
