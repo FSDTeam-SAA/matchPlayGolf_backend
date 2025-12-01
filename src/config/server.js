@@ -6,6 +6,7 @@ import http from 'http';
 import { connectDatabase } from './database.js';
 import { initializeSocket } from './socket.js';
 import { logger } from '../utils/logger.js';
+// import app from './src/app.js';
 
 const PORT = process.env.PORT || 4000;
 
@@ -15,7 +16,7 @@ export const startServer = async (app) => {
     await connectDatabase();
     logger.info('✅ Database connected successfully');
 
-    // Create HTTP server
+    // // Create HTTP server
     const httpServer = http.createServer(app);
 
     // Initialize Socket.IO
@@ -35,7 +36,7 @@ export const startServer = async (app) => {
       `);
     });
 
-    // Graceful shutdown
+    // // Graceful shutdown
     setupGracefulShutdown(httpServer);
 
   } catch (error) {
