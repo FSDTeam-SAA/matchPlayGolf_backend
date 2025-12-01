@@ -22,9 +22,7 @@ const app = express();
 // 1️⃣ CORS Setup (MUST BE FIRST!)
 // ---------------------------------------------
 const allowedOrigins = [
-  "http://localhost:3000",
-  "http://localhost:5173", // Add Vite default port if using Vite
-  "https://your-frontend-domain.com",
+ "*"
 ];
 
 app.use(
