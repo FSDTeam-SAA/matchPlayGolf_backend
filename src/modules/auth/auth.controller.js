@@ -10,6 +10,7 @@ import {
   importMultipleUsersService
 } from './auth.service.js';
 import dotenv from 'dotenv';
+import User from '../user/user.model.js';
 dotenv.config();
 
 
@@ -29,6 +30,13 @@ export const registerUser = async (req, res, next) => {
     receiveOrderUpdates,
   } = req.body;
   try {
+     const existingUser = await User.findOne({
+      $or: [{ email }, { phone }]
+    });
+    console.log(existingUser);
+    if(existingUser){
+       generateResponse(res, 400, false, 'User already registered', null);
+    }
 
     const data = await registerUserService({
       fullName,

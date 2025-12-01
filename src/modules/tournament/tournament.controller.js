@@ -1,7 +1,10 @@
 import tournamentService from "./tournament.service.js";
 import Tournament from "./tournament.model.js";
-import RegisterUser from "../others/tournamentPlayer.model.js";
 import sendEmail from '../../lib/sendEmail.js';
+import User from "../user/user.model.js";
+import TournamentPair from "../others/tournamentPair.model.js";
+import TournamentPlayer from "../others/tournamentPlayer.model.js";
+import Round from "../round/round.model.js";
 
 /**
  * @desc    Create a new tournament
@@ -143,34 +146,138 @@ export const getTournamentById = async (req, res) => {
  * @route   PUT /api/tournaments/:id
  * @access  Private
  */
+// export const updateTournament = async (req, res) => {
+//   try {
+    
+//     const updateData = req.body;
+//     const result = await tournamentService.updateTournament(
+//       req.params.id,
+//       updateData,
+//       req.user._id,
+//       req.user.role
+//     );
+
+//     res.status(200).json({
+//       success: true,
+//       data: result.tournamentData,
+//       players: result.players,
+//       rounds: result.setRounds,
+//       message: "Tournament updated successfully"
+//     });
+//   } catch (error) {
+//     const statusCode = error.message.includes("not found")
+//       ? 404
+//       : error.message.includes("Not authorized")
+//       ? 403
+//       : 500;
+
+//     res.status(statusCode).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };
+
 export const updateTournament = async (req, res) => {
   try {
-    
-    const updateData = req.body;
-    const result = await tournamentService.updateTournament(
-      req.params.id,
-      updateData,
-      req.user._id,
-      req.user.role
-    );
+    const { tournamentId, status, rules, round, players } = req.body;
+    const createdUserIds = [];
 
-    res.status(200).json({
+    // -----------------------------------
+    // STEP 1: CREATE OR GET USERS
+    // -----------------------------------
+    for (const p of players) {
+      let user = await User.findOne({ email: p.email });
+
+      if (!user) {
+        user = await User.create({
+          fullName: p.fullName,
+          email: p.email,
+          phone: p.phone,
+        });
+      }
+      createdUserIds.push(user._id);
+    }
+
+    let pair = null;
+
+    // -----------------------------------
+    // STEP 2: PAIR REGISTRATION
+    // -----------------------------------
+    if (players.length === 2) {
+      pair = await TournamentPair.create({
+        tournamentId,
+        teamName: `${players[0].fullName} & ${players[1].fullName}`,
+        player1: createdUserIds[0],
+        player2: createdUserIds[1],
+      });
+    }
+
+    // -----------------------------------
+    // STEP 3: INSERT INTO TournamentPlayer
+    // -----------------------------------
+    for (const uid of createdUserIds) {
+      await TournamentPlayer.create({
+        tournamentId,
+        playerId: uid,
+        pairId: pair ? pair._id : null,
+      });
+    }
+
+    // -----------------------------------
+    // STEP 4: UPDATE TOURNAMENT TABLE
+    // -----------------------------------
+    const updateData = {
+      status: status || "Active",
+    };
+
+    if (rules) {
+      updateData.rules = rules;
+    }
+
+    if (players.length === 1) {
+      updateData.$addToSet = { players: createdUserIds[0] };
+    }
+
+    if (players.length === 2 && pair) {
+      updateData.$addToSet = { pairs: pair._id };
+    }
+
+    await Tournament.findByIdAndUpdate(tournamentId, updateData, { new: true });
+
+    // -----------------------------------
+    // STEP 5: CREATE ROUND
+    // -----------------------------------
+    if (round && round.length > 0) {
+      for (const r of round) {
+        await Round.create({
+          tournamentId,
+          roundName: "Round 1",
+          roundNumber: 1,
+          date: new Date(r.Date),
+          status: "Scheduled",
+          createdBy: createdUserIds[0], // default first user
+        });
+      }
+    }
+
+    return res.status(201).json({
       success: true,
-      data: result.tournamentData,
-      players: result.players,
-      rounds: result.setRounds,
-      message: "Tournament updated successfully"
+      message:
+        players.length === 2
+          ? "Pair registration + Tournament updated successfully"
+          : "Single player registration + Tournament updated successfully",
+      data: {
+        users: createdUserIds,
+        pair: pair || null,
+      },
     });
   } catch (error) {
-    const statusCode = error.message.includes("not found")
-      ? 404
-      : error.message.includes("Not authorized")
-      ? 403
-      : 500;
-
-    res.status(statusCode).json({
+    console.error("REGISTER ERROR:", error);
+    return res.status(500).json({
       success: false,
-      message: error.message
+      message: "Internal server error",
+      error: error.message,
     });
   }
 };
