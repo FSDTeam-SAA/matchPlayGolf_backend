@@ -183,12 +183,12 @@ export const updateTournament = async (req, res) => {
     const { status, rules, round, players } = req.body;
     const tournamentId = req.params.tournamentId;
 
-    // if (!players || players.length === 0) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: "At least one player is required.",
-    //   });
-    // }
+    if (!players || players.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one player is required.",
+      });
+    }
 
     // -----------------------------------
     // STEP 0: Get Tournament and check format
