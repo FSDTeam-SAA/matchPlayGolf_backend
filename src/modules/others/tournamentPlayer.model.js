@@ -23,11 +23,11 @@ const tournamentPlayerSchema = new mongoose.Schema({
     min: 0,
     max: 54,
   },
-  invitationStatus: {
-    type: String,
-    enum: Object.values(INVITATION_STATUS),
-    default: INVITATION_STATUS.PENDING,
-  },
+  // invitationStatus: {
+  //   type: String,
+  //   enum: Object.values(INVITATION_STATUS),
+  //   default: INVITATION_STATUS.PENDING,
+  // },
   invitationSentAt: Date,
   invitationToken: {
     type: String,
@@ -44,5 +44,7 @@ const tournamentPlayerSchema = new mongoose.Schema({
   timestamps: true,
 });
 
+const tournamentPlayer = mongoose.models.TournamentPlayer || mongoose.model("TournamentPlayer", tournamentPlayerSchema);
+export default tournamentPlayer;
 
-module.exports = mongoose.model('TournamentPlayer', tournamentPlayerSchema);
+// module.exports = mongoose.model('TournamentPlayer', tournamentPlayerSchema);
