@@ -274,39 +274,68 @@ class TournamentService {
     return pair;
   };
 
-  /**
-   * Create rounds for tournament
-   */
-  async createRounds(tournamentId, rounds, createdBy){
-    const createdRounds = [];
-    
-    for (let i = 0; i < rounds.length; i++) {
-      const round = await Round.create({
-        tournamentId,
-        roundName: rounds[i].roundName || `Round ${i + 1}`,
-        roundNumber: rounds[i].roundNumber || i + 1,
-        date: rounds[i].date,
-        status: rounds[i].status || "Scheduled",
-        createdBy,
-      });
-      createdRounds.push(round);
+async createRounds(tournamentId, rounds, createdBy) {
+  const createdRounds = [];
+
+  for (let i = 0; i < rounds.length; i++) {
+    const data = rounds[i];
+
+    if (!data.date) {
+      throw new Error(`Round ${i + 1}: Date is required`);
     }
-    
-    return createdRounds;
-  };
+
+    const existingRound = await Round.findOne({
+      tournamentId,
+      date: data.date,
+    });
+
+    if (existingRound) {
+      throw new Error(
+        `Round already exists for date ${data.date}. Please choose another date.`
+      );
+    }
+
+    // if (data.roundNumber) {
+    //   const existingNumber = await Round.findOne({
+    //     tournamentId,
+    //     roundNumber: data.roundNumber,
+    //   });
+
+    //   if (existingNumber) {
+    //     throw new Error(
+    //       `Round number ${data.roundNumber} already exists.`
+    //     );
+    //   }
+    // }
+
+    const round = await Round.create({
+      tournamentId,
+      roundName: data.roundName || `Round ${i + 1}`,
+      roundNumber: data.roundNumber || i + 1,
+      date: data.date,
+      status: data.status || "Scheduled",
+      createdBy,
+    });
+
+    createdRounds.push(round);
+  }
+
+  return createdRounds;
+}
 
   /**
    * Update tournament service
    */
-  async updateTournamentService(tournamentId, updateData){
-    const { status, rules, rounds, players, userId, role } = updateData;
+  async updateTournamentService(tournamentId, updateData, userId, role){
+    const { status, rules, rounds, players } = updateData;
+    console.log(tournamentId);
     
     // Find tournament
     const tournament = await Tournament.findById(tournamentId);
     if (!tournament) {
       throw new Error("Tournament not found");
     }
-
+    console.log(tournament.createdBy, userId);
     const isOwner = tournament.createdBy.toString() === userId.toString();
     const isAdmin = role === "admin";
 
@@ -341,11 +370,11 @@ class TournamentService {
       }
       
       // Find or create users
-      const userIds = await findOrCreateUsers(players);
+      const userIds = await this.findOrCreateUsers(players);
       
       // Register based on format
       if (format === "Single") {
-        const registrations = await registerSinglePlayers(tournamentId, userIds);
+        const registrations = await this.registerSinglePlayers(tournamentId, userIds);
         
         // Add to tournament players array
         tournamentUpdateData.$addToSet = { players: { $each: userIds } };
@@ -356,7 +385,7 @@ class TournamentService {
           registrations,
         };
       } else if (format === "Pair") {
-        const pair = await registerPairPlayers(tournamentId, players, userIds);
+        const pair = await this.registerPairPlayers(tournamentId, players, userIds);
         
         // Add to tournament pairs array
         tournamentUpdateData.$addToSet = { pairs: pair._id };
@@ -372,7 +401,7 @@ class TournamentService {
     // Handle rounds creation if provided
     if (rounds && rounds.length > 0) {
       const createdBy = registrationResult?.users?.[0] || tournament.createdBy;
-      createdRounds = await createRounds(tournamentId, rounds, createdBy);
+      createdRounds = await this.createRounds(tournamentId, rounds, createdBy);
     }
     
     // Update tournament only if there are fields to update

@@ -40,6 +40,22 @@ export const updateProfile = async (req, res) => {
     const userId = req.user?._id;
     const updateData = req.body; // JSON body
 
+    if (!req.file || !req.file.buffer) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded',
+      });
+    }
+
+    const imageUrl = await uploadOrganizerLogo(userId, req.file.buffer);
+
+    if (!imageUrl) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to upload organizer logo',
+      });
+    }
+
     const updatedUser = await updateUserProfile(userId, updateData);
 
     if (!updatedUser) {

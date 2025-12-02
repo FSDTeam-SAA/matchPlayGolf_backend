@@ -46,25 +46,9 @@ export const registerUserService = async ({
   const user = await newUser.save();
 
 
-  return {
-    _id: user._id,
-    fullName,
-    email,
-    profileImage: user.profileImage,
-    color: user.color,
-    dob: user.dob,
-    newsletterPreference: user.newsletterPreference,
-    receiveOrderUpdates: user.receiveOrderUpdates,
-    isExisting: false,
-  };
+  return { user };
 };
 
-/** -----------------------------------------------------
- *  Multiple user import (bulk)
- * ----------------------------------------------------- */
-/**
- * Import multiple users (bulk)
- */
 export const importMultipleUsersService = async (users, tournamentId, createdBy) => {
   const results = [];
 
@@ -128,9 +112,6 @@ export const importMultipleUsersService = async (users, tournamentId, createdBy)
   return results;
 };
 
-/** -----------------------------------------------------
- * Set new password after token verification
- * ----------------------------------------------------- */
 export const setPasswordService = async ({ token, password }) => {
   if (!token || !password)
     throw new Error("Token and password are required");
@@ -190,7 +171,6 @@ export const loginUserService = async ({ email, password }) => {
 export const refreshAccessTokenService = async (refreshToken) => {
   
 
-  // ✅ Step 1: Verify token first
   let decoded;
   try {
     decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
@@ -198,7 +178,6 @@ export const refreshAccessTokenService = async (refreshToken) => {
     throw new Error('Invalid refresh token');
   }
 
-  // ✅ Step 2: Find user
   const user = await User.findById(decoded._id);
   if (!user) {
     throw new Error('Invalid refresh token');
@@ -264,7 +243,7 @@ export const verifyCodeService = async ({ email, otp }) => {
   user.otpExpires = undefined;
   user.otpVerified = true;
   user.isVerified = true;
-  // user.resetExpires = new Date(Date.now() + 15 * 60 * 1000); 
+  user.resetExpires = new Date(Date.now() + 15 * 60 * 1000); 
 
   await user.save();
 

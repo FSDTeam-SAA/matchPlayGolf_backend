@@ -16,21 +16,21 @@ export const getUserProfile = async (userId) => {
 // Only updates: fullName, email, phone, gender, clubName, handicap, whsNumber
 export const updateUserProfile = async (userId, updateData) => {
   const allowedFields = [
-    'fullName',
-    'email',
-    'phone',
-    'gender',
-    'dob',
-    'country',
-    'clubName',
-    'handicap',
-    'whsNumber',
-    'organizationName',
-    'sportNationalId',
-    'organizerLogo',
-    'color',
-    'newsletterPreference',
-    'receiveOrderUpdates',
+    "fullName",
+    "email",
+    "phone",
+    "gender",
+    "dob",
+    "country",
+    "clubName",
+    "handicap",
+    "whsNumber",
+    "organizationName",
+    "sportNationalId",
+    "organizerLogo",   // <--- important!
+    "color",
+    "newsletterPreference",
+    "receiveOrderUpdates",
   ];
 
   const user = await User.findById(userId).select(profileProjection);
@@ -39,17 +39,16 @@ export const updateUserProfile = async (userId, updateData) => {
   const updates = {};
 
   for (const field of allowedFields) {
-    // handle email specially (duplicate check + skip if same)
-    if (field === 'email' && updateData.email) {
+    // special email check
+    if (field === "email" && updateData.email) {
       if (updateData.email === user.email) {
-        // same email, no change
-        continue;
+        continue; // skip unchanged email
       }
 
       const existing = await User.findOne({ email: updateData.email });
       if (existing && existing._id.toString() !== user._id.toString()) {
-        const err = new Error('Email already in use');
-        err.code = 'EMAIL_IN_USE';
+        const err = new Error("Email already in use");
+        err.code = "EMAIL_IN_USE";
         throw err;
       }
 
@@ -57,6 +56,7 @@ export const updateUserProfile = async (userId, updateData) => {
       continue;
     }
 
+    // normal fields
     if (Object.prototype.hasOwnProperty.call(updateData, field)) {
       updates[field] = updateData[field];
     }
