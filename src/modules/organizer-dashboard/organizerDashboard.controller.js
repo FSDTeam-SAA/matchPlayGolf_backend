@@ -2,9 +2,10 @@ import organizerDashboardService from "./organizerDashboard.service.js";
 
 const ensureOrganizer = (user) => {
   const role = user?.role;
-  const normalizedRole = typeof role === "string" ? role.toLowerCase() : "";
+  console.log(role, user);
+  // const normalizedRole = typeof role === "string" ? role.toLowerCase() : "";
 
-  if (!["organizer", "admin"].includes(normalizedRole)) {
+  if (!["Organizer", "Admin"].includes(role)) {
     const err = new Error("Access denied: organizer or admin only");
     err.status = 403;
     throw err;
@@ -13,7 +14,6 @@ const ensureOrganizer = (user) => {
 
 export const getOrganizerSummary = async (req, res) => {
   try {
-    ensureOrganizer(req.user);
     const data = await organizerDashboardService.getSummary(req.user._id);
     return res.status(200).json({
       success: true,
