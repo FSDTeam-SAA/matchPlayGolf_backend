@@ -67,7 +67,7 @@ export const registerUser = async (req, res, next) => {
     }
   }
 };
-/** Import multiple players */
+
 export const importPlayers = async (players, tournamentId, userId, res) => {
   try {
     const createdBy = req.user._id
@@ -79,7 +79,7 @@ export const importPlayers = async (players, tournamentId, userId, res) => {
 };
 
 
-/** Set password */
+
 export const setPassword = async (req, res) => {
   try {
     await setPasswordService(req.body);
