@@ -1,10 +1,6 @@
 import tournamentService from "./tournament.service.js";
 import Tournament from "./tournament.model.js";
 import sendEmail from '../../lib/sendEmail.js';
-import User from "../user/user.model.js";
-import TournamentPair from "../others/tournamentPair.model.js";
-import TournamentPlayer from "../others/tournamentPlayer.model.js";
-import Round from "../round/round.model.js";
 
 
 export const createTournament = async (req, res) => {
@@ -126,122 +122,60 @@ export const getTournamentById = async (req, res) => {
 
 export const updateTournament = async (req, res) => {
   try {
-    const { status, rules, round, players } = req.body;
-    const tournamentId = req.params.tournamentId;
-
-    if (!players || players.length === 0) {
+    const { tournamentId } = req.params;
+    const updateData = req.body;
+    
+    // Validate tournament ID
+    if (!tournamentId) {
       return res.status(400).json({
         success: false,
-        message: "At least one player is required.",
+        message: "Tournament ID is required",
       });
     }
-
-    const tournament = await Tournament.findById(tournamentId);
-    if (!tournament) {
-      return res.status(404).json({
-        success: false,
-        message: "Tournament not found",
-      });
+    
+    // Call service
+    const result = await tournamentService.updateTournamentService(tournamentId, updateData,  req.user._id,
+      req.user.role);
+    
+    // Build response message
+    let message = "Tournament updated successfully";
+    if (result.registration) {
+      const regType = result.registration.type === "pair" ? "Pair" : "Single player";
+      message = `${regType} registration + Tournament updated successfully`;
     }
-
-    const format = tournament.format;
-
-    if (format === "Single" && players.length !== 1) {
-      return res.status(400).json({
-        success: false,
-        message: "Single format tournament allows only 1 player at a time",
-      });
-    }
-
-    if (format === "Pair" && players.length !== 2) {
-      return res.status(400).json({
-        success: false,
-        message: "Pair format tournament requires exactly 2 players",
-      });
-    }
-
-    const createdUserIds = [];
-
-    for (const p of players) {
-      let user = await User.findOne({ email: p.email });
-
-      if (!user) {
-        user = await User.create({
-          fullName: p.fullName,
-          email: p.email,
-          phone: p.phone,
-        });
-      }
-      createdUserIds.push(user._id);
-    }
-
-    let pair = null;
-
-    if (format === "Pair") {
-      pair = await TournamentPair.create({
-        tournamentId,
-        teamName: `${players[0].fullName} & ${players[1].fullName}`,
-        player1: createdUserIds[0],
-        player2: createdUserIds[1],
-      });
-
-      await TournamentPlayer.create({
-        tournamentId,
-        playerId: null,
-        pairId: pair._id,
-      });
-    }
-
-    if (format === "Single") {
-      await TournamentPlayer.create({
-        tournamentId,
-        playerId: createdUserIds[0],
-        pairId: null,
-      });
-    }
-
-    const updateData = {
-      status: status || tournament.status || "Active",
-    };
-
-    if (rules) updateData.rules = rules;
-
-    if (format === "Single") {
-      updateData.$addToSet = { players: createdUserIds[0] };
-    }
-
-    if (format === "Pair" && pair) {
-      updateData.$addToSet = { pairs: pair._id };
-    }
-
-    await Tournament.findByIdAndUpdate(tournamentId, updateData, { new: true });
-
-    if (round && round.length > 0) {
-      for (const r of round) {
-        await Round.create({
-          tournamentId,
-          roundName: "Round 1",
-          roundNumber: 1,
-          date: r.date,
-          status: "Scheduled",
-          createdBy: createdUserIds[0],
-        });
-      }
-    }
-
-    return res.status(201).json({
+    
+    return res.status(200).json({
       success: true,
-      message:
-        format === "Pair"
-          ? "Pair registration + Tournament updated successfully"
-          : "Single player registration + Tournament updated successfully",
+      message,
       data: {
-        users: createdUserIds,
-        pair: pair || null,
+        tournament: result.tournament,
+        registration: result.registration,
+        rounds: result.rounds,
       },
     });
+    
   } catch (error) {
-    console.error("REGISTER ERROR:", error);
+    console.error("TOURNAMENT UPDATE ERROR:", error);
+    
+    // Handle specific errors
+    if (error.message === "Tournament not found") {
+      return res.status(404).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    
+    if (
+      error.message.includes("format") || 
+      error.message.includes("player")
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    
+    // Generic error
     return res.status(500).json({
       success: false,
       message: "Internal server error",
