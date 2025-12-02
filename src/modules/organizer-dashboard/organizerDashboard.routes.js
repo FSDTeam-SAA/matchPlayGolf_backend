@@ -8,9 +8,9 @@ import {
 const router = express.Router();
 
 // GET /api/organizer-dashboard/summary
-router.get("/summary", getOrganizerSummary);
+router.get("/summary", verifyToken, getOrganizerSummary);
 
 // GET /api/organizer-dashboard/recent
-router.get("/recent", getOrganizerRecentTournaments);
+router.get("/recent", verifyToken, getOrganizerRecentTournaments);
 
 export default router;
