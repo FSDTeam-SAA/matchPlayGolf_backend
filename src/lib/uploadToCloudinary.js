@@ -13,13 +13,6 @@ export const uploadToCloudinary = async (buffer, filename, folder, resourceType 
         const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
         const publicId = `${timestamp}-${randomString}-${sanitizedFilename}`;
 
-        console.log('🔧 Cloudinary upload config:', {
-            folder,
-            publicId,
-            resourceType,
-            bufferSize: buffer.length
-        });
-
         // ✅ FIXED: Use upload_stream instead of upload
         const uploadOptions = {
             folder: folder,
@@ -36,11 +29,6 @@ export const uploadToCloudinary = async (buffer, filename, folder, resourceType 
                     console.error('❌ Cloudinary upload error:', error);
                     reject(error);
                 } else {
-                    console.log('✅ Cloudinary upload success:', {
-                        url: result.secure_url,
-                        public_id: result.public_id,
-                        resource_type: result.resource_type
-                    });
                     resolve(result);
                 }
             }
