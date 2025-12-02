@@ -6,11 +6,7 @@ import TournamentPair from "../others/tournamentPair.model.js";
 import TournamentPlayer from "../others/tournamentPlayer.model.js";
 import Round from "../round/round.model.js";
 
-/**
- * @desc    Create a new tournament
- * @route   POST /api/tournaments
- * @access  Private
- */
+
 export const createTournament = async (req, res) => {
   try {
     const {
@@ -23,7 +19,6 @@ export const createTournament = async (req, res) => {
       price
     } = req.body;
 
-    // Validation
     if (!tournamentName) {
       return res.status(400).json({
         success: false,
@@ -31,15 +26,13 @@ export const createTournament = async (req, res) => {
       });
     }
 
-    // Validate drawFormat
-    if (drawFormat && !["Matrix", "Knockout", "Teams"].includes(drawFormat)) {
+    if (drawFormat && !["Knockout", "Teams"].includes(drawFormat)) {
       return res.status(400).json({
         success: false,
         message: "Invalid draw format. Must be Matrix, Knockout, or Teams"
       });
     }
 
-    // Validate format
     if (format && !["Single", "Pair", "Team"].includes(format)) {
       return res.status(400).json({
         success: false,
@@ -78,11 +71,6 @@ export const createTournament = async (req, res) => {
   }
 };
 
-/**
- * @desc    Get all tournaments with pagination and filtering
- * @route   GET /api/tournaments
- * @access  Public
- */
 export const getAllTournaments = async (req, res) => {
   try {
     const {
@@ -119,11 +107,6 @@ export const getAllTournaments = async (req, res) => {
   }
 };
 
-/**
- * @desc    Get tournament by ID
- * @route   GET /api/tournaments/:id
- * @access  Public
- */
 export const getTournamentById = async (req, res) => {
   try {
     const tournament = await tournamentService.getTournamentById(req.params.id);
@@ -141,43 +124,6 @@ export const getTournamentById = async (req, res) => {
   }
 };
 
-/**
- * @desc    Update tournament
- * @route   PUT /api/tournaments/:id
- * @access  Private
- */
-// export const updateTournament = async (req, res) => {
-//   try {
-    
-//     const updateData = req.body;
-//     const result = await tournamentService.updateTournament(
-//       req.params.id,
-//       updateData,
-//       req.user._id,
-//       req.user.role
-//     );
-
-//     res.status(200).json({
-//       success: true,
-//       data: result.tournamentData,
-//       players: result.players,
-//       rounds: result.setRounds,
-//       message: "Tournament updated successfully"
-//     });
-//   } catch (error) {
-//     const statusCode = error.message.includes("not found")
-//       ? 404
-//       : error.message.includes("Not authorized")
-//       ? 403
-//       : 500;
-
-//     res.status(statusCode).json({
-//       success: false,
-//       message: error.message
-//     });
-//   }
-// };
-
 export const updateTournament = async (req, res) => {
   try {
     const { status, rules, round, players } = req.body;
@@ -190,9 +136,6 @@ export const updateTournament = async (req, res) => {
       });
     }
 
-    // -----------------------------------
-    // STEP 0: Get Tournament and check format
-    // -----------------------------------
     const tournament = await Tournament.findById(tournamentId);
     if (!tournament) {
       return res.status(404).json({
@@ -201,11 +144,8 @@ export const updateTournament = async (req, res) => {
       });
     }
 
-    const format = tournament.format; // "Single" or "Pair"
+    const format = tournament.format;
 
-    // -----------------------------------
-    // STEP 0B: Validate number of players
-    // -----------------------------------
     if (format === "Single" && players.length !== 1) {
       return res.status(400).json({
         success: false,
@@ -222,9 +162,6 @@ export const updateTournament = async (req, res) => {
 
     const createdUserIds = [];
 
-    // -----------------------------------
-    // STEP 1: CREATE OR GET USERS
-    // -----------------------------------
     for (const p of players) {
       let user = await User.findOne({ email: p.email });
 
@@ -240,9 +177,6 @@ export const updateTournament = async (req, res) => {
 
     let pair = null;
 
-    // -----------------------------------
-    // STEP 2: PAIR REGISTRATION (2 players only)
-    // -----------------------------------
     if (format === "Pair") {
       pair = await TournamentPair.create({
         tournamentId,
@@ -251,7 +185,6 @@ export const updateTournament = async (req, res) => {
         player2: createdUserIds[1],
       });
 
-      // INSERT ONLY PAIR ID in TournamentPlayer
       await TournamentPlayer.create({
         tournamentId,
         playerId: null,
@@ -259,9 +192,6 @@ export const updateTournament = async (req, res) => {
       });
     }
 
-    // -----------------------------------
-    // STEP 3: SINGLE PLAYER REGISTRATION
-    // -----------------------------------
     if (format === "Single") {
       await TournamentPlayer.create({
         tournamentId,
@@ -270,9 +200,6 @@ export const updateTournament = async (req, res) => {
       });
     }
 
-    // -----------------------------------
-    // STEP 4: UPDATE TOURNAMENT TABLE
-    // -----------------------------------
     const updateData = {
       status: status || tournament.status || "Active",
     };
@@ -289,9 +216,6 @@ export const updateTournament = async (req, res) => {
 
     await Tournament.findByIdAndUpdate(tournamentId, updateData, { new: true });
 
-    // -----------------------------------
-    // STEP 5: CREATE ROUND
-    // -----------------------------------
     if (round && round.length > 0) {
       for (const r of round) {
         await Round.create({
@@ -326,11 +250,6 @@ export const updateTournament = async (req, res) => {
   }
 };
 
-/**
- * @desc    Delete tournament
- * @route   DELETE /api/tournaments/:id
- * @access  Private
- */
 export const deleteTournament = async (req, res) => {
   try {
     const result = await tournamentService.deleteTournament(
@@ -357,11 +276,6 @@ export const deleteTournament = async (req, res) => {
   }
 };
 
-/**
- * @desc    Get tournaments by creator
- * @route   GET /api/tournaments/creator/me
- * @access  Private
- */
 export const getTournamentsByCreator = async (req, res) => {
   try {
     const { page = 1, limit = 10, paymentStatus } = req.query;
