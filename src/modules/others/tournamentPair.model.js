@@ -20,6 +20,7 @@ const tournamentPairSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  
 }, {
   timestamps: true,
 });
