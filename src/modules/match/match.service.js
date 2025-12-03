@@ -29,30 +29,54 @@ class MatchService {
         throw new Error("Round not found");
       }
 
-      // Validate matchType
-      if (!["single", "pair", "team"].includes(matchData.matchType)) {
-        throw new Error("Invalid match type. Must be single, pair, or team");
+      // Validate matchType (case-sensitive)
+      if (!["Single", "Pair"].includes(matchData.matchType)) {
+        throw new Error("Invalid match type. Must be 'Single' or 'Pair'");
       }
 
-      // Validate data structure based on matchType
-      if (matchData.matchType === "single") {
-        if (!matchData.players || matchData.players.length < 2) {
-          throw new Error("Single match requires at least 2 players");
+      // Validate required fields based on matchType
+      if (matchData.matchType === "Single") {
+        if (!matchData.player1Id || !matchData.player2Id) {
+          throw new Error("Single match requires both player1Id and player2Id");
         }
-      } else {
-        if (!matchData.teams || matchData.teams.length < 2) {
-          throw new Error("Pair/Team match requires at least 2 teams");
+        // Validate player IDs
+        if (!mongoose.Types.ObjectId.isValid(matchData.player1Id) || 
+            !mongoose.Types.ObjectId.isValid(matchData.player2Id)) {
+          throw new Error("Invalid player ID");
+        }
+      } else if (matchData.matchType === "Pair") {
+        if (!matchData.pair1Id || !matchData.pair2Id) {
+          throw new Error("Pair match requires both pair1Id and pair2Id");
+        }
+        // Validate pair IDs
+        if (!mongoose.Types.ObjectId.isValid(matchData.pair1Id) || 
+            !mongoose.Types.ObjectId.isValid(matchData.pair2Id)) {
+          throw new Error("Invalid pair ID");
         }
       }
 
       const match = await Match.create(matchData);
-      const populatedMatch = await match.populate([
+      
+      // Populate based on match type
+      const populateFields = [
         { path: "tournamentId", select: "tournamentName sportName format" },
         { path: "roundId", select: "roundName roundNumber date" },
-        { path: "players.userId", select: "fullName email" },
-        { path: "teams.players.userId", select: "fullName email" },
         { path: "createdBy", select: "fullName email" }
-      ]);
+      ];
+
+      if (matchData.matchType === "Single") {
+        populateFields.push(
+          { path: "player1Id", select: "fullName email" },
+          { path: "player2Id", select: "fullName email" }
+        );
+      } else if (matchData.matchType === "Pair") {
+        populateFields.push(
+          { path: "pair1Id", select: "pairName" },
+          { path: "pair2Id", select: "pairName" }
+        );
+      }
+
+      const populatedMatch = await match.populate(populateFields);
 
       return populatedMatch;
     } catch (error) {
@@ -95,8 +119,12 @@ class MatchService {
       const matches = await Match.find(query)
         .populate("tournamentId", "tournamentName sportName format")
         .populate("roundId", "roundName roundNumber date")
-        .populate("players.userId", "fullName email")
-        .populate("teams.players.userId", "fullName email")
+        .populate("player1Id", "fullName email")
+        .populate("player2Id", "fullName email")
+        .populate("pair1Id", "pairName")
+        .populate("pair2Id", "pairName")
+        .populate("players.userId", "fullName email") // For stats
+        .populate("teams.players.userId", "fullName email") // For stats
         .populate("createdBy", "fullName email")
         .sort({ teeTime: 1 })
         .skip(skip)
@@ -125,8 +153,12 @@ class MatchService {
       const match = await Match.findById(id)
         .populate("tournamentId", "tournamentName sportName format")
         .populate("roundId", "roundName roundNumber date")
-        .populate("players.userId", "fullName email")
-        .populate("teams.players.userId", "fullName email")
+        .populate("player1Id", "fullName email")
+        .populate("player2Id", "fullName email")
+        .populate("pair1Id", "pairName")
+        .populate("pair2Id", "pairName")
+        .populate("players.userId", "fullName email") // For stats
+        .populate("teams.players.userId", "fullName email") // For stats
         .populate("createdBy", "fullName email")
         .populate("updatedBy", "fullName email");
 
@@ -155,8 +187,12 @@ class MatchService {
 
       const matches = await Match.find(query)
         .populate("tournamentId", "tournamentName sportName format")
-        .populate("players.userId", "fullName email")
-        .populate("teams.players.userId", "fullName email")
+        .populate("player1Id", "fullName email")
+        .populate("player2Id", "fullName email")
+        .populate("pair1Id", "pairName")
+        .populate("pair2Id", "pairName")
+        .populate("players.userId", "fullName email") // For stats
+        .populate("teams.players.userId", "fullName email") // For stats
         .populate("createdBy", "fullName email")
         .sort({ teeTime: 1, groupNumber: 1 })
         .skip(skip)
@@ -196,14 +232,14 @@ class MatchService {
         throw new Error("Not authorized to update this match");
       }
 
-      // Validate status if provided
-      if (updateData.status && !["Scheduled", "In Progress", "Completed", "Cancelled"].includes(updateData.status)) {
-        throw new Error("Invalid status");
+      // Validate status if provided (match schema enum)
+      if (updateData.status && !["Upcoming", "In Progress", "Completed", "Cancelled"].includes(updateData.status)) {
+        throw new Error("Invalid status. Must be 'Upcoming', 'In Progress', 'Completed', or 'Cancelled'");
       }
 
       // Validate matchType if provided
-      if (updateData.matchType && !["single", "pair", "team"].includes(updateData.matchType)) {
-        throw new Error("Invalid match type");
+      if (updateData.matchType && !["Single", "Pair"].includes(updateData.matchType)) {
+        throw new Error("Invalid match type. Must be 'Single' or 'Pair'");
       }
 
       Object.assign(match, updateData);
@@ -213,6 +249,10 @@ class MatchService {
       return await match.populate([
         { path: "tournamentId", select: "tournamentName sportName format" },
         { path: "roundId", select: "roundName roundNumber date" },
+        { path: "player1Id", select: "fullName email" },
+        { path: "player2Id", select: "fullName email" },
+        { path: "pair1Id", select: "pairName" },
+        { path: "pair2Id", select: "pairName" },
         { path: "players.userId", select: "fullName email" },
         { path: "teams.players.userId", select: "fullName email" },
         { path: "createdBy", select: "fullName email" },
@@ -238,10 +278,10 @@ class MatchService {
         throw new Error("Match not found");
       }
 
-      // Update scores based on match type
-      if (match.matchType === "single" && scoresData.players) {
+      // Update scores based on match type (case-sensitive)
+      if (match.matchType === "Single" && scoresData.players) {
         match.players = scoresData.players;
-      } else if (["pair", "team"].includes(match.matchType) && scoresData.teams) {
+      } else if (match.matchType === "Pair" && scoresData.teams) {
         match.teams = scoresData.teams;
       }
 
@@ -259,6 +299,10 @@ class MatchService {
       return await match.populate([
         { path: "tournamentId", select: "tournamentName sportName" },
         { path: "roundId", select: "roundName roundNumber" },
+        { path: "player1Id", select: "fullName email" },
+        { path: "player2Id", select: "fullName email" },
+        { path: "pair1Id", select: "pairName" },
+        { path: "pair2Id", select: "pairName" },
         { path: "players.userId", select: "fullName email" },
         { path: "teams.players.userId", select: "fullName email" }
       ]);
