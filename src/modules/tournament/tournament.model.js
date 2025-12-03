@@ -53,7 +53,7 @@ const TournamentSchema = new mongoose.Schema(
       default:Date.now
     },
     endDate:{
-      type: String,
+      type: Date,
       default: Date.now
     },
     location:{
@@ -65,8 +65,9 @@ const TournamentSchema = new mongoose.Schema(
     description:{
       type:String
     },
-    status:{
-      type:String,
+   status: {
+      type: String,
+      enum: ["upcoming", "in progress", "completed", "cancelled", "scheduled"],
       default: "Upcoming"
     },
    rules: {
