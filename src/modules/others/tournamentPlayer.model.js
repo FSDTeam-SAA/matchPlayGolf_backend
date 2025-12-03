@@ -34,6 +34,10 @@ const tournamentPlayerSchema = new mongoose.Schema({
     unique: true,
     sparse: true,
   },
+  assignMatch:{
+    type:Boolean,
+    default:true
+  },
   registeredAt: Date,
   isActive: {
     type: Boolean,

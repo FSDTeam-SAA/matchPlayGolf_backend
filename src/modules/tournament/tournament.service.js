@@ -67,9 +67,12 @@ class TournamentService {
 
       return {
         tournaments,
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        totalTournaments: total
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total: total,
+          totalPages: Math.ceil(total / limit),
+        }
       };
     } catch (error) {
       throw new Error(`Failed to fetch tournaments: ${error.message}`);
@@ -358,9 +361,12 @@ async createRounds(tournamentId, rounds, createdBy) {
 
       return {
         tournaments,
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        totalTournaments: total
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total: total,
+          totalPages: Math.ceil(total / limit),
+        }
       };
     } catch (error) {
       throw new Error(`Failed to fetch creator tournaments: ${error.message}`);
@@ -394,9 +400,12 @@ async createRounds(tournamentId, rounds, createdBy) {
   return {
     success: true,
     matches,
-    currentPage: page,
-    totalPages: Math.ceil(total / limit),
-    totalMatches: total
+    pagination: {
+      page: Number(page),
+      limit: Number(limit),
+      total: total,
+      totalPages: Math.ceil(total / limit),
+    }
   };
 }
 
