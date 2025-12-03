@@ -211,7 +211,7 @@ async createRounds(tournamentId, rounds, createdBy) {
    * Update tournament service
    */
   async updateTournamentService(tournamentId, updateData, userId, role){
-    const { status, rules, rounds, players } = updateData;
+    const { status, rules, rounds, players, location } = updateData;
     console.log(tournamentId);
     
     // Find tournament
@@ -241,7 +241,10 @@ async createRounds(tournamentId, rounds, createdBy) {
     if (rules !== undefined) {
       tournamentUpdateData.rules = rules;
     }
-    
+
+     if (location !== undefined) {
+      tournamentUpdateData.location = location;
+    }
     // Handle player registration if players are provided
     if (players && players.length > 0) {
       // Validate player count based on format
