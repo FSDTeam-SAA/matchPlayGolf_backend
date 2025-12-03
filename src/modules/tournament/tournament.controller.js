@@ -332,7 +332,7 @@ export const findTournamentPlayer = async (req, res) => {
     }
 
     // Fetch all players for this tournament
-    const players = await TournamentPlayer.find({ tournamentId, isActive: true })
+    const players = await TournamentPlayer.find({ tournamentId, isActive: true, assignMatch:true })
       .populate("playerId", "fullName email phone handicap clubName")
       .populate({
         path: "pairId",
