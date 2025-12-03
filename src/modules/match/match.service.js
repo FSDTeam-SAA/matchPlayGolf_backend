@@ -132,9 +132,12 @@ class MatchService {
 
       return {
         matches,
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        totalMatches: total
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total: total,
+          totalPages: Math.ceil(total / limit),
+        }
       };
     } catch (error) {
       throw new Error(`Failed to fetch matches: ${error.message}`);
@@ -200,9 +203,12 @@ class MatchService {
 
       return {
         matches,
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        totalMatches: total
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total: total,
+          totalPages: Math.ceil(total / limit),
+        }
       };
     } catch (error) {
       throw new Error(`Failed to fetch round matches: ${error.message}`);
