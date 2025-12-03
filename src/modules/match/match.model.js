@@ -1,67 +1,54 @@
 import mongoose from "mongoose";
 
+// ---------------- PLAYER STATS ----------------
 const PlayerStatSchema = new mongoose.Schema(
   {
-    userId: {
+    userId: { 
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true
+      required: true 
     },
-    score: {
-      type: Number,
-      default: 0
-    },
-    strokes: {
-      type: Number,
-      default: 0
-    },
-    points: {
-      type: Number,
-      default: 0
-    },
-    result:{
-      type: String
-    },
+    score: { type: Number, default: 0 },
+    strokes: { type: Number, default: 0 },
+    points: { type: Number, default: 0 },
+    result: { type: String },
+
     holeStats: [
       {
-        hole: { type: Number },
-        strokes: { type: Number },
-        fairwayHit: { type: Boolean },
-        greenInRegulation: { type: Boolean },
-        putts: { type: Number }
+        hole: Number,
+        strokes: Number,
+        fairwayHit: Boolean,
+        greenInRegulation: Boolean,
+        putts: Number
       }
     ]
   },
   { _id: false }
 );
 
+// ---------------- TEAM STATS ----------------
 const TeamSchema = new mongoose.Schema(
   {
-    teamName: {
-      type: String,
-      trim: true
+    pairId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TournamentPair"
     },
+    teamName: String,
+
     players: {
       type: [PlayerStatSchema],
       required: true
     },
-    totalScore: {
-      type: Number,
-      default: 0
-    },
-    result:{
-      type:String
-    },
-    handicap: {
-      type: Number
-    },
-    rank: {
-      type: Number
-    }
+
+    totalScore: { type: Number, default: 0 },
+    result: { type: String },
+    handicap: Number,
+    rank: Number
   },
   { _id: false }
 );
 
+// ---------------- MATCH SCHEMA ----------------
 const MatchSchema = new mongoose.Schema(
   {
     tournamentId: {
@@ -69,39 +56,58 @@ const MatchSchema = new mongoose.Schema(
       ref: "Tournament",
       required: true
     },
+
     roundId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Round",
       required: true
     },
+
     matchType: {
       type: String,
-      enum: ["single", "pair", "team"],
+      enum: ["Single", "Pair"],
       required: true
     },
-    players: [PlayerStatSchema],
-    teams: [TeamSchema],
+
+    // ----- SINGLE MATCH -----
+    player1Id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    },
+    player2Id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    },
+
+    players: [PlayerStatSchema], // single-player stats
+
+    // ----- PAIR MATCH -----
+    pair1Id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TournamentPair"
+    },
+    pair2Id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TournamentPair"
+    },
+
+    teams: [TeamSchema], // pair-team stats
+
     status: {
       type: String,
       enum: ["Upcoming", "In Progress", "Completed", "Cancelled"],
       default: "Upcoming"
     },
-    teeTime: {
-      type: Date,
+    assignMatch:{
+
     },
-    startingHole: {
-      type: Number,
-      default: 1
-    },
-    groupNumber: {
-      type: Number
-    },
-    winnerTeamId: {
-      type: mongoose.Schema.Types.ObjectId
-    },
-    winnerPlayerId: {
-      type: mongoose.Schema.Types.ObjectId
-    },
+    teeTime: Date,
+    startingHole: { type: Number, default: 1 },
+    groupNumber: Number,
+
+    winnerTeamId: mongoose.Schema.Types.ObjectId,   // for Pair
+    winnerPlayerId: mongoose.Schema.Types.ObjectId, // for Single
+
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -110,17 +116,12 @@ const MatchSchema = new mongoose.Schema(
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User"
-    },
-},
-{
-    timestamps:true
-}
+    }
+  },
+  { timestamps: true }
 );
 
-// Indexes
 MatchSchema.index({ roundId: 1, teeTime: 1 });
 MatchSchema.index({ tournamentId: 1 });
 
-const Match = mongoose.models.Match || mongoose.model("Match", MatchSchema);
-
-export default Match;
+export default mongoose.models.Match || mongoose.model("Match", MatchSchema);

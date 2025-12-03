@@ -1,6 +1,7 @@
 import tournamentService from "./tournament.service.js";
 import Tournament from "./tournament.model.js";
 import sendEmail from '../../lib/sendEmail.js';
+import TournamentPlayer from "../others/tournamentPlayer.model.js";
 
 
 export const createTournament = async (req, res) => {
@@ -269,7 +270,7 @@ export const generateUniqueOrderCode = async () => {
     }
 
     // ✅ Find all registered users for this tournament
-    const registeredUsers = await RegisterUser
+    const registeredUsers = await TournamentPlayer
       .find({ tournamentId })
       .populate("userId", "fullName email");
 
@@ -313,6 +314,68 @@ export const generateUniqueOrderCode = async () => {
     res.status(500).json({
       success: false,
       message: "Internal server error",
+    });
+  }
+};
+
+
+
+export const findTournamentPlayer = async (req, res) => {
+  try {
+    const tournamentId = req.params.tournamentId;
+
+    if (!tournamentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Tournament ID is required",
+      });
+    }
+
+    // Fetch all players for this tournament
+    const players = await TournamentPlayer.find({ tournamentId, isActive: true })
+      .populate("playerId", "fullName email phone handicap clubName")
+      .populate({
+        path: "pairId",
+        select: "teamName player1 player2",
+        populate: [
+          { path: "player1", select: "fullName email phone" },
+          { path: "player2", select: "fullName email phone" },
+        ],
+      })
+      .sort({ createdAt: -1 }); // latest first
+
+    return res.status(200).json({
+      success: true,
+      message: "Tournament players fetched successfully",
+      data: players,
+    });
+  } catch (error) {
+    console.error("Find tournament player error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+
+export const getTournamentMatchesController = async (req, res) => {
+  try {
+    const { tournamentId } = req.params;
+
+    const matches = await tournamentService.getTournamentMatchesService(tournamentId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Tournament matches fetched successfully",
+      data: matches,
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
     });
   }
 };

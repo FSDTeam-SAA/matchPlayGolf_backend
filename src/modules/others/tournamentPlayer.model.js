@@ -14,7 +14,7 @@ const tournamentPlayerSchema = new mongoose.Schema({
   },
   pairId:{
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Pair',
+    ref: 'TournamentPair',
   },
   firstName: String,
   lastName: String,
