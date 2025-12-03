@@ -5,6 +5,7 @@ import User from "../user/user.model.js";
 import TournamentPair from "../others/tournamentPair.model.js";
 import TournamentPlayer from "../others/tournamentPlayer.model.js";
 import Round from "../round/round.model.js";
+import Match from "../match/match.model.js";
 
 class TournamentService {
   /**
@@ -365,6 +366,40 @@ async createRounds(tournamentId, rounds, createdBy) {
       throw new Error(`Failed to fetch creator tournaments: ${error.message}`);
     }
   }
+
+ async getTournamentMatchesService(tournamentId, page = 1, limit = 10) {
+ 
+  if (!tournamentId) {
+    throw new Error("Tournament ID is required");
+  }
+
+  // Correct query object
+  const query = { tournamentId };
+
+  const skip = (page - 1) * limit;
+
+  // Count total matches for pagination
+  const total = await Match.countDocuments(query);
+
+  // Fetch matches
+  const matches = await Match.find(query)
+    .populate("player1Id player2Id", "name email photo")
+    .populate("pair1Id pair2Id")
+    .populate("teams.players.userId", "name email photo")
+    .populate("roundId", "roundNumber name")
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  return {
+    success: true,
+    matches,
+    currentPage: page,
+    totalPages: Math.ceil(total / limit),
+    totalMatches: total
+  };
+}
+
 
 }
 

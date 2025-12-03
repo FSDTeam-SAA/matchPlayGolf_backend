@@ -7,7 +7,8 @@ import {
   deleteTournament,
   getTournamentsByCreator,
   sendInvitationRegisteredUsers,
-  findTournamentPlayer
+  findTournamentPlayer,
+  getTournamentMatchesController
 } from "./tournament.controller.js";
 import { verifyToken } from "../../middleware/authMiddleware.js";
 
@@ -21,6 +22,7 @@ router.put("/:tournamentId", verifyToken, updateTournament);
 router.delete("/:id", verifyToken, deleteTournament);
 router.get("/:id", getTournamentById);
 router.get("/findplayer/:tournamentId", verifyToken, findTournamentPlayer);
+router.get("/getAllMatches/:tournamentId", getTournamentMatchesController)
 
 
 

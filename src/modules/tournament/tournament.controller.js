@@ -358,3 +358,24 @@ export const findTournamentPlayer = async (req, res) => {
     });
   }
 };
+
+
+export const getTournamentMatchesController = async (req, res) => {
+  try {
+    const { tournamentId } = req.params;
+
+    const matches = await tournamentService.getTournamentMatchesService(tournamentId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Tournament matches fetched successfully",
+      data: matches,
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
