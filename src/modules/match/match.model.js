@@ -98,9 +98,6 @@ const MatchSchema = new mongoose.Schema(
       enum: ["Upcoming", "In Progress", "Completed", "Cancelled"],
       default: "Upcoming"
     },
-    assignMatch:{
-
-    },
     teeTime: Date,
     startingHole: { type: Number, default: 1 },
     groupNumber: Number,
