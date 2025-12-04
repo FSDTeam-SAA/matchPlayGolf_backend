@@ -35,8 +35,9 @@ const TournamentSchema = new mongoose.Schema(
       country: { type: String },
       streetAddress: { type: String },   // fixed spelling
       city: { type: String },
-      district: { type: String },
-      zipcode: { type: String }          // fixed "types"
+      state: { type: String },
+      zipcode: { type: String } ,
+      companyName: { type: String }          // fixed "types"
     },
     price: {
       type: String

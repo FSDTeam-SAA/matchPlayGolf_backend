@@ -2,6 +2,7 @@ import tournamentService from "./tournament.service.js";
 import Tournament from "./tournament.model.js";
 import sendEmail from '../../lib/sendEmail.js';
 import TournamentPlayer from "../others/tournamentPlayer.model.js";
+import User from "../user/user.model.js";
 
 
 export const createTournament = async (req, res) => {
@@ -15,7 +16,9 @@ export const createTournament = async (req, res) => {
       billingAddress,
       price
     } = req.body;
-
+    console.log(billingAddress);
+    const userId = req.user._id;
+    const user = await User.findById(userId);
     if (!tournamentName) {
       return res.status(400).json({
         success: false,
@@ -50,6 +53,7 @@ export const createTournament = async (req, res) => {
       createdBy: req.user._id,
       paymentStatus: "pending",
       orderId: orderCode,
+      role: user.role
     };
 
     const { tournamentDetails, payment} = await tournamentService.createTournament(tournamentData);

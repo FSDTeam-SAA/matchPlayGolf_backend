@@ -13,20 +13,25 @@ class TournamentService {
    */
   async createTournament(tournamentData) {
     try {
+      console.log(tournamentData);
       const tournament = await Tournament.create(tournamentData);
+      let payment = {};
 
       // Call checkout session using the created tournament record
-      const payment = await createCheckoutSession(
-        tournament.price,                                // OK
-        tournament.billingAddress?.email,                // FIXED
-        tournament._id,                                  // FIXED (use saved tournament)
-        tournament.tournamentName,                       // OK
-        tournament.createdBy                             // OK
-      );
+      if(tournamentData.role === "Organizer"){
+          payment = await createCheckoutSession(
+            tournament.price,                                // OK
+            tournament.billingAddress?.email,                // FIXED
+            tournament._id,                                  // FIXED (use saved tournament)
+            tournament.tournamentName,                       // OK
+            tournament.createdBy                             // OK
+          );
+
+      }
 
       const tournamentDetails = await tournament.populate(
         "createdBy",
-        "fullName email"
+        "fullName email role"
       );
 
       return {tournamentDetails, payment};
