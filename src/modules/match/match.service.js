@@ -91,26 +91,23 @@ class MatchService {
     try {
       const query = {};
 
-      if (filters.tournamentId) {
-        if (!mongoose.Types.ObjectId.isValid(filters.tournamentId)) {
-          throw new Error("Invalid tournament ID");
-        }
-        query.tournamentId = filters.tournamentId;
+      if (filters.tournamentName) {
+        query.tournamentName = { $regex: filters.tournamentName, $options: "i" };
       }
 
-      if (filters.roundId) {
-        if (!mongoose.Types.ObjectId.isValid(filters.roundId)) {
-          throw new Error("Invalid round ID");
-        }
-        query.roundId = filters.roundId;
+      if (filters.round) {
+        query.round = { $regex: filters.round, $options: "i" };
       }
 
       if (filters.matchType) {
-        query.matchType = filters.matchType;
+        query.matchType = { $regex: filters.matchType, $options: "i" };
       }
 
       if (filters.status) {
-        query.status = filters.status;
+        query.status = { $regex: filters.status, $options: "i" };
+      }
+      if (filters.tournamentId) {
+        query.tournamentId = filters.tournamentId;
       }
 
       const skip = (page - 1) * limit;
@@ -143,6 +140,41 @@ class MatchService {
       throw new Error(`Failed to fetch matches: ${error.message}`);
     }
   }
+
+//   async getAllTournamentMatches(filters = {}, page = 1, limit = 10) {
+//   const query = {};
+
+//   if (filters.tournamentId) query.tournamentId = filters.tournamentId;
+//   if (filters.matchType) query.matchType = filters.matchType;
+//   if (filters.status) query.status = filters.status;
+
+//   const skip = (page - 1) * limit;
+//   const total = await Match.countDocuments(query);
+
+//   const matches = await Match.find(query)
+//     .populate("tournamentId", "tournamentName sportName format")
+//     .populate("roundId", "roundName roundNumber date")
+//     .populate("player1Id", "fullName email")
+//     .populate("player2Id", "fullName email")
+//     .populate("pair1Id", "pairName")
+//     .populate("pair2Id", "pairName")
+//     .populate("players.userId", "fullName email")
+//     .populate("teams.players.userId", "fullName email")
+//     .populate("createdBy", "fullName email")
+//     .sort({ teeTime: 1 })
+//     .skip(skip)
+//     .limit(limit);
+
+//   return {
+//     matches,
+//     pagination: {
+//       page: Number(page),
+//       limit: Number(limit),
+//       total: total,
+//       totalPages: Math.ceil(total / limit)
+//     }
+//   };
+// }
 
   /**
    * Get match by ID
