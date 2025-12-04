@@ -99,8 +99,8 @@ class MatchService {
         query.tournamentName = { $regex: filters.tournamentName, $options: "i" };
       }
 
-      if (filters.round) {
-        query.round = { $regex: filters.round, $options: "i" };
+      if (filters.roundName) {
+        query.roundName = { $regex: filters.roundName, $options: "i" };
       }
 
       if (filters.matchType) {

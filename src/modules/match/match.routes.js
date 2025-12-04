@@ -6,13 +6,19 @@ import {
   getTournamentMatchesByRound,
   updateTournamentMatch,
   updateTournamentMatchScores,
-  deleteTournamentMatch
+  deleteTournamentMatch,
+  getUserMatchesWithFilters,
+  getUserTournamentMatches,
+  getUserActiveTournaments
 } from "./match.controller.js";
 import { verifyToken } from "../../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 // Public routes
+router.get("/userall", verifyToken, getUserMatchesWithFilters);
+router.get("/specific-tournament", verifyToken, getUserTournamentMatches);
+router.get("/active-tournaments", verifyToken, getUserActiveTournaments);
 router.get("/", getAllTournamentMatches);
 router.get("/:id", getTournamentMatchById);
 router.get("/round/:roundId", getTournamentMatchesByRound);
