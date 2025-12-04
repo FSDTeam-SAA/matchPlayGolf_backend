@@ -39,45 +39,71 @@ class TournamentService {
    * Get all tournaments with pagination and filtering
    */
   async getAllTournaments(filters = {}, page = 1, limit = 10) {
-    try {
-      const query = {};
+  try {
+    const query = {};
 
-      // Apply filters
-      if (filters.sportName) {
-        query.sportName = { $regex: filters.sportName, $options: "i" };
-      }
-      if (filters.drawFormat) {
-        query.drawFormat = filters.drawFormat;
-      }
-      if (filters.format) {
-        query.format = filters.format;
-      }
-      if (filters.paymentStatus) {
-        query.paymentStatus = { $regex: filters.paymentStatus, $options: "i" };
-      }
-
-      const skip = (page - 1) * limit;
-      const total = await Tournament.countDocuments(query);
-
-      const tournaments = await Tournament.find(query)
-        .populate("createdBy", "fullName email")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit);
-
-      return {
-        tournaments,
-        pagination: {
-          page: Number(page),
-          limit: Number(limit),
-          total: total,
-          totalPages: Math.ceil(total / limit),
-        }
-      };
-    } catch (error) {
-      throw new Error(`Failed to fetch tournaments: ${error.message}`);
+    // ------- FILTERS -------
+    if (filters.sportName) {
+      query.sportName = { $regex: filters.sportName, $options: "i" };
     }
+    if (filters.drawFormat) {
+      query.drawFormat = filters.drawFormat;
+    }
+    if (filters.format) {
+      query.format = filters.format;
+    }
+    if (filters.tournamentName) {
+      query.tournamentName = { $regex: filters.tournamentName, $options: "i" };
+    }
+    if (filters.location) {
+      query.location = filters.location;
+    }
+    if (filters.paymentStatus) {
+      query.paymentStatus = { $regex: filters.paymentStatus, $options: "i" };
+    }
+    if (filters.status) {
+      query.status = { $regex: filters.status, $options: "i" };
+    }
+
+    const skip = (page - 1) * limit;
+    const total = await Tournament.countDocuments(query);
+
+    // ------- GET TOURNAMENTS -------
+    const tournaments = await Tournament.find(query)
+      .populate("createdBy", "fullName email")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // ------- GET PLAYER COUNT FOR EACH TOURNAMENT -------
+    const tournamentsWithPlayerCount = await Promise.all(
+      tournaments.map(async (tournament) => {
+        const playerCount = await TournamentPlayer.countDocuments({
+          tournamentId: tournament._id,
+        });
+
+        return {
+          ...tournament.toObject(),
+          playerCount, // <-- ONLY total count
+        };
+      })
+    );
+
+    return {
+      tournaments: tournamentsWithPlayerCount,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total: total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+
+  } catch (error) {
+    throw new Error(`Failed to fetch tournaments: ${error.message}`);
   }
+}
+
 
   /**
    * Get tournament by ID

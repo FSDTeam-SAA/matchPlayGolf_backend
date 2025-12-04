@@ -76,14 +76,20 @@ export const getAllTournaments = async (req, res) => {
       sportName,
       drawFormat,
       format,
-      paymentStatus
+      tournamentName,
+      location,
+      paymentStatus,
+      status
     } = req.query;
 
     const filters = {
       sportName,
       drawFormat,
       format,
-      paymentStatus
+      tournamentName,
+      location,
+      paymentStatus,
+      status
     };
 
     const result = await tournamentService.getAllTournaments(
