@@ -13,7 +13,9 @@ class OrganizerDashboardService {
     const organizerObjectId = new ObjectId(organizerId);
 
     // Fetch tournaments created by this organizer
-    const tournaments = await Tournament.find({ createdBy: organizerObjectId }).select("_id status");
+    const tournaments = await Tournament.find({ createdBy: organizerObjectId }).select(
+      "_id status"
+    );
     const tournamentIds = tournaments.map((t) => t._id);
 
     const activeTournamentCount = tournaments.filter(
@@ -60,6 +62,101 @@ class OrganizerDashboardService {
       .lean();
 
     return tournaments;
+  }
+
+  /**
+   * Get monthly participant counts for an organizer's tournaments in a year.
+   */
+  async getParticipantsByMonth({ organizerId, year = new Date().getFullYear() }) {
+    try {
+      const organizerObjectId = new ObjectId(organizerId);
+      const numericYear = parseInt(year, 10);
+
+      // 1) All tournaments of this organizer in that year
+      const tournaments = await Tournament.find({
+        createdBy: organizerObjectId,
+        startDate: {
+          $gte: new Date(numericYear, 0, 1),
+          $lt: new Date(numericYear + 1, 0, 1)
+        }
+      }).select("_id");
+
+      if (!tournaments.length) {
+        const monthNames = [
+          "January",
+          "February",
+          "March",
+          "April",
+          "May",
+          "June",
+          "July",
+          "August",
+          "September",
+          "October",
+          "November",
+          "December"
+        ];
+        return {
+          year: numericYear,
+          data: monthNames.map((month) => ({ month, participants: 0 }))
+        };
+      }
+
+      const tournamentIds = tournaments.map((t) => t._id);
+
+      // 2) Aggregate registrations for those tournaments, by registration date (createdAt)
+      const results = await RegisterUser.aggregate([
+        {
+          $match: {
+            tournamentId: { $in: tournamentIds },
+            createdAt: {
+              $gte: new Date(numericYear, 0, 1),
+              $lt: new Date(numericYear + 1, 0, 1)
+            },
+            isActive: true
+          }
+        },
+        {
+          $group: {
+            _id: { month: { $month: "$createdAt" } },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { "_id.month": 1 } }
+      ]);
+
+      const monthNames = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December"
+      ];
+
+      const monthlyData = monthNames.map((monthName, index) => {
+        const monthNumber = index + 1;
+        const monthData = results.find((r) => r._id.month === monthNumber);
+        return {
+          month: monthName,
+          participants: monthData ? monthData.count : 0
+        };
+      });
+
+      return {
+        year: numericYear,
+        data: monthlyData
+      };
+    } catch (error) {
+      console.error("Error in getParticipantsByMonth:", error);
+      throw error;
+    }
   }
 }
 
