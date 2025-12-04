@@ -19,7 +19,9 @@ export const createTournamentMatch = async (req, res) => {
       teeTime,
       startingHole,
       groupNumber,
-      status
+      status,
+      date, 
+      score
     } = req.body;
 
     // Validation
@@ -66,6 +68,8 @@ export const createTournamentMatch = async (req, res) => {
       tournamentId,
       roundId,
       matchType,
+      date,
+      score,
       status: status || "Upcoming",
       createdBy: req.user._id,
       ...(teeTime && { teeTime }),
@@ -244,17 +248,19 @@ export const getAllTournamentMatches = async (req, res) => {
     const {
       page = 1,
       limit = 10,
-      tournamentId,
-      roundId,
+      tournamentName,
+      round,
       matchType,
-      status
+      status,
+      tournamentId
     } = req.query;
 
     const filters = {
-      tournamentId,
-      roundId,
+      tournamentName,
+      round,
       matchType,
-      status
+      status,
+      tournamentId
     };
 
     const result = await matchService.getAllTournamentMatches(

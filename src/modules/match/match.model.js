@@ -98,6 +98,14 @@ const MatchSchema = new mongoose.Schema(
       enum: ["Upcoming", "In Progress", "Completed", "Cancelled"],
       default: "Upcoming"
     },
+    score:{
+      type:Number,
+      default:0
+    },
+    date:{
+      type:Date,
+      default:Date.now
+    },
     teeTime: Date,
     startingHole: { type: Number, default: 1 },
     groupNumber: Number,

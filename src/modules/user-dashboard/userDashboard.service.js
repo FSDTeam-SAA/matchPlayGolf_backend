@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import TournamentMatch from "../match/match.model.js";
+import Match from "../match/match.model.js";
 import MatchResult from "../match-result/match-result.model.js";
 import Tournament from "../tournament/tournament.model.js";
 import Round from "../round/round.model.js";
@@ -29,16 +29,16 @@ class UserDashboardService {
     const userObjectId = new ObjectId(userId);
 
     // Tournament matches and personal matches (match-result module)
-    const [tournamentMatchStats, personalMatches] = await Promise.all([
-      this.getTournamentMatchStats(participantFilter, userObjectId),
+    const [MatchStats, personalMatches] = await Promise.all([
+      this.getMatchStats(participantFilter, userObjectId),
       this.getPersonalMatchStats(userObjectId)
     ]);
 
     // Current round: prefer "In Progress", fall back to the nearest scheduled
     const currentRound = await this.getCurrentRound(userObjectId);
 
-    const totalMatchesPlayed = tournamentMatchStats.played + personalMatches.played;
-    const totalWins = tournamentMatchStats.wins + personalMatches.wins;
+    const totalMatchesPlayed = MatchStats.played + personalMatches.played;
+    const totalWins = MatchStats.wins + personalMatches.wins;
     const winRate = totalMatchesPlayed > 0 ? Number(((totalWins / totalMatchesPlayed) * 100).toFixed(2)) : 0;
 
     return {
@@ -46,16 +46,16 @@ class UserDashboardService {
       wins: totalWins,
       winRate,
       currentRound,
-      pendingResults: tournamentMatchStats.pending
+      pendingResults: MatchStats.pending
     };
   }
 
-  async getTournamentMatchStats(participantFilter, userObjectId) {
+  async getMatchStats(participantFilter, userObjectId) {
     const matchQuery = { ...participantFilter, status: { $ne: "Cancelled" } };
 
     const [played, wins, pending] = await Promise.all([
-      TournamentMatch.countDocuments(matchQuery),
-      TournamentMatch.countDocuments({
+      Match.countDocuments(matchQuery),
+      Match.countDocuments({
         ...matchQuery,
         status: "Completed",
         $or: [
@@ -63,7 +63,7 @@ class UserDashboardService {
           { winnerTeamId: { $exists: true, $ne: null } }
         ]
       }),
-      TournamentMatch.countDocuments({
+      Match.countDocuments({
         ...matchQuery,
         status: "In Progress"
       })
@@ -91,7 +91,7 @@ class UserDashboardService {
     if (!tournamentIds.length) return null;
 
     // If the user has an in-progress match, surface that round even if the round document is still Scheduled
-    const inProgressMatch = await TournamentMatch.findOne({
+    const inProgressMatch = await Match.findOne({
       ...this.buildParticipantFilter(userObjectId),
       tournamentId: { $in: tournamentIds },
       status: "In Progress"
@@ -151,6 +151,7 @@ class UserDashboardService {
    * Get current tournaments for the user with next match info.
    */
   async getUserTournaments(userId) {
+
     const userObjectId = new ObjectId(userId);
     const tournamentIds = await this.getTournamentIdsForUser(userObjectId);
     if (!tournamentIds.length) return [];
@@ -171,7 +172,7 @@ class UserDashboardService {
           .sort({ roundNumber: 1 })
           .select("roundName roundNumber status date");
 
-        const nextMatch = await TournamentMatch.findOne({
+        const nextMatch = await Match.findOne({
           ...participantFilter,
           tournamentId: tournament._id,
           status: { $in: ["Upcoming", "Scheduled", "In Progress"] }
@@ -205,7 +206,7 @@ class UserDashboardService {
   async getTournamentIdsForUser(userObjectId) {
     const [registeredIds, matchTournamentIds, createdIds] = await Promise.all([
       RegisterUser.distinct("tournamentId", { userId: userObjectId }),
-      TournamentMatch.distinct("tournamentId", this.buildParticipantFilter(userObjectId)),
+      Match.distinct("tournamentId", this.buildParticipantFilter(userObjectId)),
       Tournament.distinct("_id", { createdBy: userObjectId })
     ]);
 
