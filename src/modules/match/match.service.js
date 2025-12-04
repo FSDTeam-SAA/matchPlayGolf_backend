@@ -40,8 +40,10 @@ class MatchService {
           throw new Error("Single match requires both player1Id and player2Id");
         }
         // Validate player IDs
-        if (!mongoose.Types.ObjectId.isValid(matchData.player1Id) || 
-            !mongoose.Types.ObjectId.isValid(matchData.player2Id)) {
+        if (
+          !mongoose.Types.ObjectId.isValid(matchData.player1Id) ||
+          !mongoose.Types.ObjectId.isValid(matchData.player2Id)
+        ) {
           throw new Error("Invalid player ID");
         }
       } else if (matchData.matchType === "Pair") {
@@ -49,19 +51,21 @@ class MatchService {
           throw new Error("Pair match requires both pair1Id and pair2Id");
         }
         // Validate pair IDs
-        if (!mongoose.Types.ObjectId.isValid(matchData.pair1Id) || 
-            !mongoose.Types.ObjectId.isValid(matchData.pair2Id)) {
+        if (
+          !mongoose.Types.ObjectId.isValid(matchData.pair1Id) ||
+          !mongoose.Types.ObjectId.isValid(matchData.pair2Id)
+        ) {
           throw new Error("Invalid pair ID");
         }
       }
 
       const match = await Match.create(matchData);
-      
+
       // Populate based on match type
       const populateFields = [
         { path: "tournamentId", select: "tournamentName sportName format" },
         { path: "roundId", select: "roundName roundNumber date" },
-        { path: "createdBy", select: "fullName email" }
+        { path: "createdBy", select: "fullName email" },
       ];
 
       if (matchData.matchType === "Single") {
@@ -141,40 +145,44 @@ class MatchService {
     }
   }
 
-//   async getAllTournamentMatches(filters = {}, page = 1, limit = 10) {
-//   const query = {};
+  // async getAllTournamentMatches(filters = {}, page = 1, limit = 10) {
+  //   const query = {};
 
-//   if (filters.tournamentId) query.tournamentId = filters.tournamentId;
-//   if (filters.matchType) query.matchType = filters.matchType;
-//   if (filters.status) query.status = filters.status;
+  //   if (filters.tournamentId) query.tournamentId = filters.tournamentId;
+  //   if (filters.matchType) query.matchType = filters.matchType;
+  //   if (filters.status) query.status = filters.status;
 
-//   const skip = (page - 1) * limit;
-//   const total = await Match.countDocuments(query);
+  //   const skip = (page - 1) * limit;
+  //   const total = await Match.countDocuments(query);
 
-//   const matches = await Match.find(query)
-//     .populate("tournamentId", "tournamentName sportName format")
-//     .populate("roundId", "roundName roundNumber date")
-//     .populate("player1Id", "fullName email")
-//     .populate("player2Id", "fullName email")
-//     .populate("pair1Id", "pairName")
-//     .populate("pair2Id", "pairName")
-//     .populate("players.userId", "fullName email")
-//     .populate("teams.players.userId", "fullName email")
-//     .populate("createdBy", "fullName email")
-//     .sort({ teeTime: 1 })
-//     .skip(skip)
-//     .limit(limit);
+  //   const matches = await Match.find(query)
+  //     .populate({
+  //       path: "tournamentId",
+  //       select: "tournamentName sportName format",
+  //       model: "Tournament",
+  //     })
+  //     .populate("roundId", "roundName roundNumber date")
+  //     .populate("player1Id", "fullName email")
+  //     .populate("player2Id", "fullName email")
+  //     .populate("pair1Id", "pairName")
+  //     .populate("pair2Id", "pairName")
+  //     .populate("players.userId", "fullName email")
+  //     .populate("teams.players.userId", "fullName email")
+  //     .populate("createdBy", "fullName email")
+  //     .sort({ teeTime: 1 })
+  //     .skip(skip)
+  //     .limit(limit);
 
-//   return {
-//     matches,
-//     pagination: {
-//       page: Number(page),
-//       limit: Number(limit),
-//       total: total,
-//       totalPages: Math.ceil(total / limit)
-//     }
-//   };
-// }
+  //   return {
+  //     matches,
+  //     pagination: {
+  //       page: Number(page),
+  //       limit: Number(limit),
+  //       total: total,
+  //       totalPages: Math.ceil(total / limit),
+  //     },
+  //   };
+  // }
 
   /**
    * Get match by ID
@@ -192,8 +200,8 @@ class MatchService {
         .populate("player2Id", "fullName email")
         .populate("pair1Id", "pairName")
         .populate("pair2Id", "pairName")
-        .populate("players.userId", "fullName email") // For stats
-        .populate("teams.players.userId", "fullName email") // For stats
+        .populate("players.userId", "fullName email")
+        .populate("teams.players.userId", "fullName email")
         .populate("createdBy", "fullName email")
         .populate("updatedBy", "fullName email");
 
@@ -201,12 +209,16 @@ class MatchService {
         throw new Error("Match not found");
       }
 
+      // Check if tournament exists
+      if (!match.tournamentId) {
+        console.warn(`Match ${id} has no valid tournament reference`);
+      }
+
       return match;
     } catch (error) {
       throw new Error(`Failed to fetch match: ${error.message}`);
     }
   }
-
   /**
    * Get matches by round
    */
@@ -240,7 +252,7 @@ class MatchService {
           limit: Number(limit),
           total: total,
           totalPages: Math.ceil(total / limit),
-        }
+        },
       };
     } catch (error) {
       throw new Error(`Failed to fetch round matches: ${error.message}`);
@@ -263,7 +275,8 @@ class MatchService {
       }
 
       // Check authorization
-      const isOwner = match.tournamentId.createdBy.toString() === userId.toString();
+      const isOwner =
+        match.tournamentId.createdBy.toString() === userId.toString();
       const isAdmin = role === "admin";
 
       if (!isAdmin && !isOwner) {
@@ -271,12 +284,22 @@ class MatchService {
       }
 
       // Validate status if provided (match schema enum)
-      if (updateData.status && !["Upcoming", "In Progress", "Completed", "Cancelled"].includes(updateData.status)) {
-        throw new Error("Invalid status. Must be 'Upcoming', 'In Progress', 'Completed', or 'Cancelled'");
+      if (
+        updateData.status &&
+        !["Upcoming", "In Progress", "Completed", "Cancelled"].includes(
+          updateData.status
+        )
+      ) {
+        throw new Error(
+          "Invalid status. Must be 'Upcoming', 'In Progress', 'Completed', or 'Cancelled'"
+        );
       }
 
       // Validate matchType if provided
-      if (updateData.matchType && !["Single", "Pair"].includes(updateData.matchType)) {
+      if (
+        updateData.matchType &&
+        !["Single", "Pair"].includes(updateData.matchType)
+      ) {
         throw new Error("Invalid match type. Must be 'Single' or 'Pair'");
       }
 
@@ -294,7 +317,7 @@ class MatchService {
         { path: "players.userId", select: "fullName email" },
         { path: "teams.players.userId", select: "fullName email" },
         { path: "createdBy", select: "fullName email" },
-        { path: "updatedBy", select: "fullName email" }
+        { path: "updatedBy", select: "fullName email" },
       ]);
     } catch (error) {
       throw new Error(`Failed to update match: ${error.message}`);
@@ -342,7 +365,7 @@ class MatchService {
         { path: "pair1Id", select: "pairName" },
         { path: "pair2Id", select: "pairName" },
         { path: "players.userId", select: "fullName email" },
-        { path: "teams.players.userId", select: "fullName email" }
+        { path: "teams.players.userId", select: "fullName email" },
       ]);
     } catch (error) {
       throw new Error(`Failed to update match scores: ${error.message}`);
@@ -365,7 +388,8 @@ class MatchService {
       }
 
       // Check authorization
-      const isOwner = match.tournamentId.createdBy.toString() === userId.toString();
+      const isOwner =
+        match.tournamentId.createdBy.toString() === userId.toString();
       const isAdmin = role === "admin";
 
       if (!isOwner && !isAdmin) {
