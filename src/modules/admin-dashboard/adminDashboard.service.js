@@ -108,7 +108,7 @@ class AdminDashboardService {
         : null,
       createdAt: reg.createdAt
     }))
-  };
+  };  
 }
 
 
