@@ -71,10 +71,19 @@ const TournamentSchema = new mongoose.Schema(
       enum: ["upcoming", "in progress", "completed", "cancelled", "scheduled"],
       default: "upcoming"
     },
-   rules: {
-      type: [String],
-      default: []
-    },
+    rules: {
+        type:String
+      },
+    maxParticipants: { type: Number },
+    registeredPlayers: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Player'
+    }],
+    // knockoutStage: knockoutSchema,
+    knockoutStage: [{ 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: "KnockoutSchema" 
+    }],
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
