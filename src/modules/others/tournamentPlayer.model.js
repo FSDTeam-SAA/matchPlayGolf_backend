@@ -36,7 +36,7 @@ const tournamentPlayerSchema = new mongoose.Schema({
   },
   assignMatch:{
     type:Boolean,
-    default:true
+    default: true
   },
   registeredAt: Date,
   isActive: {

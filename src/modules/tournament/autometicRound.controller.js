@@ -1,17 +1,30 @@
 // controllers/knockoutController.js
-const Tournament = require('../models/Tournament');
+import Tournament from '../tournament/tournament.model.js';
 
 // Initialize Knockout Stage
-exports.initializeKnockout = async (req, res) => {
+export const initializeKnockout = async (req, res) => {
   try {
     const { tournamentId } = req.params;
-    const { qualifiedPlayers } = req.body; // Array of player IDs
-
+    // const { qualifiedPlayers } = req.body; // Array of player IDs
     const tournament = await Tournament.findById(tournamentId);
-    
+
     if (!tournament) {
-      return res.status(404).json({ message: 'Tournament not found' });
+      return res.status(404).json({ message: "Tournament not found" });
     }
+
+    // 2️⃣ Auto-fetch all active registered players
+    const registeredPlayers = await TournamentPlayer.find({
+      tournamentId,
+      isActive: true,
+      assignMatch: true
+    }).select("playerId");
+
+    if (registeredPlayers.length === 0) {
+      return res.status(400).json({ message: "No registered players found" });
+    }
+
+    // Extract only IDs
+    const qualifiedPlayers = registeredPlayers.map(p => p.playerId.toString());
 
     // Validate number of players (must be power of 2)
     const playerCount = qualifiedPlayers.length;
@@ -47,7 +60,7 @@ exports.initializeKnockout = async (req, res) => {
 };
 
 // Auto-generate next round matches
-exports.generateNextRound = async (req, res) => {
+export const generateNextRound = async (req, res) => {
   try {
     const { tournamentId } = req.params;
     
@@ -101,7 +114,7 @@ exports.generateNextRound = async (req, res) => {
 };
 
 // Update match result and auto-advance winner
-exports.updateMatchResult = async (req, res) => {
+export const updateMatchResult = async (req, res) => {
   try {
     const { tournamentId, matchId } = req.params;
     const { winnerId, player1Score, player2Score } = req.body;
@@ -150,7 +163,7 @@ exports.updateMatchResult = async (req, res) => {
 };
 
 // Hold/Resume Tournament
-exports.toggleTournamentHold = async (req, res) => {
+export const toggleTournamentHold = async (req, res) => {
   try {
     const { tournamentId } = req.params;
     const { holdReason } = req.body;
@@ -176,7 +189,7 @@ exports.toggleTournamentHold = async (req, res) => {
 };
 
 // Reschedule Match
-exports.rescheduleMatch = async (req, res) => {
+export const rescheduleMatch = async (req, res) => {
   try {
     const { tournamentId, matchId } = req.params;
     const { scheduledDate, scheduledTime, venue, notes } = req.body;
@@ -212,7 +225,7 @@ exports.rescheduleMatch = async (req, res) => {
 };
 
 // Get Knockout Stage Details
-exports.getKnockoutStage = async (req, res) => {
+export const getKnockoutStage = async (req, res) => {
   try {
     const { tournamentId } = req.params;
     
