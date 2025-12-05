@@ -35,3 +35,10 @@ export const adminMiddleware = (req, res, next) => {
   }
   next();
 };
+export const organizerMiddleware = (req, res, next) => {
+  // Capitalized match
+  if (!req.user || req.user.role !== "Organizer") {
+    return res.status(403).json({ message: "Access denied: Organizer only" });
+  }
+  next();
+};
