@@ -18,6 +18,7 @@ import userDashboardRoutes from '../modules/user-dashboard/userDashboard.routes.
 import organizerDashboardRoutes from '../modules/organizer-dashboard/organizerDashboard.routes.js';
 import adminDashboardRoutes from '../modules/admin-dashboard/adminDashboard.routes.js';
 import adminTeam from '../modules/team/team.routes.js';
+import playerManagement from '../modules/tournamentPlayer/tournamentPlayer.routes.js';
 
 
 
@@ -37,6 +38,7 @@ router.use('/user-dashboard', userDashboardRoutes);
 router.use('/organizer-dashboard', organizerDashboardRoutes);
 router.use('/admin-dashboard', adminDashboardRoutes);
 router.use('/admin-team', adminTeam)
+router.use('/players', playerManagement)
 
 
 
