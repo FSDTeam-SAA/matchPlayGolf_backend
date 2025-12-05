@@ -413,6 +413,8 @@ async createRounds(tournamentId, rounds, createdBy) {
     throw new Error("Tournament ID is required");
   }
 
+  const tournament = await Tournament.findById(tournamentId);
+
   // Correct query object
   const query = { tournamentId };
 
@@ -433,6 +435,7 @@ async createRounds(tournamentId, rounds, createdBy) {
 
   return {
     success: true,
+    tournament,
     matches,
     pagination: {
       page: Number(page),
