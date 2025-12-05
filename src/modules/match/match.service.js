@@ -302,6 +302,27 @@ class MatchService {
       ) {
         throw new Error("Invalid match type. Must be 'Single' or 'Pair'");
       }
+      
+      // if (updateData.status === "Completed" || match.status === "Completed") {
+  
+      // // Single Match Winner Color Logic
+      // if (match.matchType === "Single") {
+      //   if (updateData.winnerPlayerId?.toString() === match.player1Id?.toString()) {
+      //     match.player1Color = "#39674b"; // Winner
+      //   } else if (updateData.winnerPlayerId?.toString() === match.player2Id?.toString()) {
+      //     match.player2Color = "#39674b"; // Winner
+      //   }
+      // }
+
+      // // Pair Match Winner Color Logic
+      // if (match.matchType === "Pair") {
+      //   if (updateData.winnerPairId?.toString() === match.pair1Id?.toString()) {
+      //     match.pair1Color = "#39674b"; // Winner
+      //   } else if (updateData.winnerPairId?.toString() === match.pair2Id?.toString()) {
+      //     match.pair2Color = "#39674b"; // Winner
+      //   }
+      // }
+    // }
 
       Object.assign(match, updateData);
       match.updatedBy = userId;

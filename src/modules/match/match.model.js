@@ -93,6 +93,11 @@ const MatchSchema = new mongoose.Schema(
     pair1Score: { type: Number, default: 0 },
     pair2Score: { type: Number, default: 0 },
 
+    // player1Color: { type: String,  },
+    // player2Color: { type: String,  },
+    // pair1Color: { type: String,  },
+    winnerColor: { type: String },
+
     teams: [TeamSchema], // pair-team stats
 
     status: {
@@ -104,12 +109,13 @@ const MatchSchema = new mongoose.Schema(
       type:Date,
       default:Date.now
     },
-    teeTime: Date,
+    time: Date,
     startingHole: { type: Number, default: 1 },
     groupNumber: Number,
 
     winnerPairId: mongoose.Schema.Types.ObjectId,   // for Pair
     winnerPlayerId: mongoose.Schema.Types.ObjectId, // for Single
+
     venue: { type: String },
 
     createdBy: {
