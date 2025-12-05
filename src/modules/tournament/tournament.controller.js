@@ -374,6 +374,7 @@ export const getTournamentMatchesController = async (req, res) => {
   try {
     const { tournamentId } = req.params;
 
+
     const matches = await tournamentService.getTournamentMatchesService(tournamentId);
 
     return res.status(200).json({
