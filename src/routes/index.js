@@ -7,7 +7,7 @@ import authRoutes  from '../modules/auth/auth.routes.js';
 import userRoutes from '../modules/user/user.routes.js';
 import broadcastRoutes from '../modules/broadcast/broadcast.routes.js';
 
-import matchRoutes from '../modules/match-result/match-result.routes.js';
+// import matchRoutes from '../modules/match-result/match-result.routes.js';
 
 import tournamentRoutes from '../modules/tournament/tournament.routes.js';
 import roundRoutes from '../modules/round/round.routes.js';
@@ -26,7 +26,7 @@ const router = express.Router();
 router.use('/auth', authRoutes);
 router.use('/user', userRoutes);
 
-router.use('/match-result', matchRoutes);
+// router.use('/match-result', matchRoutes);
 router.use('/article', articleRoutes);
 router.use('/tournament', tournamentRoutes);
 router.use("/round", roundRoutes);

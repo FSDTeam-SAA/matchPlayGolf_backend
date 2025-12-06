@@ -1,6 +1,9 @@
 import express from "express";
-import { getDashboardSummary, getUserCurrentTournaments } from "./userDashboard.controller.js";
 import { verifyToken } from "../../middleware/authMiddleware.js";
+import {
+  getDashboardSummary,
+  getUserCurrentTournaments
+} from "./userDashboard.controller.js";
 
 const router = express.Router();
 

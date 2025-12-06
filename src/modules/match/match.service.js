@@ -2,6 +2,7 @@ import Match from "./match.model.js";
 import Round from "../round/round.model.js";
 import Tournament from "../tournament/tournament.model.js";
 import mongoose from "mongoose";
+import { uploadToCloudinary } from "../../lib/uploadToCloudinary.js";
 
 class MatchService {
   /**
@@ -262,7 +263,10 @@ class MatchService {
   /**
    * Update match
    */
-  async updateTournamentMatch(id, updateData, userId, role) {
+   /**
+   * Update match
+   */
+  async updateTournamentMatch(id, updateData, userId, role, file) {
     try {
       if (!mongoose.Types.ObjectId.isValid(id)) {
         throw new Error("Invalid match ID");
@@ -303,6 +307,24 @@ class MatchService {
         throw new Error("Invalid match type. Must be 'Single' or 'Pair'");
       }
 
+      // ✅ comments (optional)
+      if (updateData.comments !== undefined) {
+        match.comments = updateData.comments;
+      }
+
+      // ✅ photo upload (optional)
+      if (file && file.buffer) {
+        const uploadResult = await uploadToCloudinary(
+          file.buffer,
+          file.originalname || "match_photo",
+          "match_photos"
+        );
+        if (uploadResult?.secure_url) {
+          match.photo = uploadResult.secure_url;
+        }
+      }
+
+      // Apply remaining fields (score, status, teeTime, etc.)
       Object.assign(match, updateData);
       match.updatedBy = userId;
       await match.save();
@@ -317,7 +339,7 @@ class MatchService {
         { path: "players.userId", select: "fullName email" },
         { path: "teams.players.userId", select: "fullName email" },
         { path: "createdBy", select: "fullName email" },
-        { path: "updatedBy", select: "fullName email" },
+        { path: "updatedBy", select: "fullName email" }
       ]);
     } catch (error) {
       throw new Error(`Failed to update match: ${error.message}`);

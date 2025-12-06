@@ -3,10 +3,10 @@ import mongoose from "mongoose";
 // ---------------- PLAYER STATS ----------------
 const PlayerStatSchema = new mongoose.Schema(
   {
-    userId: { 
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true 
+      required: true
     },
     score: { type: Number, default: 0 },
     strokes: { type: Number, default: 0 },
@@ -98,20 +98,33 @@ const MatchSchema = new mongoose.Schema(
       enum: ["Upcoming", "In Progress", "Completed", "Cancelled"],
       default: "Upcoming"
     },
-    score:{
-      type:Number,
-      default:0
+
+    score: {
+      type: Number,
+      default: 0
     },
-    date:{
-      type:Date,
-      default:Date.now
+
+    date: {
+      type: Date,
+      default: Date.now
     },
+
     teeTime: Date,
     startingHole: { type: Number, default: 1 },
     groupNumber: Number,
 
     winnerTeamId: mongoose.Schema.Types.ObjectId,   // for Pair
     winnerPlayerId: mongoose.Schema.Types.ObjectId, // for Single
+
+    // ✅ NEW FIELDS MOVED FROM MATCH-RESULT
+    comments: {
+      type: String,
+      default: ""
+    },
+    photo: {
+      type: String,
+      default: ""
+    },
 
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
