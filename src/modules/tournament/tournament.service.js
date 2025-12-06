@@ -413,6 +413,8 @@ async createRounds(tournamentId, rounds, createdBy) {
     throw new Error("Tournament ID is required");
   }
 
+  const tournament = await Tournament.findById(tournamentId);
+
   // Correct query object
   const query = { tournamentId };
 
@@ -423,9 +425,9 @@ async createRounds(tournamentId, rounds, createdBy) {
 
   // Fetch matches
   const matches = await Match.find(query)
-    .populate("player1Id player2Id", "name email photo")
+    .populate("player1Id player2Id", "fullName email profileImage score")
     .populate("pair1Id pair2Id")
-    .populate("teams.players.userId", "name email photo")
+    .populate("teams.players.userId", "fullName email profileImage score")
     .populate("roundId", "roundNumber name")
     .sort({ createdAt: -1 })
     .skip(skip)
@@ -433,6 +435,7 @@ async createRounds(tournamentId, rounds, createdBy) {
 
   return {
     success: true,
+    tournament,
     matches,
     pagination: {
       page: Number(page),

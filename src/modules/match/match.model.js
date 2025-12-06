@@ -69,7 +69,6 @@ const MatchSchema = new mongoose.Schema(
       required: true
     },
 
-    // ----- SINGLE MATCH -----
     player1Id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User"
@@ -78,10 +77,6 @@ const MatchSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User"
     },
-
-    players: [PlayerStatSchema], // single-player stats
-
-    // ----- PAIR MATCH -----
     pair1Id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "TournamentPair"
@@ -90,6 +85,13 @@ const MatchSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "TournamentPair"
     },
+
+    players: [PlayerStatSchema], // single-player stats-
+
+    player1Score: { type: Number, default: 0 },
+    player2Score: { type: Number, default: 0 },
+    pair1Score: { type: Number, default: 0 },
+    pair2Score: { type: Number, default: 0 },
 
     teams: [TeamSchema], // pair-team stats
 
@@ -113,8 +115,9 @@ const MatchSchema = new mongoose.Schema(
     startingHole: { type: Number, default: 1 },
     groupNumber: Number,
 
-    winnerTeamId: mongoose.Schema.Types.ObjectId,   // for Pair
+    winnerPairId: mongoose.Schema.Types.ObjectId,   // for Pair
     winnerPlayerId: mongoose.Schema.Types.ObjectId, // for Single
+    venue: { type: String },
 
     // ✅ NEW FIELDS MOVED FROM MATCH-RESULT
     comments: {
