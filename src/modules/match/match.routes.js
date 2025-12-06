@@ -12,6 +12,7 @@ import {
   getUserActiveTournaments
 } from "./match.controller.js";
 import { verifyToken } from "../../middleware/authMiddleware.js";
+import { multerUpload } from "../../config/multer.js";
 
 const router = express.Router();
 
@@ -25,7 +26,15 @@ router.get("/round/:roundId", getTournamentMatchesByRound);
 
 // Protected routes
 router.post("/", verifyToken, createTournamentMatch);
-router.put("/:id", verifyToken, updateTournamentMatch);
+
+// ✅ single update route with photo support
+router.put(
+  "/:id",
+  verifyToken,
+  multerUpload.single("photo"),   // field name = photo
+  updateTournamentMatch
+);
+
 router.put("/:matchId/scores", verifyToken, updateTournamentMatchScores);
 router.delete("/:matchId", verifyToken, deleteTournamentMatch);
 
