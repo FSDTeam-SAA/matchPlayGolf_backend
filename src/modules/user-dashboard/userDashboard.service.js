@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import Match from "../match/match.model.js";
-import MatchResult from "../match-result/match-result.model.js";
 import Tournament from "../tournament/tournament.model.js";
 import Round from "../round/round.model.js";
 import RegisterUser from "../others/tournamentPlayer.model.js";
@@ -15,8 +14,10 @@ class UserDashboardService {
     const id = new ObjectId(userId);
     return {
       $or: [
-        { "players.userId": id },
-        { "teams.players.userId": id }
+        { "players.userId": id },          // stats array (when used)
+        { "teams.players.userId": id },    // team stats
+        { player1Id: id },                 // single matches, top-level
+        { player2Id: id }                  // single matches, top-level
       ]
     };
   }
@@ -28,18 +29,18 @@ class UserDashboardService {
     const participantFilter = this.buildParticipantFilter(userId);
     const userObjectId = new ObjectId(userId);
 
-    // Tournament matches and personal matches (match-result module)
-    const [MatchStats, personalMatches] = await Promise.all([
-      this.getMatchStats(participantFilter, userObjectId),
-      this.getPersonalMatchStats(userObjectId)
-    ]);
+    // Only tournament matches (Match model) – no MatchResult
+    const MatchStats = await this.getMatchStats(participantFilter, userObjectId);
 
     // Current round: prefer "In Progress", fall back to the nearest scheduled
     const currentRound = await this.getCurrentRound(userObjectId);
 
-    const totalMatchesPlayed = MatchStats.played + personalMatches.played;
-    const totalWins = MatchStats.wins + personalMatches.wins;
-    const winRate = totalMatchesPlayed > 0 ? Number(((totalWins / totalMatchesPlayed) * 100).toFixed(2)) : 0;
+    const totalMatchesPlayed = MatchStats.played;
+    const totalWins = MatchStats.wins;
+    const winRate =
+      totalMatchesPlayed > 0
+        ? Number(((totalWins / totalMatchesPlayed) * 100).toFixed(2))
+        : 0;
 
     return {
       matchesPlayed: totalMatchesPlayed,
@@ -53,7 +54,7 @@ class UserDashboardService {
   async getMatchStats(participantFilter, userObjectId) {
     const matchQuery = { ...participantFilter, status: { $ne: "Cancelled" } };
 
-    const [played, wins, pending] = await Promise.all([
+    const [played, rawWins, pending] = await Promise.all([
       Match.countDocuments(matchQuery),
       Match.countDocuments({
         ...matchQuery,
@@ -69,21 +70,10 @@ class UserDashboardService {
       })
     ]);
 
+    // Defensive: wins can never logically exceed played
+    const wins = Math.min(rawWins, played);
+
     return { played, wins, pending };
-  }
-
-  async getPersonalMatchStats(userObjectId) {
-    const personalMatches = await MatchResult.find({ createdBy: userObjectId }).select("yourScore opponentScore");
-
-    const played = personalMatches.length;
-    const wins = personalMatches.reduce((acc, match) => {
-      if (typeof match.yourScore === "number" && typeof match.opponentScore === "number" && match.yourScore > match.opponentScore) {
-        return acc + 1;
-      }
-      return acc;
-    }, 0);
-
-    return { played, wins };
   }
 
   async getCurrentRound(userObjectId) {
@@ -124,11 +114,11 @@ class UserDashboardService {
 
     const scheduledRound = !inProgressRound
       ? await Round.findOne({
-          tournamentId: { $in: tournamentIds },
-          status: "Scheduled"
-        })
-          .populate("tournamentId", "tournamentName")
-          .sort({ date: 1 })
+        tournamentId: { $in: tournamentIds },
+        status: "Scheduled"
+      })
+        .populate("tournamentId", "tournamentName")
+        .sort({ date: 1 })
       : null;
 
     const round = inProgressRound || scheduledRound;
@@ -151,7 +141,6 @@ class UserDashboardService {
    * Get current tournaments for the user with next match info.
    */
   async getUserTournaments(userId) {
-
     const userObjectId = new ObjectId(userId);
     const tournamentIds = await this.getTournamentIdsForUser(userObjectId);
     if (!tournamentIds.length) return [];
@@ -191,13 +180,15 @@ class UserDashboardService {
           location: tournament.location,
           currentRound: currentRound
             ? {
-                roundName: currentRound.roundName,
-                roundNumber: currentRound.roundNumber,
-                status: currentRound.status,
-                date: currentRound.date
-              }
+              roundName: currentRound.roundName,
+              roundNumber: currentRound.roundNumber,
+              status: currentRound.status,
+              date: currentRound.date
+            }
             : null,
-          nextMatch: nextMatch ? this.formatNextMatch(nextMatch, userObjectId) : null
+          nextMatch: nextMatch
+            ? this.formatNextMatch(nextMatch, userObjectId)
+            : null
         };
       })
     );
@@ -222,15 +213,20 @@ class UserDashboardService {
   formatNextMatch(match, userObjectId) {
     const opponentNames = [];
 
-    if (match.matchType === "single") {
+    if (match.matchType === "single" || match.matchType === "Single") {
       for (const player of match.players || []) {
-        if (player?.userId && player.userId._id?.toString() !== userObjectId.toString()) {
+        if (
+          player?.userId &&
+          player.userId._id?.toString() !== userObjectId.toString()
+        ) {
           opponentNames.push(player.userId.fullName || "Opponent");
         }
       }
     } else {
       for (const team of match.teams || []) {
-        const hasUser = (team.players || []).some((p) => p?.userId?._id?.toString() === userObjectId.toString());
+        const hasUser = (team.players || []).some(
+          (p) => p?.userId?._id?.toString() === userObjectId.toString()
+        );
         if (!hasUser) {
           const names = (team.players || [])
             .map((p) => p?.userId?.fullName)
@@ -251,11 +247,11 @@ class UserDashboardService {
       matchType: match.matchType,
       round: match.roundId
         ? {
-            id: match.roundId._id,
-            roundName: match.roundId.roundName,
-            roundNumber: match.roundId.roundNumber,
-            date: match.roundId.date
-          }
+          id: match.roundId._id,
+          roundName: match.roundId.roundName,
+          roundNumber: match.roundId.roundNumber,
+          date: match.roundId.date
+        }
         : null,
       opponent
     };
