@@ -3,10 +3,10 @@ import mongoose from "mongoose";
 // ---------------- PLAYER STATS ----------------
 const PlayerStatSchema = new mongoose.Schema(
   {
-    userId: { 
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true 
+      required: true
     },
     score: { type: Number, default: 0 },
     strokes: { type: Number, default: 0 },
@@ -69,6 +69,7 @@ const MatchSchema = new mongoose.Schema(
       required: true
     },
 
+    // ----- SINGLE MATCH -----
     player1Id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User"
@@ -77,6 +78,10 @@ const MatchSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User"
     },
+
+    players: [PlayerStatSchema], // single-player stats
+
+    // ----- PAIR MATCH -----
     pair1Id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "TournamentPair"
@@ -85,7 +90,6 @@ const MatchSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "TournamentPair"
     },
-
     players: [PlayerStatSchema], // single-player stats-
 
     player1Score: { type: Number, default: 0 },
@@ -98,6 +102,7 @@ const MatchSchema = new mongoose.Schema(
     // pair1Color: { type: String,  },
     winnerColor: { type: String },
 
+
     teams: [TeamSchema], // pair-team stats
 
     status: {
@@ -105,18 +110,36 @@ const MatchSchema = new mongoose.Schema(
       enum: ["Upcoming", "In Progress", "Completed", "Cancelled"],
       default: "Upcoming"
     },
-    date:{
-      type:Date,
-      default:Date.now
+
+    score: {
+      type: Number,
+      default: 0
     },
     time: Date,
+
+
+    date: {
+      type: Date,
+      default: Date.now
+    },
+
     startingHole: { type: Number, default: 1 },
     groupNumber: Number,
 
-    winnerPairId: mongoose.Schema.Types.ObjectId,   // for Pair
+    winnerTeamId: mongoose.Schema.Types.ObjectId,   // for Pair
     winnerPlayerId: mongoose.Schema.Types.ObjectId, // for Single
 
     venue: { type: String },
+
+    // ✅ NEW FIELDS MOVED FROM MATCH-RESULT
+    comments: {
+      type: String,
+      default: ""
+    },
+    photo: {
+      type: String,
+      default: ""
+    },
 
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
