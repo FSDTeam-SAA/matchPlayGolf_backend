@@ -25,7 +25,7 @@ export const createTournamentMatch = async (req, res) => {
       startingHole,
       groupNumber,
       status,
-      date, 
+      date,
       score
     } = req.body;
 
@@ -62,10 +62,14 @@ export const createTournamentMatch = async (req, res) => {
     }
 
     // Status validation (match schema enum)
-    if (status && !["Upcoming", "In Progress", "Completed", "Cancelled"].includes(status)) {
+    if (
+      status &&
+      !["Upcoming", "In Progress", "Completed", "Cancelled"].includes(status)
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Invalid status. Must be 'Upcoming', 'In Progress', 'Completed', or 'Cancelled'"
+        message:
+          "Invalid status. Must be 'Upcoming', 'In Progress', 'Completed', or 'Cancelled'"
       });
     }
 
@@ -94,9 +98,9 @@ export const createTournamentMatch = async (req, res) => {
     const match = await matchService.createTournamentMatch(matchData);
 
     // 🔥 EMIT SOCKET NOTIFICATION - ONLY TO MATCH PARTICIPANTS
-    const io = req.app.get('io');
+    const io = req.app.get("io");
     if (io) {
-      emitMatchNotification(io, 'MATCH_CREATED', match);
+      emitMatchNotification(io, "MATCH_CREATED", match);
     }
 
     res.status(201).json({
@@ -120,17 +124,26 @@ export const createTournamentMatch = async (req, res) => {
 export const updateTournamentMatch = async (req, res) => {
   try {
     const updateData = req.body;
-    
+
     // Validate status if provided
-    if (updateData.status && !["Upcoming", "In Progress", "Completed", "Cancelled"].includes(updateData.status)) {
+    if (
+      updateData.status &&
+      !["Upcoming", "In Progress", "Completed", "Cancelled"].includes(
+        updateData.status
+      )
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Invalid status. Must be 'Upcoming', 'In Progress', 'Completed', or 'Cancelled'"
+        message:
+          "Invalid status. Must be 'Upcoming', 'In Progress', 'Completed', or 'Cancelled'"
       });
     }
 
     // Validate matchType if provided
-    if (updateData.matchType && !["Single", "Pair"].includes(updateData.matchType)) {
+    if (
+      updateData.matchType &&
+      !["Single", "Pair"].includes(updateData.matchType)
+    ) {
       return res.status(400).json({
         success: false,
         message: "Invalid match type. Must be 'Single' or 'Pair'"
@@ -141,13 +154,14 @@ export const updateTournamentMatch = async (req, res) => {
       req.params.id,
       updateData,
       req.user._id,
-      req.user.role
+      req.user.role,
+      req.file || null        // ✅ pass uploaded photo (if any) to service
     );
 
     // 🔥 EMIT SOCKET NOTIFICATION - ONLY TO MATCH PARTICIPANTS
-    const io = req.app.get('io');
+    const io = req.app.get("io");
     if (io) {
-      emitMatchNotification(io, 'MATCH_UPDATED', match);
+      emitMatchNotification(io, "MATCH_UPDATED", match);
     }
 
     res.status(200).json({
@@ -184,9 +198,9 @@ export const updateTournamentMatchScores = async (req, res) => {
     );
 
     // 🔥 EMIT SOCKET NOTIFICATION - ONLY TO MATCH PARTICIPANTS
-    const io = req.app.get('io');
+    const io = req.app.get("io");
     if (io) {
-      emitMatchNotification(io, 'MATCH_UPDATED', match);
+      emitMatchNotification(io, "MATCH_UPDATED", match);
     }
 
     res.status(200).json({
@@ -220,9 +234,9 @@ export const deleteTournamentMatch = async (req, res) => {
     );
 
     // 🔥 EMIT SOCKET NOTIFICATION - ONLY TO MATCH PARTICIPANTS
-    const io = req.app.get('io');
+    const io = req.app.get("io");
     if (io) {
-      emitMatchNotification(io, 'MATCH_DELETED', match);
+      emitMatchNotification(io, "MATCH_DELETED", match);
     }
 
     res.status(200).json({

@@ -19,7 +19,9 @@ export const getDashboardSummary = async (req, res) => {
 
 export const getUserCurrentTournaments = async (req, res) => {
   try {
-    const tournaments = await userDashboardService.getUserTournaments(req.user._id);
+    const tournaments = await userDashboardService.getUserTournaments(
+      req.user._id
+    );
 
     return res.status(200).json({
       success: true,
