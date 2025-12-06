@@ -21,7 +21,7 @@ export const createTournamentMatch = async (req, res) => {
       player2Id,
       pair1Id,
       pair2Id,
-      teeTime,
+      time,
       startingHole,
       groupNumber,
       status,
@@ -78,10 +78,9 @@ export const createTournamentMatch = async (req, res) => {
       roundId,
       matchType,
       date,
-      score,
       status: status || "Upcoming",
       createdBy: req.user._id,
-      ...(teeTime && { teeTime }),
+      ...(time && { time }),
       ...(startingHole && { startingHole }),
       ...(groupNumber && { groupNumber })
     };

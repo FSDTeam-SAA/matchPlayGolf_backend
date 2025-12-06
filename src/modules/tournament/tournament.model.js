@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import knockoutStageSchema from "../others/knockoutSchema.model.js";
 
 const TournamentSchema = new mongoose.Schema(
   {
@@ -80,10 +81,7 @@ const TournamentSchema = new mongoose.Schema(
       ref: 'Player'
     }],
     // knockoutStage: knockoutSchema,
-    knockoutStage: [{ 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: "KnockoutSchema" 
-    }],
+   knockoutStage:knockoutStageSchema,
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

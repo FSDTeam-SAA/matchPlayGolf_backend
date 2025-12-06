@@ -73,6 +73,7 @@ export const paginationHandler = (page, limit, sortBy, sortOrder) => {
 export const getAllMembers = async (req, res) => {
   try {
     const { page, limit, sortBy, sortOrder } = req.query;
+    console.log("mahabur");
 
     const {
       page: currentPage,
@@ -111,7 +112,9 @@ export const getAllMembers = async (req, res) => {
 // Get single member
 export const getMemberById = async (req, res) => {
   try {
-    const member = await Member.findById(req.params.id);
+    const { memberId } = req.params;
+    console.log(memberId);
+    const member = await Member.findById( memberId );
 
     if (!member) {
       return res.status(404).json({

@@ -90,6 +90,18 @@ const MatchSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "TournamentPair"
     },
+    players: [PlayerStatSchema], // single-player stats-
+
+    player1Score: { type: Number, default: 0 },
+    player2Score: { type: Number, default: 0 },
+    pair1Score: { type: Number, default: 0 },
+    pair2Score: { type: Number, default: 0 },
+
+    // player1Color: { type: String,  },
+    // player2Color: { type: String,  },
+    // pair1Color: { type: String,  },
+    winnerColor: { type: String },
+
 
     teams: [TeamSchema], // pair-team stats
 
@@ -103,18 +115,21 @@ const MatchSchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    time: Date,
+
 
     date: {
       type: Date,
       default: Date.now
     },
 
-    teeTime: Date,
     startingHole: { type: Number, default: 1 },
     groupNumber: Number,
 
     winnerTeamId: mongoose.Schema.Types.ObjectId,   // for Pair
     winnerPlayerId: mongoose.Schema.Types.ObjectId, // for Single
+
+    venue: { type: String },
 
     // ✅ NEW FIELDS MOVED FROM MATCH-RESULT
     comments: {
