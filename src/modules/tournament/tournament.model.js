@@ -75,10 +75,10 @@ const TournamentSchema = new mongoose.Schema(
     rules: {
         type:String
       },
-    maxParticipants: { type: Number },
+    totalParticipants: { type: Number, default: 0 },
     registeredPlayers: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Player'
+      ref: 'User'
     }],
     // knockoutStage: knockoutSchema,
    knockoutStage:knockoutStageSchema,

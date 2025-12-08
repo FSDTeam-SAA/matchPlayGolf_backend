@@ -1,5 +1,6 @@
 // controllers/knockoutController.js
 import Tournament from '../tournament/tournament.model.js';
+import TournamentPlayer from '../others/tournamentPlayer.model.js';
 
 // Initialize Knockout Stage
 export const initializeKnockout = async (req, res) => {

@@ -112,7 +112,7 @@ export const getAllMembers = async (req, res) => {
 // Get single member
 export const getMemberById = async (req, res) => {
   try {
-    const { memberId } = req.params;
+    const  memberId  = req.params.memberId;
     console.log(memberId);
     const member = await Member.findById( memberId );
 
@@ -134,12 +134,75 @@ export const getMemberById = async (req, res) => {
     });
   }
 };
+export const updateMemberById = async(req, res) => {
+  try{
+
+    const memberId = req.params.memberId;
+    console.log(memberId);
+    const member = await Member.findById(memberId);
+    const { memberName, designation, description } = req.body;
+
+    if(!member){
+      res.status(404).json({
+        success:false,
+        message:"Member not found provide correct member id mahabur",
+      })
+    }
+
+    const updateMember = {
+     memberName: memberName || member.memberName,
+     designation: designation || member.designation,
+     description:description || member.description
+    }
+
+    if(req.file && req.file.buffer){
+
+      
+        const fileBuffer = req.file.buffer;
+
+        // Upload to Cloudinary
+        const uploadResult = await uploadToCloudinary(
+          fileBuffer,
+          "members_image",
+          "ourTeam_images"
+        );
+
+        if (!uploadResult?.secure_url || !uploadResult?.public_id) {
+          return res.status(500).json({
+            success: false,
+            message: "File upload failed",
+          });
+        }
+        updateMember.image = uploadResult.secure_url;
+        updateMember.cloudinaryPublicId = uploadResult.public_id;
+      }
+
+      const updateAllData = await Member.findByIdAndUpdate(
+        memberId,
+        { $set: updateMember },
+        { new: true }
+    );
+
+    res.status(201).json({
+      success:true,
+      message: "Member updated successfully",
+      member: updateAllData
+    });
+      
+  }catch(err){
+    res.status(500).json({
+      success:false,
+      message:"Member not foound or provide valid id"
+    })
+  }
+}
 
 // Delete member
 export const deleteMember = async (req, res) => {
   try {
-    // 1. Find member first (so we get public_id)
-    const member = await Member.findById(req.params.id);
+    const { memberId } = req.params;
+
+    const member = await Member.findById(memberId);
 
     if (!member) {
       return res.status(404).json({
@@ -148,22 +211,31 @@ export const deleteMember = async (req, res) => {
       });
     }
 
-    // 2. Delete image from Cloudinary if exists
+    // Delete Cloudinary image safely
     if (member.cloudinaryPublicId) {
-      await cloudinary.uploader.destroy(member.cloudinaryPublicId);
+      try {
+        await cloudinary.uploader.destroy(member.cloudinaryPublicId);
+      } catch (err) {
+        console.error("Cloudinary Delete Error:", err.message);
+        // Do NOT return here — DB delete must continue
+      }
     }
 
-    // 3. Delete from MongoDB
-    await Member.findByIdAndDelete(req.params.id);
+    // Delete DB record
+    await Member.findByIdAndDelete(memberId);
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Member deleted successfully",
     });
+
   } catch (error) {
-    res.status(500).json({
+    console.error("Delete Member Error:", error);
+
+    return res.status(500).json({
       success: false,
-      message: error.message,
+      message: "Server error while deleting the member",
     });
   }
 };
+
