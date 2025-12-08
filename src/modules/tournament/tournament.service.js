@@ -73,7 +73,6 @@ class TournamentService {
     const skip = (page - 1) * limit;
     const total = await Tournament.countDocuments(query);
 
-    // ------- GET TOURNAMENTS -------
     const tournaments = await Tournament.find(query)
       .populate("createdBy", "fullName email")
       .sort({ createdAt: -1 })
@@ -349,6 +348,7 @@ async createRounds(tournamentId, rounds, createdBy) {
     
     const isOwner = tournament.createdBy.toString() === userId.toString();
     const isAdmin = role === "admin";
+    console.log(userId, role, tournament.createdBy);
 
     if (!isAdmin && !isOwner) {
       throw new Error("Not authorized to update this tournament");
@@ -378,6 +378,7 @@ async createRounds(tournamentId, rounds, createdBy) {
       const allPairs = [];
       
       if (format === "Single" || format === "Team") {
+       tournamentUpdateData.totalParticipants =  Number(tournamentUpdateData.totalParticipants || 0) + players.length;
         // Process all players for Single format
         const userIds = await this.findOrCreateUsers(players);
         const registrations = await this.registerSinglePlayers(tournamentId, userIds);
@@ -397,6 +398,7 @@ async createRounds(tournamentId, rounds, createdBy) {
         if (players.length % 2 !== 0) {
           throw new Error("Pair format requires an even number of players");
         }
+        tournamentUpdateData.totalParticipants =  Number(tournamentUpdateData.totalParticipants || 0) + players.length / 2;
         
         for (let i = 0; i < players.length; i += 2) {
           const pairPlayers = [players[i], players[i + 1]];
@@ -418,7 +420,6 @@ async createRounds(tournamentId, rounds, createdBy) {
         };
       }
     }
-    
     // Handle rounds creation
     if (rounds && rounds.length > 0) {
       const createdBy = registrationResult?.users?.[0] || tournament.createdBy;
