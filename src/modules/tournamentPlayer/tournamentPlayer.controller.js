@@ -1,11 +1,10 @@
 // src/controllers/tournamentPlayer.controller.js
+import tournamentPlayer from '../others/tournamentPlayer.model.js';
+import tournamentService from '../tournament/tournament.service.js';
 import TournamentPlayerService from './tournamentPlayer.service.js';
 
 class TournamentPlayerController {
-  /**
-   * Get all players (Admin: all players, Organizer: only their tournament players)
-   * GET /api/players
-   */
+
   async getAllPlayers(req, res) {
     try {
       const { tournamentId, isActive, assignMatch } = req.query;
@@ -37,10 +36,7 @@ class TournamentPlayerController {
     }
   }
 
-  /**
-   * Get players for a specific tournament
-   * GET /api/tournaments/:tournamentId/players
-   */
+ 
   async getPlayersByTournament(req, res) {
     try {
       const { tournamentId } = req.params;
@@ -66,14 +62,10 @@ class TournamentPlayerController {
     }
   }
 
-  /**
-   * Get single player by ID
-   * GET /api/players/:playerId
-   */
   async getPlayerById(req, res) {
     try {
       const { playerId } = req.params;
-      const userId = req.user.id;
+      const userId = req.user._id;
       const userRole = req.user.role;
 
       const player = await TournamentPlayerService.getPlayerById(
@@ -93,10 +85,11 @@ class TournamentPlayerController {
       });
     }
   }
+  
   async deletePlayer(req, res) {
     try {
       const { playerId } = req.params;
-      const userId = req.user.id;
+      const userId = req.user._id;
       const userRole = req.user.role;
 
       const result = await TournamentPlayerService.deletePlayer(
@@ -116,11 +109,29 @@ class TournamentPlayerController {
       });
     }
   }
+  async updatePlayer (req, res){
 
-  /**
-   * Toggle player active status
-   * PATCH /api/players/:playerId/toggle-status
-   */
+    try{
+      const updateData = req.body;
+      const { playerId } = req.params;
+      const userId = req.user._id;
+      const userRole = req.user.role;
+
+      const updatePlayer = await TournamentPlayerService.updatePlayer(playerId, updateData, userId, userRole);
+      
+      return res.status(201).json({
+        success:true,
+        message: "Player data updated successfully",
+        updateData: updatePlayer,
+      })
+    }
+    catch(err){
+      res.status(500).json({
+        success:false,
+        message:"Provide correct information"
+      })
+    }
+  }
   async togglePlayerStatus(req, res) {
     try {
       const { playerId } = req.params;
@@ -146,10 +157,6 @@ class TournamentPlayerController {
     }
   }
 
-  /**
-   * Get player statistics for a tournament
-   * GET /api/tournaments/:tournamentId/players/stats
-   */
   async getPlayerStats(req, res) {
     try {
       const { tournamentId } = req.params;

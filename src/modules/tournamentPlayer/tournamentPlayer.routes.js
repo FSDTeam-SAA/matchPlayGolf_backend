@@ -11,34 +11,29 @@ router.get(
   verifyToken,
   TournamentPlayerController.getAllPlayers
 );
-
-// Get single player by ID
 router.get(
   '/:playerId',
   verifyToken,
   TournamentPlayerController.getPlayerById
 );
-// Delete player
+router.put(
+  '/:playerId',
+  verifyToken,
+  TournamentPlayerController.updatePlayer
+);
 router.delete(
-  '/players/:playerId',
+  '/:playerId',
   verifyToken,
   TournamentPlayerController.deletePlayer
 );
-
-// // Toggle player status
 router.patch(
   '/players/:playerId/toggle-status',
   TournamentPlayerController.togglePlayerStatus
 );
-
-// Tournament-specific routes
-// Get all players for a tournament
 router.get(
   '/tournaments/:tournamentId/players',
   TournamentPlayerController.getPlayersByTournament
 );
-
-// Get player statistics for tournament
 router.get(
   '/tournaments/:tournamentId/players/stats',
   TournamentPlayerController.getPlayerStats
