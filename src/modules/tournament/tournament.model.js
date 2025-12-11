@@ -81,7 +81,11 @@ const TournamentSchema = new mongoose.Schema(
       ref: 'User'
     }],
     // knockoutStage: knockoutSchema,
-   knockoutStage:knockoutStageSchema,
+   knockoutStage: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "KnockoutStage",
+    default: null
+  },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
