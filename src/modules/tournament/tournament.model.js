@@ -80,6 +80,14 @@ const TournamentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
     }],
+    totalRounds:{
+      type:Number,
+      default:0
+    },
+    rememberEmail: {
+      type: Number,
+      default: 0
+    },
     // knockoutStage: knockoutSchema,
    knockoutStage: {
     type: mongoose.Schema.Types.ObjectId,
