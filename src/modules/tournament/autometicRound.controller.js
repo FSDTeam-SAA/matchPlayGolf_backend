@@ -2,6 +2,7 @@ import Tournament from '../tournament/tournament.model.js';
 import TournamentPlayer from '../others/tournamentPlayer.model.js';
 import KnockoutStage from '../others/knockoutSchema.model.js';
 import KnockoutMatch from '../match/match.model.js';
+import { match } from 'assert';
 
 // Initialize Knockout Stage
 export const initializeKnockout = async (req, res) => {
@@ -341,9 +342,11 @@ function isPowerOfTwo(n) {
   return n > 0 && (n & (n - 1)) === 0;
 }
 
-function generateFirstRoundMatches(players, tournamentId, knockoutStageId, userId) {
+async function generateFirstRoundMatches(players, tournamentId, knockoutStageId, userId) {
   const matches = [];
   const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
+  const tournament = await Tournament.findById(tournamentId);
+  
   
   for (let i = 0; i < shuffledPlayers.length; i += 2) {
     matches.push({
@@ -354,7 +357,8 @@ function generateFirstRoundMatches(players, tournamentId, knockoutStageId, userI
       player1: shuffledPlayers[i],
       player2: shuffledPlayers[i + 1],
       status: 'scheduled',
-      createdBy: userId
+      createdBy: userId,
+      matchType: tournament.format
     });
   }
   
