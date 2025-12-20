@@ -27,8 +27,8 @@ const router = express.Router();
 router.post('/:tournamentId/next-round', verifyToken, generateNextRound);
 router.post('/:tournamentId/initialize', verifyToken, initializeKnockout);
 router.put('/:tournamentId/match/:matchId', verifyToken, updateMatchResult);
-router.patch('/:tournamentId/hold', verifyToken, toggleTournamentHold);
-router.patch('/:tournamentId/match/:matchId/reschedule', verifyToken, rescheduleMatch);
+router.put('/:tournamentId/hold', verifyToken, toggleTournamentHold);
+router.put('/:tournamentId/match/:matchId/reschedule', verifyToken, rescheduleMatch);
 router.get('/knockout/:tournamentId', getKnockoutStage);
 
 router.post("/", verifyToken, createTournament);
