@@ -58,7 +58,7 @@ class OrganizerDashboardService {
     const tournaments = await Tournament.find({ createdBy: organizerObjectId })
       .sort({ createdAt: -1 })
       .limit(limit)
-      .select("tournamentName location startDate endDate createdAt status")
+      .select("tournamentName location drawSize startDate createdAt")
       .lean();
 
     return tournaments;
