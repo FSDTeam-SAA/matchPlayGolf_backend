@@ -16,7 +16,8 @@ import {
   updateMatchResult,
   toggleTournamentHold,
   rescheduleMatch,
-  getKnockoutStage
+  getKnockoutStage,
+  getMatchesByRound
 } from "./autometicRound.controller.js"
 import { verifyToken } from "../../middleware/authMiddleware.js";
 import { multerUpload } from '../../config/multer.js';
@@ -30,6 +31,7 @@ router.put('/:tournamentId/match/:matchId', verifyToken, updateMatchResult);
 router.put('/:tournamentId/hold', verifyToken, toggleTournamentHold);
 router.put('/:tournamentId/match/:matchId/reschedule', verifyToken, rescheduleMatch);
 router.get('/knockout/:tournamentId', getKnockoutStage);
+router.get('/round/:tournamentId/:round', verifyToken, getMatchesByRound)
 
 router.post("/", verifyToken, createTournament);
 router.get("/", getAllTournaments);
