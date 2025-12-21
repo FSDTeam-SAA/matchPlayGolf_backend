@@ -19,7 +19,7 @@ const knockoutStageSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     refPath: 'Match'
   }],
-  
+  date: { type: Date },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
