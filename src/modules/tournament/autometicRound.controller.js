@@ -2,7 +2,7 @@ import Tournament from '../tournament/tournament.model.js';
 import TournamentPlayer from '../others/tournamentPlayer.model.js';
 import KnockoutStage from '../others/knockoutSchema.model.js';
 import KnockoutMatch from '../match/match.model.js';
-import { match } from 'assert';
+import Round from '../round/round.model.js';
 
 // Initialize Knockout Stage
 export const initializeKnockout = async (req, res) => {
@@ -25,25 +25,47 @@ export const initializeKnockout = async (req, res) => {
       tournamentId,
       isActive: true,
       assignMatch: true
-    }).select("playerId");
+    }).select("playerId pairId");
 
     if (registeredPlayers.length === 0) {
       return res.status(400).json({ message: "No registered players found" });
     }
 
-    // Extract only IDs
-    const qualifiedPlayers = registeredPlayers.map(p => p.playerId.toString());
+    // Extract player or pair IDs based on tournament format
+    const qualifiedEntries = registeredPlayers.map(p => {
+      if (tournament.format === 'Pair') {
+        return { pairId: p.pairId };
+      } else {
+        return { playerId: p.playerId };
+      }
+    });
 
-    // Validate number of players (must be power of 2)
-    const playerCount = qualifiedPlayers.length;
-    if (!isPowerOfTwo(playerCount)) {
+    // Validate number of entries (must be power of 2)
+    const entryCount = qualifiedEntries.length;
+    if (!isPowerOfTwo(entryCount)) {
       return res.status(400).json({ 
-        message: 'Number of qualified players must be a power of 2 (8, 16, 32, etc.)' 
+        message: 'Number of qualified entries must be a power of 2 (8, 16, 32, etc.)' 
       });
     }
 
     // Calculate total rounds
-    const totalRounds = Math.log2(playerCount);
+    const totalRounds = Math.log2(entryCount);
+
+    let rounds = [];
+    let date = null;
+    let currentRound = 0;
+
+    rounds = await Round.find({ tournamentId: tournamentId });
+    if (rounds.length > 0) {
+
+      const currentRoundInfo = rounds.find(r => r.roundNumber === currentRound + 1);
+
+      if (currentRoundInfo) {
+
+        date = currentRoundInfo.date;
+
+      }
+    }
     
     // Create Knockout Stage
     const knockoutStage = await KnockoutStage.create({
@@ -51,20 +73,24 @@ export const initializeKnockout = async (req, res) => {
       isActive: true,
       currentRound: 1,
       totalRounds,
-      createdBy: req.user?._id
+      createdBy: req.user?._id,
+      date
     });
 
-    // Generate first round matches
-    const matchesData = generateFirstRoundMatches(qualifiedPlayers, tournamentId, knockoutStage._id, req.user?._id);
+    // FIXED: Add await here
+    const matchesData = await generateFirstRoundMatches(
+      qualifiedEntries, 
+      tournamentId, 
+      knockoutStage._id, 
+      req.user?._id,
+      tournament.format
+    );
+    
     const matches = await KnockoutMatch.insertMany(matchesData);
 
     // Store match IDs in knockout stage
     knockoutStage.matchIds = matches.map(m => m._id);
     await knockoutStage.save();
-
-    // Optionally update tournament status
-    // tournament.status = 'Knockout';
-    // await tournament.save();
 
     res.status(200).json({
       message: 'Knockout stage initialized successfully',
@@ -72,6 +98,7 @@ export const initializeKnockout = async (req, res) => {
       matches
     });
   } catch (error) {
+    console.error('Initialize Knockout Error:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -118,14 +145,28 @@ export const generateNextRound = async (req, res) => {
         winner: currentRoundMatches[0].winner 
       });
     }
+    let rounds = [];
+    let date = null;
 
-    // Generate next round matches
-    const nextRoundMatchesData = generateNextRoundMatches(
+    rounds = await Round.find({ tournamentId: tournamentId }).sort({ roundNumber: 1 });
+    if (rounds.length > 0) {
+
+      const currentRoundInfo = rounds.find(r => r.roundNumber === currentRound + 1);
+
+      if (currentRoundInfo) {
+
+        date = currentRoundInfo.date;
+
+      }
+    }
+    // FIXED: Add await here
+    const nextRoundMatchesData = await generateNextRoundMatches(
       currentRoundMatches, 
       currentRound + 1, 
       tournamentId, 
       knockoutStage._id,
-      req.user?._id
+      req.user?._id,
+      date
     );
     
     const nextRoundMatches = await KnockoutMatch.insertMany(nextRoundMatchesData);
@@ -140,6 +181,7 @@ export const generateNextRound = async (req, res) => {
       nextRoundMatches
     });
   } catch (error) {
+    console.error('Generate Next Round Error:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -184,8 +226,8 @@ export const updateMatchResult = async (req, res) => {
 
     let autoAdvanced = false;
     if (allComplete && currentRound < knockoutStage.totalRounds) {
-      // Auto-generate next round
-      const nextRoundMatchesData = generateNextRoundMatches(
+      // FIXED: Add await here
+      const nextRoundMatchesData = await generateNextRoundMatches(
         currentRoundMatches, 
         currentRound + 1,
         tournamentId,
@@ -206,6 +248,7 @@ export const updateMatchResult = async (req, res) => {
       autoAdvanced
     });
   } catch (error) {
+    console.error('Update Match Result Error:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -342,43 +385,74 @@ function isPowerOfTwo(n) {
   return n > 0 && (n & (n - 1)) === 0;
 }
 
-async function generateFirstRoundMatches(players, tournamentId, knockoutStageId, userId) {
+// FIXED: Properly handle both Single and Pair formats
+async function generateFirstRoundMatches(entries, tournamentId, knockoutStageId, userId, format) {
   const matches = [];
-  const shuffledPlayers = [...players].sort(() => Math.random() - 0.5);
-  const tournament = await Tournament.findById(tournamentId);
+  const shuffledEntries = [...entries].sort(() => Math.random() - 0.5);
   
-  
-  for (let i = 0; i < shuffledPlayers.length; i += 2) {
-    matches.push({
+  for (let i = 0; i < shuffledEntries.length; i += 2) {
+    const matchData = {
       tournamentId,
       knockoutStageId,
       matchNumber: (i / 2) + 1,
       round: 1,
-      player1: shuffledPlayers[i],
-      player2: shuffledPlayers[i + 1],
       status: 'scheduled',
       createdBy: userId,
-      matchType: tournament.format
-    });
+      matchType: format
+    };
+
+    // Set player or pair based on format
+    if (format === 'Pair') {
+      matchData.pair1 = shuffledEntries[i].pairId;
+      matchData.pair2 = shuffledEntries[i + 1].pairId;
+    } else {
+      matchData.player1 = shuffledEntries[i].playerId;
+      matchData.player2 = shuffledEntries[i + 1].playerId;
+    }
+
+    matches.push(matchData);
   }
   
   return matches;
 }
 
-function generateNextRoundMatches(completedMatches, nextRound, tournamentId, knockoutStageId, userId) {
+// FIXED: Properly handle winners based on format
+async function generateNextRoundMatches(completedMatches, nextRound, tournamentId, knockoutStageId, userId) {
   const matches = [];
+  const tournament = await Tournament.findById(tournamentId);
   
+  if (!tournament) {
+    throw new Error('Tournament not found');
+  }
+
   for (let i = 0; i < completedMatches.length; i += 2) {
-    matches.push({
+    const match1 = completedMatches[i];
+    const match2 = completedMatches[i + 1];
+
+    if (!match1 || !match1.winner) {
+      throw new Error(`Match ${i} does not have a winner`);
+    }
+
+    const matchData = {
       tournamentId,
       knockoutStageId,
       matchNumber: (i / 2) + 1,
       round: nextRound,
-      player1: completedMatches[i].winner,
-      player2: completedMatches[i + 1]?.winner,
       status: 'scheduled',
-      createdBy: userId
-    });
+      createdBy: userId,
+      matchType: tournament.format
+    };
+
+    // Set winners based on format
+    if (tournament.format === 'Pair') {
+      matchData.pair1 = match1.winner;
+      matchData.pair2 = match2?.winner || null;
+    } else {
+      matchData.player1 = match1.winner;
+      matchData.player2 = match2?.winner || null;
+    }
+
+    matches.push(matchData);
   }
   
   return matches;
