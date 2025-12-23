@@ -403,11 +403,11 @@ async function generateFirstRoundMatches(entries, tournamentId, knockoutStageId,
 
     // Set player or pair based on format
     if (format === 'Pair') {
-      matchData.pair1 = shuffledEntries[i].pairId;
-      matchData.pair2 = shuffledEntries[i + 1].pairId;
+      matchData.pair1Id = shuffledEntries[i].pairId;
+      matchData.pair2Id = shuffledEntries[i + 1].pairId;
     } else {
-      matchData.player1 = shuffledEntries[i].playerId;
-      matchData.player2 = shuffledEntries[i + 1].playerId;
+      matchData.player1Id = shuffledEntries[i].playerId;
+      matchData.player2Id = shuffledEntries[i + 1].playerId;
     }
 
     matches.push(matchData);
@@ -445,11 +445,11 @@ async function generateNextRoundMatches(completedMatches, nextRound, tournamentI
 
     // Set winners based on format
     if (tournament.format === 'Pair') {
-      matchData.pair1 = match1.winner;
-      matchData.pair2 = match2?.winner || null;
+      matchData.pair1Id = match1.winner;
+      matchData.pair2Id = match2?.winner || null;
     } else {
-      matchData.player1 = match1.winner;
-      matchData.player2 = match2?.winner || null;
+      matchData.player1Id = match1.winner;
+      matchData.player2Id = match2?.winner || null;
     }
 
     matches.push(matchData);
