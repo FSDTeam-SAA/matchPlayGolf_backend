@@ -539,7 +539,7 @@ async createOrUpdateRounds(tournamentId, rounds, createdBy) {
 }
 
 async updateTournamentService(tournamentId, updateData, userId, role) {
-  const { status, rules, rounds, players, location, rememberEmail, numberOfSeeds } = updateData;
+  const { status, rules, rounds, players, location, rememberEmail, numberOfSeeds, tournamentName, sportName, drawFormat, description, entryConditions, range } = updateData;
   
   const tournament = await Tournament.findById(tournamentId);
   if (!tournament) {
@@ -584,6 +584,25 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
   if(numberOfSeeds !== undefined){
     tournamentUpdateData.numberOfSeeds = numberOfSeeds;
   }
+  if(tournamentName !== undefined){
+    tournamentUpdateData.tournamentName = tournamentName;
+  }
+  if(sportName !== undefined){
+    tournamentUpdateData.sportName = sportName;
+  }
+  if(drawFormat !== undefined){
+    tournamentUpdateData.drawFormat = drawFormat;
+  }
+  if(description !== undefined){
+    tournamentUpdateData.description = description;
+  }
+  if(entryConditions !== undefined){
+    tournamentUpdateData.entryConditions = entryConditions;
+  }
+  if(range !== undefined){
+    tournamentUpdateData.range = range;
+  }
+
   
   // Handle player registration (supports bulk upload)
   if (players && players.length > 0) {
