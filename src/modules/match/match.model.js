@@ -54,6 +54,7 @@ const knockoutMatchSchema = new mongoose.Schema({
     // enum: ['User', 'TournamentPair'],
     default: 'User'
   },
+  winnerColor: { type: String },
   
   player1Score: { type: Number, default: 0 },
   player2Score: { type: Number, default: 0 },
