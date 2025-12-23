@@ -56,7 +56,7 @@ class TournamentService {
       query.drawFormat = filters.drawFormat;
     }
     if (filters.format) {
-      query.format = filters.format;
+      query.format = { $regex: filters.format, $options: "i" };
     }
     if (filters.tournamentName) {
       query.tournamentName = { $regex: filters.tournamentName, $options: "i" };
