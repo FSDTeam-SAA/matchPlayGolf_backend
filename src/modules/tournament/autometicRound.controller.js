@@ -24,7 +24,7 @@ export const initializeKnockout = async (req, res) => {
     const registeredPlayers = await TournamentPlayer.find({
       tournamentId,
       isActive: true,
-      assignMatch: true
+      assignMatch: false
     }).select("playerId pairId");
 
     if (registeredPlayers.length === 0) {
