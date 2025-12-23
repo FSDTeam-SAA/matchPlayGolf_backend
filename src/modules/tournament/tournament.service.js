@@ -6,6 +6,7 @@ import TournamentPair from "../others/tournamentPair.model.js";
 import TournamentPlayer from "../others/tournamentPlayer.model.js";
 import Round from "../round/round.model.js";
 import Match from "../match/match.model.js";
+// import { number } from "joi";
 
 class TournamentService {
   /**
@@ -538,7 +539,7 @@ async createOrUpdateRounds(tournamentId, rounds, createdBy) {
 }
 
 async updateTournamentService(tournamentId, updateData, userId, role) {
-  const { status, rules, rounds, players, location, rememberEmail } = updateData;
+  const { status, rules, rounds, players, location, rememberEmail, numberOfSeeds } = updateData;
   
   const tournament = await Tournament.findById(tournamentId);
   if (!tournament) {
@@ -579,6 +580,9 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
   
   if (rememberEmail !== undefined) {
     tournamentUpdateData.rememberEmail = rememberEmail;
+  }
+  if(numberOfSeeds !== undefined){
+    tournamentUpdateData.numberOfSeeds = numberOfSeeds;
   }
   
   // Handle player registration (supports bulk upload)
