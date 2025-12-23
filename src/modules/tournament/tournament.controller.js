@@ -17,7 +17,8 @@ export const createTournament = async (req, res) => {
       format,
       drawSize,
       billingAddress,
-      price
+      price,
+      numberOfSeeds
     } = req.body;
  
     const userId = req.user._id;
@@ -56,7 +57,8 @@ export const createTournament = async (req, res) => {
       createdBy: req.user._id,
       paymentStatus: "pending",
       orderId: orderCode,
-      role: user.role
+      role: user.role,
+      numberOfSeeds: numberOfSeeds || 0
     };
 
     const { tournamentDetails, payment} = await tournamentService.createTournament(tournamentData);
