@@ -787,7 +787,7 @@ export const getUserActiveTournaments = async (req, res) => {
       limit = 10 
     } = req.query;
 
-    // Validate userId
+    // Validate userIdF
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({
         success: false,
