@@ -39,7 +39,7 @@ router.get("/creator", verifyToken, getTournamentsByCreator);
 router.post("/:id", verifyToken, sendInvitationRegisteredUsers);
 router.put("/:tournamentId", verifyToken, multerUpload.single('csvFile'), updateTournament);
 router.delete("/:id", verifyToken, deleteTournament);
-router.get("/:id", verifyToken, getTournamentById);
+router.get("/:id", getTournamentById);
 router.get("/findplayer/:tournamentId", verifyToken, findTournamentPlayer);
 router.get("/getAllMatches/:tournamentId", getTournamentMatchesController)
 
