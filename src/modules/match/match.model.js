@@ -21,24 +21,24 @@ const knockoutMatchSchema = new mongoose.Schema({
   },
   
   // For Singles
-  player1: { 
+  player1Id: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User',
     default: null 
   },
-  player2: { 
+  player2Id: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User',
     default: null 
   },
   
   // For Pairs
-  pair1: { 
+  pair1Id: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'TournamentPair',
     default: null 
   },
-  pair2: { 
+  pair2Id: { 
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'TournamentPair',
     default: null 
