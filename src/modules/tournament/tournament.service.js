@@ -756,9 +756,7 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
   // Fetch matches
   const matches = await Match.find(query)
     .populate("player1Id player2Id", "fullName email profileImage score")
-    .populate("pair1Id pair2Id")
-    .populate("teams.players.userId", "fullName email profileImage score")
-    .populate("roundId", "roundNumber name")
+    .populate("pair1Id pair2Id", "fullName email profileImage score")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
