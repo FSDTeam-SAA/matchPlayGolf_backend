@@ -5,54 +5,125 @@ import User from "../user/user.model.js";
 
 class TournamentPlayerService {
 
-  async getAllPlayers(userId, userRole, filters = {}) {
+  async getAllPlayers(userId, userRole, queryParams) {
     try {
-      let query = {};
-
-      if (userRole === "Organizer") {
-        const tournaments = await Tournament.find({ createdBy: userId }).select("_id");
-        const tournamentIds = tournaments.map(t => t._id);
-        query.tournamentId = { $in: tournamentIds };
-      }
-
-      if (filters.tournamentId) {
-        query.tournamentId = filters.tournamentId;
-      }
-      if (filters.isActive !== undefined) {
-        query.isActive = filters.isActive;
-      }
-      if (filters.assignMatch !== undefined) {
-        query.assignMatch = filters.assignMatch;
-      }
-
-      const page = Number(filters.page) || 1;
-      const limit = Number(filters.limit) || 10;
+      // 📌 Pagination params
+      const page = Math.max(parseInt(queryParams.page) || 1, 1);
+      const limit = Math.min(parseInt(queryParams.limit) || 10, 100);
       const skip = (page - 1) * limit;
 
-      const total = await TournamentPlayer.countDocuments(query);
-      const totalPages = Math.ceil(total / limit);
+      // 🔍 Search/Filter params
+      const { tournamentName, search } = queryParams;
 
-      const players = await TournamentPlayer.find(query)
-        .populate("tournamentId", "tournamentName startDate endDate")
-        .populate("playerId", "firstName lastName email")
-        .populate("pairId")
+      const filters = { isActive: true };
+
+      // 🔐 Role-based tournament filtering
+      let tournamentQuery = {};
+
+      if (userRole !== "Admin") {
+        tournamentQuery.createdBy = userId;
+      }
+
+      // 🎯 Filter by tournament name (partial match, case-insensitive)
+      if (tournamentName) {
+        tournamentQuery.tournamentName = {
+          $regex: tournamentName,
+          $options: "i"
+        };
+      }
+
+      const tournaments = await Tournament.find(tournamentQuery, { _id: 1 });
+
+      if (!tournaments.length) {
+        return {
+          success: true,
+          count: 0,
+          pagination: {
+            page,
+            limit,
+            totalPages: 0,
+            totalRecords: 0
+          },
+          filters: {
+            tournamentName: tournamentName || null,
+            search: search || null
+          },
+          data: []
+        };
+      }
+
+      filters.tournamentId = {
+        $in: tournaments.map(t => t._id)
+      };
+
+      // 🔎 Optional: Search by player name or email
+      let playerQuery = {};
+      if (search) {
+        playerQuery = {
+          $or: [
+            { fullName: { $regex: search, $options: "i" } },
+            { email: { $regex: search, $options: "i" } }
+          ]
+        };
+      }
+
+      // 📊 Total count (before pagination)
+      const totalRecords = await TournamentPlayer.countDocuments(filters);
+
+      // 🎯 Query with population and optional player search
+      let query = TournamentPlayer.find(filters)
+        .populate({
+          path: "tournamentId",
+          select: "tournamentName sportName format"
+        })
+        .populate({
+          path: "playerId",
+          select: "fullName email profileImage",
+          match: search ? playerQuery : {}
+        })
+        .populate({
+          path: "pairId",
+          populate: [
+            {
+              path: "player1",
+              select: "fullName email profileImage"
+            },
+            {
+              path: "player2",
+              select: "fullName email profileImage"
+            }
+          ]
+        })
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit);
 
+      let players = await query;
+
+      // 🧹 Filter out null playerId results (when search doesn't match)
+      if (search) {
+        players = players.filter(p => p.playerId !== null);
+      }
+
+      const totalPages = Math.ceil(totalRecords / limit);
+
       return {
         success: true,
-        data: players,
-         pagination: {
+        count: players.length,
+        pagination: {
           page,
           limit,
-          total,
-          totalPages
+          totalPages,
+          totalRecords
         },
+        filters: {
+          tournamentName: tournamentName || null,
+          search: search || null
+        },
+        data: players
       };
-
     } catch (error) {
-      throw new Error(`Error fetching players: ${error.message}`);
+      throw new Error(`Failed to get players: ${error.message}`);
     }
   }
 
