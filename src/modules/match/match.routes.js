@@ -24,14 +24,13 @@ router.get("/", getAllTournamentMatches);
 router.get("/:id", getTournamentMatchById);
 router.get("/round/:roundId", getTournamentMatchesByRound);
 
-// Protected routes
+
 router.post("/", verifyToken, createTournamentMatch);
 
-// ✅ single update route with photo support
 router.put(
   "/:id",
   verifyToken,
-  multerUpload.single("photo"),   // field name = photo
+  multerUpload.single("photo"),   
   updateTournamentMatch
 );
 

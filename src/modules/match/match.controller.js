@@ -154,7 +154,7 @@ export const updateTournamentMatch = async (req, res) => {
       updateData,
       req.user._id,
       req.user.role,
-      req.file || null        // ✅ pass uploaded photo (if any) to service
+      req.file || null      
     );
 
     // 🔥 EMIT SOCKET NOTIFICATION - ONLY TO MATCH PARTICIPANTS
