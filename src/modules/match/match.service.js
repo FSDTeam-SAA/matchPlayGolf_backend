@@ -31,12 +31,12 @@ class MatchService {
       }
 
       // Validate matchType (case-sensitive)
-      if (!["Single", "Pair"].includes(matchData.matchType)) {
-        throw new Error("Invalid match type. Must be 'Single' or 'Pair'");
+      if (!["Single", "Pair", "Team"].includes(matchData.matchType)) {
+        throw new Error("Invalid match type. Must be 'Single', 'Pair', or 'Team'");
       }
 
       // Validate required fields based on matchType
-      if (matchData.matchType === "Single") {
+      if (matchData.matchType === "Single" || matchData.matchType === "Team") {
         if (!matchData.player1Id || !matchData.player2Id) {
           throw new Error("Single match requires both player1Id and player2Id");
         }
@@ -69,7 +69,7 @@ class MatchService {
         { path: "createdBy", select: "fullName email" },
       ];
 
-      if (matchData.matchType === "Single") {
+      if (matchData.matchType === "Single" || matchData.matchType === "Team") {
         populateFields.push(
           { path: "player1Id", select: "fullName email" },
           { path: "player2Id", select: "fullName email" }

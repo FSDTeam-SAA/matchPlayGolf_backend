@@ -38,15 +38,15 @@ export const createTournamentMatch = async (req, res) => {
     }
 
     // Match type validation (case-sensitive to match schema)
-    if (!["Single", "Pair"].includes(matchType)) {
+    if (!["Single", "Pair", "Team"].includes(matchType)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid match type. Must be 'Single' or 'Pair'"
+        message: "Invalid match type. Must be 'Single', 'Pair', or 'Team'"
       });
     }
 
     // Single match validation
-    if (matchType === "Single" && (!player1Id || !player2Id)) {
+    if (matchType === "Single" && (!player1Id || !player2Id) || matchType === "Team" && (!player1Id || !player2Id)) {
       return res.status(400).json({
         success: false,
         message: "Single match requires both player1Id and player2Id"
@@ -86,7 +86,7 @@ export const createTournamentMatch = async (req, res) => {
     };
 
     // Add type-specific fields
-    if (matchType === "Single") {
+    if (matchType === "Single" || matchType === "Team") {
       matchData.player1Id = player1Id;
       matchData.player2Id = player2Id;
     } else if (matchType === "Pair") {
