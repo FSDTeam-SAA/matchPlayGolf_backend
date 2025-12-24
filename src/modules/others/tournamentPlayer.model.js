@@ -43,6 +43,10 @@ const tournamentPlayerSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+  },
   notes: String,
 }, {
   timestamps: true,
