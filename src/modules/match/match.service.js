@@ -266,8 +266,114 @@ class MatchService {
    /**
    * Update match
    */
-  async updateTournamentMatch(id, updateData, userId, role, file) {
+  // async updateTournamentMatch(id, updateData, userId, role, file) {
+  //   try {
+  //     if (!mongoose.Types.ObjectId.isValid(id)) {
+  //       throw new Error("Invalid match ID");
+  //     }
+
+  //     const match = await Match.findById(id).populate("tournamentId");
+
+  //     if (!match) {
+  //       throw new Error("Match not found");
+  //     }
+
+  //     // Check authorization
+  //     const isOwner =
+  //       match.tournamentId.createdBy.toString() === userId.toString();
+  //     const isAdmin = role === "admin";
+
+  //     if (!isAdmin && !isOwner) {
+  //       throw new Error("Not authorized to update this match");
+  //     }
+
+  //     // Validate status if provided (match schema enum)
+  //     if (
+  //       updateData.status &&
+  //       !["Upcoming", "In Progress", "Completed", "Cancelled"].includes(
+  //         updateData.status
+  //       )
+  //     ) {
+  //       throw new Error(
+  //         "Invalid status. Must be 'Upcoming', 'In Progress', 'Completed', or 'Cancelled'"
+  //       );
+  //     }
+
+  //     // Validate matchType if provided
+  //     if (
+  //       updateData.matchType &&
+  //       !["Single", "Pair"].includes(updateData.matchType)
+  //     ) {
+  //       throw new Error("Invalid match type. Must be 'Single' or 'Pair'");
+  //     }
+      
+  //     // if (updateData.status === "Completed" || match.status === "Completed") {
+  
+  //     // // Single Match Winner Color Logic
+  //     // if (match.matchType === "Single") {
+  //     //   if (updateData.winnerPlayerId?.toString() === match.player1Id?.toString()) {
+  //     //     match.player1Color = "#39674b"; // Winner
+  //     //   } else if (updateData.winnerPlayerId?.toString() === match.player2Id?.toString()) {
+  //     //     match.player2Color = "#39674b"; // Winner
+  //     //   }
+  //     // }
+
+  //     // // Pair Match Winner Color Logic
+  //     // if (match.matchType === "Pair") {
+  //     //   if (updateData.winnerPairId?.toString() === match.pair1Id?.toString()) {
+  //     //     match.pair1Color = "#39674b"; // Winner
+  //     //   } else if (updateData.winnerPairId?.toString() === match.pair2Id?.toString()) {
+  //     //     match.pair2Color = "#39674b"; // Winner
+  //     //   }
+  //     // }
+  //   // }
+
+  //     // ✅ comments (optional)
+  //     if (updateData.comments !== undefined) {
+  //       match.comments = updateData.comments;
+  //     }
+
+  //     // ✅ photo upload (optional)
+  //     if (file && file.buffer) {
+  //       const uploadResult = await uploadToCloudinary(
+  //         file.buffer,
+  //         file.originalname || "match_photo",
+  //         "match_photos"
+  //       );
+  //       if (uploadResult?.secure_url) {
+  //         match.matchPhoto = uploadResult.secure_url;
+  //       }
+  //     }
+
+  //     // Apply remaining fields (score, status, teeTime, etc.)
+  //     Object.assign(match, updateData);
+  //     match.updatedBy = userId;
+  //     const savedMatch = await match.save();
+
+  //     console.log("Updated Match:", savedMatch);
+  //     return await savedMatch.populate([
+  //       { path: "tournamentId", select: "tournamentName sportName format" },
+  //       { path: "roundId", select: "roundName roundNumber date" },
+  //       { path: "player1Id", select: "fullName email" },
+  //       { path: "player2Id", select: "fullName email" },
+  //       { path: "pair1Id", select: "pairName" },
+  //       { path: "pair2Id", select: "pairName" },
+  //       // { path: "players.userId", select: "fullName email" },
+  //       // { path: "teams.players.userId", select: "fullName email" },
+  //       { path: "createdBy", select: "fullName email" },
+  //       { path: "updatedBy", select: "fullName email" }
+  //     ]);
+  //   } catch (error) {
+  //     throw new Error(`Failed to update match: ${error.message}`);
+  //   }
+  // }
+  // ============================================
+// SERVICE UPDATE - match.service.js
+// ============================================
+async updateTournamentMatch(id, updateData, userId, role, files) {
     try {
+      console.log("🔍 Service received files:", files); // Debug log
+      
       if (!mongoose.Types.ObjectId.isValid(id)) {
         throw new Error("Invalid match ID");
       }
@@ -287,86 +393,95 @@ class MatchService {
         throw new Error("Not authorized to update this match");
       }
 
-      // Validate status if provided (match schema enum)
+      // Validate status if provided
       if (
         updateData.status &&
-        !["Upcoming", "In Progress", "Completed", "Cancelled"].includes(
+        !["pending", "scheduled", "in-progress", "completed", "rescheduled"].includes(
           updateData.status
         )
       ) {
         throw new Error(
-          "Invalid status. Must be 'Upcoming', 'In Progress', 'Completed', or 'Cancelled'"
+          "Invalid status. Must be 'pending', 'scheduled', 'in-progress', 'completed', or 'rescheduled'"
         );
       }
 
       // Validate matchType if provided
       if (
         updateData.matchType &&
-        !["Single", "Pair"].includes(updateData.matchType)
+        !["Single", "Pair", "Team"].includes(updateData.matchType)
       ) {
-        throw new Error("Invalid match type. Must be 'Single' or 'Pair'");
+        throw new Error("Invalid match type. Must be 'Single', 'Pair', or 'Team'");
       }
-      
-      // if (updateData.status === "Completed" || match.status === "Completed") {
-  
-      // // Single Match Winner Color Logic
-      // if (match.matchType === "Single") {
-      //   if (updateData.winnerPlayerId?.toString() === match.player1Id?.toString()) {
-      //     match.player1Color = "#39674b"; // Winner
-      //   } else if (updateData.winnerPlayerId?.toString() === match.player2Id?.toString()) {
-      //     match.player2Color = "#39674b"; // Winner
-      //   }
-      // }
-
-      // // Pair Match Winner Color Logic
-      // if (match.matchType === "Pair") {
-      //   if (updateData.winnerPairId?.toString() === match.pair1Id?.toString()) {
-      //     match.pair1Color = "#39674b"; // Winner
-      //   } else if (updateData.winnerPairId?.toString() === match.pair2Id?.toString()) {
-      //     match.pair2Color = "#39674b"; // Winner
-      //   }
-      // }
-    // }
 
       // ✅ comments (optional)
       if (updateData.comments !== undefined) {
         match.comments = updateData.comments;
       }
 
-      // ✅ photo upload (optional)
-      if (file && file.buffer) {
-        const uploadResult = await uploadToCloudinary(
-          file.buffer,
-          file.originalname || "match_photo",
-          "match_photos"
-        );
-        if (uploadResult?.secure_url) {
-          match.photo = uploadResult.secure_url;
+      // ✅ photo uploads (single or multiple)
+      if (files && Array.isArray(files) && files.length > 0) {
+        console.log(`📸 Processing ${files.length} file(s)...`);
+        
+        const uploadedPhotos = [];
+        
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          console.log(`⬆️ Uploading file ${i + 1}/${files.length}:`, file.originalname);
+          
+          if (file && file.buffer) {
+            try {
+              const uploadResult = await uploadToCloudinary(
+                file.buffer,
+                file.originalname || `match_photo_${i}`,
+                "match_photos"
+              );
+              
+              if (uploadResult?.secure_url) {
+                console.log(`✅ Upload success: ${uploadResult.secure_url}`);
+                uploadedPhotos.push(uploadResult.secure_url);
+              }
+            } catch (uploadError) {
+              console.error(`❌ Upload failed for file ${i + 1}:`, uploadError);
+              throw new Error(`Failed to upload file ${file.originalname}: ${uploadError.message}`);
+            }
+          }
+        }
+        
+        console.log(`✅ Total uploaded: ${uploadedPhotos.length} photo(s)`);
+        
+        // Always store as array since model expects array
+        if (uploadedPhotos.length > 0) {
+          // Option 1: Replace all photos
+          match.matchPhoto = uploadedPhotos;
+          
+          // Option 2: Append to existing photos (uncomment if you want to keep old photos)
+          // match.matchPhoto = [...(match.matchPhoto || []), ...uploadedPhotos];
+          
+          console.log("💾 Saved matchPhoto:", match.matchPhoto);
         }
       }
 
-      // Apply remaining fields (score, status, teeTime, etc.)
+      // Apply remaining fields
       Object.assign(match, updateData);
       match.updatedBy = userId;
-      await match.save();
+      const savedMatch = await match.save();
 
-      return await match.populate([
+      console.log("✅ Match updated successfully");
+      return await savedMatch.populate([
         { path: "tournamentId", select: "tournamentName sportName format" },
         { path: "roundId", select: "roundName roundNumber date" },
         { path: "player1Id", select: "fullName email" },
         { path: "player2Id", select: "fullName email" },
         { path: "pair1Id", select: "pairName" },
         { path: "pair2Id", select: "pairName" },
-        // { path: "players.userId", select: "fullName email" },
-        // { path: "teams.players.userId", select: "fullName email" },
         { path: "createdBy", select: "fullName email" },
         { path: "updatedBy", select: "fullName email" }
       ]);
     } catch (error) {
+      console.error("❌ Service error:", error);
       throw new Error(`Failed to update match: ${error.message}`);
     }
   }
-
   /**
    * Update match scores
    */
