@@ -30,7 +30,7 @@ router.post("/", verifyToken, createTournamentMatch);
 router.put(
   "/:id",
   verifyToken,
-  multerUpload.single("photo"),   
+  multerUpload.array("matchPhotos", 10), // Changed from single to array, max 10 photos
   updateTournamentMatch
 );
 

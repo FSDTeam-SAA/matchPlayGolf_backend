@@ -6,6 +6,10 @@ const knockoutMatchSchema = new mongoose.Schema({
     ref: 'Tournament',
     required: true
   },
+  roundId:{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Round'
+  },
   knockoutStageId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'KnockoutStage',
@@ -72,6 +76,8 @@ const knockoutMatchSchema = new mongoose.Schema({
   
   venue: { type: String },
   notes: { type: String },
+  matchPhoto: [{ type: String }],
+  comments: { type: String },
   
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
