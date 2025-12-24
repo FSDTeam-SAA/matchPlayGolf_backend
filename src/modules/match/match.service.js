@@ -357,8 +357,8 @@ class MatchService {
         { path: "player2Id", select: "fullName email" },
         { path: "pair1Id", select: "pairName" },
         { path: "pair2Id", select: "pairName" },
-        { path: "players.userId", select: "fullName email" },
-        { path: "teams.players.userId", select: "fullName email" },
+        // { path: "players.userId", select: "fullName email" },
+        // { path: "teams.players.userId", select: "fullName email" },
         { path: "createdBy", select: "fullName email" },
         { path: "updatedBy", select: "fullName email" }
       ]);
@@ -383,7 +383,7 @@ class MatchService {
       }
 
       // Update scores based on match type (case-sensitive)
-      if (match.matchType === "Single" && scoresData.players) {
+      if (match.matchType === "Single" && scoresData.players || match.matchType === "Team" && scoresData.teams) {
         match.players = scoresData.players;
       } else if (match.matchType === "Pair" && scoresData.teams) {
         match.teams = scoresData.teams;
@@ -407,8 +407,6 @@ class MatchService {
         { path: "player2Id", select: "fullName email" },
         { path: "pair1Id", select: "pairName" },
         { path: "pair2Id", select: "pairName" },
-        { path: "players.userId", select: "fullName email" },
-        { path: "teams.players.userId", select: "fullName email" },
       ]);
     } catch (error) {
       throw new Error(`Failed to update match scores: ${error.message}`);
@@ -431,8 +429,7 @@ class MatchService {
       }
 
       // Check authorization
-      const isOwner =
-        match.tournamentId.createdBy.toString() === userId.toString();
+      const isOwner = match.tournamentId.createdBy.toString() === userId.toString();
       const isAdmin = role === "admin";
 
       if (!isOwner && !isAdmin) {
