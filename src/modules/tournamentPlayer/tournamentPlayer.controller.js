@@ -5,36 +5,27 @@ import TournamentPlayerService from './tournamentPlayer.service.js';
 
 class TournamentPlayerController {
 
-  async getAllPlayers(req, res) {
-    try {
-      const { tournamentId, isActive, assignMatch } = req.query;
-      const userId = req.user._id;
-      const userRole = req.user.role;
 
-      const filters = {
-        ...(tournamentId && { tournamentId }),
-        ...(isActive !== undefined && { isActive: isActive === 'true' }),
-        ...(assignMatch !== undefined && { assignMatch: assignMatch === 'true' }),
-      };
+async getAllPlayers (req, res){
+  try {
+    const userId = req.user._id;
+    const userRole = req.user.role;
 
-      const players = await TournamentPlayerService.getAllPlayers(
-        userId,
-        userRole,
-        filters
-      );
+    const result = await TournamentPlayerService.getAllPlayers(
+      userId,
+      userRole,
+      req.query
+    );
 
-      res.status(200).json({
-        success: true,
-        count: players.length,
-        data: players,
-      });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message,
-      });
-    }
+    return res.status(200).json(result);
+  } catch (error) {
+    console.error("❌ Get players error:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
+};
 
  
   async getPlayersByTournament(req, res) {
