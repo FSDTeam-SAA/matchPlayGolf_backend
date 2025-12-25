@@ -1,7 +1,7 @@
 import Tournament from '../tournament/tournament.model.js';
 import TournamentPlayer from '../others/tournamentPlayer.model.js';
 import KnockoutStage from '../others/knockoutSchema.model.js';
-import KnockoutMatch from '../match/match.model.js';
+import Match from '../match/match.model.js';
 import Round from '../round/round.model.js';
 
 // Initialize Knockout Stage
@@ -86,7 +86,7 @@ export const initializeKnockout = async (req, res) => {
       tournament.format
     );
     
-    const matches = await KnockoutMatch.insertMany(matchesData);
+    const matches = await Match.insertMany(matchesData);
 
     // Store match IDs in knockout stage
     knockoutStage.matchIds = matches.map(m => m._id);
@@ -113,18 +113,18 @@ export const generateNextRound = async (req, res) => {
     if (!knockoutStage || !knockoutStage.isActive) {
       return res.status(400).json({ message: 'Knockout stage not active' });
     }
-
+    console.log('Knockout Stage:', knockoutStage);
     const { currentRound, totalRounds } = knockoutStage;
 
     // Get current round matches
-    const currentRoundMatches = await KnockoutMatch.find({
+    const currentRoundMatches = await Match.find({
       knockoutStageId: knockoutStage._id,
       round: currentRound
-    }).populate('player1 player2 pair1 pair2 winner');
+    }).populate('player1Id player2Id pair1Id pair2Id winner');
 
     // Check if current round is complete
     const allMatchesComplete = currentRoundMatches.every(m => m.status === 'completed' && m.winner);
-
+    console.log('All Matches Complete:', allMatchesComplete, currentRoundMatches);
     if (!allMatchesComplete) {
       return res.status(400).json({ 
         message: 'Current round not complete. All matches must have winners.' 
@@ -169,7 +169,7 @@ export const generateNextRound = async (req, res) => {
       date
     );
     
-    const nextRoundMatches = await KnockoutMatch.insertMany(nextRoundMatchesData);
+    const nextRoundMatches = await Match.insertMany(nextRoundMatchesData);
 
     // Update knockout stage
     knockoutStage.currentRound += 1;
@@ -437,6 +437,9 @@ async function generateNextRoundMatches(completedMatches, nextRound, tournamentI
     }
 
     const round = await Round.findOne({ tournamentId, roundNumber: nextRound });
+    if (!round) {
+      throw new Error(`Round ${nextRound} not found`);
+    }
     const matchDate = round?.date || null;
 
     const matchData = {

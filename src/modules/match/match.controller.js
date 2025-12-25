@@ -78,6 +78,7 @@ export const createTournamentMatch = async (req, res) => {
       roundId,
       matchType,
       date,
+      score,
       status: status || "Upcoming",
       createdBy: req.user._id,
       ...(time && { time }),
