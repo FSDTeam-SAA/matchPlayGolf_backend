@@ -4,7 +4,8 @@ import {
   getDashboardSummary,
   getUserCurrentTournaments,
   getUserTournaments,
-  getPlayerMatches
+  getPlayerMatches,
+  getPlayerMatchesByTournament
 } from "./userDashboard.controller.js";
 
 const router = express.Router();
@@ -16,5 +17,6 @@ router.get("/summary", verifyToken, getDashboardSummary);
 router.get("/tournaments", verifyToken, getUserCurrentTournaments);
 router.get("/user-tournaments", verifyToken, getUserTournaments);
 router.get("/player-matches", verifyToken, getPlayerMatches);
+router.get("/player-matches/:tournamentId", verifyToken, getPlayerMatchesByTournament);
 
 export default router;
