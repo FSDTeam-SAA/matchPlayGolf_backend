@@ -3,6 +3,7 @@ import Tournament from "./tournament.model.js";
 import sendEmail from '../../lib/sendEmail.js';
 import TournamentPlayer from "../others/tournamentPlayer.model.js";
 import User from "../user/user.model.js";
+import Round from "../round/round.model.js";
 // import fs from 'fs';
 // import csv from 'csv-parser';
 import { parse } from 'csv-parse/sync';
@@ -459,22 +460,26 @@ export const findTournamentPlayer = async (req, res) => {
     }
 
     // Fetch all players for this tournament
-    const players = await TournamentPlayer.find({ tournamentId, isActive: true, assignMatch:true })
+    const players = await TournamentPlayer.find({ tournamentId, isActive: true, assignMatch:false })
       .populate("playerId", "fullName email phone handicap clubName")
       .populate({
         path: "pairId",
-        select: "teamName player1 player2",
         populate: [
-          { path: "player1", select: "fullName email phone" },
-          { path: "player2", select: "fullName email phone" },
+          { path: "player1", select: "fullName email phone handicap clubName" },
+          { path: "player2", select: "fullName email phone handicap clubName" },
         ],
       })
-      .sort({ createdAt: -1 }); // latest first
+      .sort({ createdAt: -1 }); 
+
+      const rounds = await Round.find({ tournamentId });
+
+      console.log("ROUNDS DATA:", rounds);
 
     return res.status(200).json({
       success: true,
       message: "Tournament players fetched successfully",
       data: players,
+      rounds: rounds
     });
   } catch (error) {
     console.error("Find tournament player error:", error);
