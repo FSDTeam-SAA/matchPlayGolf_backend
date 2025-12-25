@@ -55,7 +55,7 @@ const knockoutMatchSchema = new mongoose.Schema({
   },
   winnerModel: {
     type: String,
-    // enum: ['User', 'TournamentPair'],
+    enum: ['User', 'TournamentPair'],
     default: 'User'
   },
   winnerColor: { type: String },

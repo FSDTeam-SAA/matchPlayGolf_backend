@@ -50,7 +50,7 @@ export const createTournament = async (req, res) => {
     const tournamentData = {
       tournamentName,
       sportName: sportName || "golf",
-      drawFormat: drawFormat || "Matrix",
+      drawFormat: drawFormat || "Knockout",
       format: format || "Single",
       drawSize: drawSize || 16,
       billingAddress,
@@ -136,70 +136,6 @@ export const getTournamentById = async (req, res) => {
     });
   }
 };
-
-// export const updateTournament = async (req, res) => {
-//   try {
-//     const { tournamentId } = req.params;
-//     const updateData = req.body;
-    
-//     // Validate tournament ID
-//     if (!tournamentId) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Tournament ID is required",
-//       });
-//     }
-    
-//     // Call service
-//     const result = await tournamentService.updateTournamentService(tournamentId, updateData,  req.user._id,
-//       req.user.role);
-    
-//     // Build response message
-//     let message = "Tournament updated successfully";
-//     if (result.registration) {
-//       const regType = result.registration.type === "pair" ? "Pair" : "Single player";
-//       message = `${regType} registration + Tournament updated successfully`;
-//     }
-    
-//     return res.status(200).json({
-//       success: true,
-//       message,
-//       data: {
-//         tournament: result.tournament,
-//         registration: result.registration,
-//         rounds: result.rounds,
-//       },
-//     });
-    
-//   } catch (error) {
-//     console.error("TOURNAMENT UPDATE ERROR:", error);
-    
-//     // Handle specific errors
-//     if (error.message === "Tournament not found") {
-//       return res.status(404).json({
-//         success: false,
-//         message: error.message,
-//       });
-//     }
-    
-//     if (
-//       error.message.includes("format") || 
-//       error.message.includes("player")
-//     ) {
-//       return res.status(400).json({
-//         success: false,
-//         message: error.message,
-//       });
-//     }
-    
-//     // Generic error
-//     return res.status(500).json({
-//       success: false,
-//       message: "Internal server error",
-//       error: error.message,
-//     });
-//   }
-// };
 
 export const updateTournament = async (req, res) => {
   try {
@@ -384,9 +320,9 @@ export const generateUniqueOrderCode = async () => {
   };
 
 
-  export const sendInvitationRegisteredUsers = async (req, res) => {
+export const sendInvitationRegisteredUsers = async (req, res) => {
   try {
-    const tournamentId  = req.params.id;
+    const tournamentId = req.params.id;
 
     // ✅ Check tournament exists
     const tournament = await Tournament.findById(tournamentId);
@@ -400,7 +336,14 @@ export const generateUniqueOrderCode = async () => {
     // ✅ Find all registered users for this tournament
     const registeredUsers = await TournamentPlayer
       .find({ tournamentId })
-      .populate("userId", "fullName email");
+      .populate("playerId", "fullName email")
+      .populate({
+        path: "pairId",
+        populate: {
+          path: "player1 player2",
+          select: "fullName email profileImage"
+        }
+      });
 
     if (registeredUsers.length === 0) {
       return res.status(404).json({
@@ -409,33 +352,33 @@ export const generateUniqueOrderCode = async () => {
       });
     }
 
-    // ===============================
-    //  EMAIL SENDING FOR EACH USER
-    // ===============================
+    // ✅ EMAIL SENDING FOR EACH USER
     for (const regUser of registeredUsers) {
-      const user = regUser.userId;
+      const user = regUser.playerId;  // ✅ FIXED: Use 'playerId' not 'userId'
 
       if (user?.email) {
-        // 👇 Replace with your actual email sending logic
         await sendEmail({
           to: user.email,
           subject: `Tournament Invitation: ${tournament.name}`,
           html: `
             <h3>Hello ${user.fullName},</h3>
-            <p>You are invited to participate in the tournament <strong>${tournament.name}</strong>.</p>
-            <p>Date: ${tournament.date}</p>
+            <p>You are invited to participate in the tournament <strong>${tournament.tournamentName}</strong>.</p>
+            <p>Date: ${tournament.startDate} - ${tournament.endDate}</p>
+            <p>Location: ${tournament.location}</p>
+            <p>Please log in to your account to view more details and confirm your participation.</p>
+            <br/>
+            <p>Best regards,<br/>Tournament Team</p>
           `,
         });
       }
     }
 
-    // ===============================
-    //  SUCCESS RESPONSE
-    // ===============================
+    // ✅ SUCCESS RESPONSE
     res.json({
       success: true,
       message: "Invitations sent to all registered users",
       totalUsers: registeredUsers.length,
+      registeredUsers
     });
   } catch (error) {
     console.error("Send Invitation Error:", error);
@@ -445,8 +388,6 @@ export const generateUniqueOrderCode = async () => {
     });
   }
 };
-
-
 
 export const findTournamentPlayer = async (req, res) => {
   try {
