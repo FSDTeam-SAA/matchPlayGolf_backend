@@ -40,11 +40,12 @@ export const getUserCurrentTournaments = async (req, res) => {
   }
 };
 
-export const getUserTournaments = async (req, res, page = 1, limit = 10) => {
+export const getUserTournaments = async (req, res) => {
   try {
-
-    const skip = (page - 1) * limit;
     const userId = req.user._id;
+    const { status, page = 1, limit = 10 } = req.query;
+    
+    const skip = (page - 1) * limit;
 
     // Find all tournament registrations for this user
     const tournamentPlayers = await TournamentPlayer.find({
@@ -55,24 +56,34 @@ export const getUserTournaments = async (req, res, page = 1, limit = 10) => {
     const tournamentIds = tournamentPlayers.map(tp => tp.tournamentId);
     
     if (tournamentIds.length === 0) {
-      return {
-        tournaments: [],
-        pagination: {
-          page: Number(page),
-          limit: Number(limit),
-          total: 0,
-          totalPages: 0,
-        }
-      };
+      return res.status(200).json({
+        success: true,
+        data: {
+          tournaments: [],
+          pagination: {
+            page: Number(page),
+            limit: Number(limit),
+            total: 0,
+            totalPages: 0,
+          }
+        },
+        message: "No tournaments found for this user"
+      });
     }
     
-    const total = await Tournament.countDocuments({
+    // Build query with tournament IDs
+    const query = {
       _id: { $in: tournamentIds }
-    });
+    };
     
-    const tournaments = await Tournament.find({
-      _id: { $in: tournamentIds }
-    })
+    // Add status filter if provided
+    if (status) {
+      query.status = status.toLowerCase(); // "upcoming", "in progress", "completed", "cancelled", "scheduled"
+    }
+    
+    const total = await Tournament.countDocuments(query);
+    
+    const tournaments = await Tournament.find(query)
       .populate('createdBy', 'fullName email')
       .populate('knockoutStage')
       .sort({ startDate: -1 })
@@ -92,118 +103,13 @@ export const getUserTournaments = async (req, res, page = 1, limit = 10) => {
       },
       message: "User tournaments fetched successfully"
     });
-    
-    // return {
-    //   tournaments,
-    //   pagination: {
-    //     page: Number(page),
-    //     limit: Number(limit),
-    //     total: total,
-    //     totalPages: Math.ceil(total / limit),
-    //   }
-    // };
   } catch (error) {
-    throw new Error(`Failed to fetch user tournaments: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: `Failed to fetch user tournaments: ${error.message}`
+    });
   }
-}
-// export const getPlayerMatches = async (req, res, page = 1, limit = 10) => {
-//   try {
-//     const userId = req.user.userId;
-//     const filters = {};
-//     const query = {
-//       $or: [
-//         { player1Id: userId },
-//         { player2Id: userId }
-//       ]
-//     };
-    
-//     // If the player is also in pairs, find their pairs
-//     const userPairs = await TournamentPair.find({
-//       $or: [
-//         { player1: userId },
-//         { player2: userId }
-//       ]
-//     }).select('_id');
-    
-//     const pairIds = userPairs.map(p => p._id);
-    
-//     if (pairIds.length > 0) {
-//       // Extend the query to include pair matches
-//       query.$or.push(
-//         { pair1Id: { $in: pairIds } },
-//         { pair2Id: { $in: pairIds } }
-//       );
-//     }
-    
-//     // Apply additional filters
-//     if (filters.tournamentId) {
-//       query.tournamentId = filters.tournamentId;
-//     }
-    
-//     if (filters.status) {
-//       query.status = {$regex: filters.status, $options: 'i' };
-//     }
-    
-//     if (filters.matchType) {
-//       query.matchType = filters.matchType;
-//     }
-    
-//     const skip = (page - 1) * limit;
-//     const total = await Match.countDocuments(query);
-    
-//     const matches = await Match.find(query)
-//       .populate('tournamentId', 'tournamentName sportName format startDate endDate')
-//       .populate('roundId', 'roundName roundNumber date')
-//       .populate('knockoutStageId', 'stageName')
-//       .populate('player1Id', 'fullName email profileImage')
-//       .populate('player2Id', 'fullName email profileImage')
-//       .populate({
-//         path: 'pair1Id',
-//         populate: {
-//           path: 'player1 player2',
-//           select: 'fullName email profileImage'
-//         }
-//       })
-//       .populate({
-//         path: 'pair2Id',
-//         populate: {
-//           path: 'player1 player2',
-//           select: 'fullName email profileImage'
-//         }
-//       })
-//       .populate('winner')
-//       .populate('createdBy', 'fullName email')
-//       .sort({ date: -1, time: 1 })
-//       .skip(skip)
-//       .limit(limit);
-
-//     res.status(200).json({
-//       success: true,
-//       data: {
-//         matches,
-//         pagination: {
-//           page: Number(page),
-//           limit: Number(limit),
-//           total: total,
-//           totalPages: Math.ceil(total / limit),
-//         }
-//       },
-//       message: "Player matches fetched successfully"
-//     });
-    
-//     // return {
-//     //   matches,
-//     //   pagination: {
-//     //     page: Number(page),
-//     //     limit: Number(limit),
-//     //     total: total,
-//     //     totalPages: Math.ceil(total / limit),
-//     //   }
-//     // };
-//   } catch (error) {
-//     throw new Error(`Failed to fetch player matches: ${error.message}`);
-//   }
-// }
+};
 
 export const getPlayerMatches = async (req, res) => {
   try {
@@ -336,3 +242,107 @@ export const getPlayerTournamentDashboard = async (userId, page = 1, limit = 10)
     throw new Error(`Failed to fetch player dashboard: ${error.message}`);
   }
 }
+export const getPlayerMatchesByTournament = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { tournamentId } = req.params;
+    const { status, matchType, page = 1, limit = 20 } = req.query;
+    
+    // Verify user is registered in this tournament
+    const registration = await TournamentPlayer.findOne({
+      playerId: userId,
+      tournamentId: tournamentId,
+      isActive: true
+    });
+    
+    if (!registration) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not registered in this tournament"
+      });
+    }
+    
+    // Build query
+    const query = {
+      tournamentId: tournamentId,
+      $or: [
+        { player1Id: userId },
+        { player2Id: userId }
+      ]
+    };
+    
+    // Check for pair matches
+    const userPairs = await TournamentPair.find({
+      $or: [
+        { player1: userId },
+        { player2: userId }
+      ]
+    }).select('_id');
+    
+    const pairIds = userPairs.map(p => p._id);
+    
+    if (pairIds.length > 0) {
+      query.$or.push(
+        { pair1Id: { $in: pairIds } },
+        { pair2Id: { $in: pairIds } }
+      );
+    }
+    
+    // Apply filters
+    if (status) {
+      query.status = status;
+    }
+    
+    if (matchType) {
+      query.matchType = matchType;
+    }
+    
+    const skip = (page - 1) * limit;
+    const total = await Match.countDocuments(query);
+    
+    const matches = await Match.find(query)
+      .populate('tournamentId', 'tournamentName sportName format startDate endDate')
+      .populate('roundId', 'roundName roundNumber date')
+      .populate('knockoutStageId', 'stageName')
+      .populate('player1Id', 'fullName email profileImage')
+      .populate('player2Id', 'fullName email profileImage')
+      .populate({
+        path: 'pair1Id',
+        populate: {
+          path: 'player1 player2',
+          select: 'fullName email profileImage'
+        }
+      })
+      .populate({
+        path: 'pair2Id',
+        populate: {
+          path: 'player1 player2',
+          select: 'fullName email profileImage'
+        }
+      })
+      .populate('winner')
+      .populate('createdBy', 'fullName email')
+      .sort({ round: 1, matchNumber: 1 })
+      .skip(skip)
+      .limit(limit);
+    
+    res.status(200).json({
+      success: true,
+      data: {
+        matches,
+        pagination: {
+          page: Number(page),
+          limit: Number(limit),
+          total: total,
+          totalPages: Math.ceil(total / limit),
+        }
+      },
+      message: "Tournament matches fetched successfully"
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: `Failed to fetch tournament matches: ${error.message}`
+    });
+  }
+};
