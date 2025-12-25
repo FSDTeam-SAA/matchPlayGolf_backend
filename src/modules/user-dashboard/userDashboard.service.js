@@ -195,11 +195,11 @@ class UserDashboardService {
   }
 
   async getTournamentIdsForUser(userObjectId) {
-    const [registeredIds, matchTournamentIds, createdIds] = await Promise.all([
-      RegisterUser.distinct("tournamentId", { userId: userObjectId }),
-      Match.distinct("tournamentId", this.buildParticipantFilter(userObjectId)),
-      Tournament.distinct("_id", { createdBy: userObjectId })
-    ]);
+  const [registeredIds, matchTournamentIds, createdIds] = await Promise.all([
+    RegisterUser.distinct("tournamentId", { playerId: userObjectId }), // <-- use playerId
+    Match.distinct("tournamentId", this.buildParticipantFilter(userObjectId)),
+    Tournament.distinct("_id", { createdBy: userObjectId })
+  ]);
 
     const ids = new Set([
       ...registeredIds.map(String),
