@@ -65,7 +65,7 @@ const knockoutMatchSchema = new mongoose.Schema({
   pair1Score: { type: Number, default: 0 },
   pair2Score: { type: Number, default: 0 },
   
-  date: { type: Date },
+  date: { type: Date, default: Date.now },
   time: { type: String },
   
   status: {
