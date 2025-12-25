@@ -44,7 +44,7 @@ export const getUserTournaments = async (req, res, page = 1, limit = 10) => {
   try {
 
     const skip = (page - 1) * limit;
-    const userId = req.user.userId;
+    const userId = req.user._id;
 
     // Find all tournament registrations for this user
     const tournamentPlayers = await TournamentPlayer.find({
@@ -207,8 +207,8 @@ export const getUserTournaments = async (req, res, page = 1, limit = 10) => {
 
 export const getPlayerMatches = async (req, res) => {
   try {
-    const userId = req.user.userId;
-    
+    const userId = req.user._id;
+    console.log("Fetching matches for user:", userId);
     // Get filters from query params
     const { tournamentId, status, matchType, page = 1, limit = 10 } = req.query;
     
