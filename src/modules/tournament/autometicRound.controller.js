@@ -389,6 +389,8 @@ function isPowerOfTwo(n) {
 async function generateFirstRoundMatches(entries, tournamentId, knockoutStageId, userId, format) {
   const matches = [];
   const shuffledEntries = [...entries].sort(() => Math.random() - 0.5);
+  const round = await Round.findOne({ tournamentId, roundNumber: 1 });
+  const matchDate = round?.date || null;
   
   for (let i = 0; i < shuffledEntries.length; i += 2) {
     const matchData = {
@@ -398,7 +400,8 @@ async function generateFirstRoundMatches(entries, tournamentId, knockoutStageId,
       round: 1,
       status: 'scheduled',
       createdBy: userId,
-      matchType: format
+      matchType: format,
+      date: matchDate
     };
 
     // Set player or pair based on format
@@ -433,6 +436,9 @@ async function generateNextRoundMatches(completedMatches, nextRound, tournamentI
       throw new Error(`Match ${i} does not have a winner`);
     }
 
+    const round = await Round.findOne({ tournamentId, roundNumber: nextRound });
+    const matchDate = round?.date || null;
+
     const matchData = {
       tournamentId,
       knockoutStageId,
@@ -440,7 +446,8 @@ async function generateNextRoundMatches(completedMatches, nextRound, tournamentI
       round: nextRound,
       status: 'scheduled',
       createdBy: userId,
-      matchType: tournament.format
+      matchType: tournament.format,
+      date: matchDate
     };
 
     // Set winners based on format
