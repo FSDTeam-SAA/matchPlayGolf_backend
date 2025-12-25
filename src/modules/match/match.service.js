@@ -125,8 +125,9 @@ class MatchService {
         .populate("player2Id", "fullName email")
         .populate("pair1Id", "pairName")
         .populate("pair2Id", "pairName")
-        .populate("players.userId", "fullName email") // For stats
-        .populate("teams.players.userId", "fullName email") // For stats
+        .populate("roundId", "roundName roundNumber date")
+        // .populate("players.userId", "fullName email") // For stats
+        // .populate("teams.players.userId", "fullName email") // For stats
         .populate("createdBy", "fullName email")
         .sort({ teeTime: 1 })
         .skip(skip)
