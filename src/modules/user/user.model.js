@@ -39,7 +39,7 @@ const UserSchema = new mongoose.Schema(
 
     clubName:  { type: String, default: "" },
     country:   { type: String, default: "" },
-    handicap:  { type: String, default: "" },
+    handicap:  { type: String, default: "4.5" },
     whsNumber: { type: String, default: "" },
 
     tournamentId: {
@@ -59,7 +59,7 @@ const UserSchema = new mongoose.Schema(
       default: "none",
     },
     receiveOrderUpdates: { type: Boolean, default: false },
-
+    status:             { type: String, default: "active" },
     profileImage:      { type: String, default: "" },
     organizerLogo:     { type: String, default: "" },
     sportNationalId:   { type: String, default: "" },
