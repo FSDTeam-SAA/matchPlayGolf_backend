@@ -93,59 +93,90 @@ class MatchService {
    * Get all matches with filters and pagination
    */
   async getAllTournamentMatches(filters = {}, page = 1, limit = 10) {
-    try {
-      const query = {};
+  try {
+    const query = {};
 
-      if (filters.tournamentName) {
-        query.tournamentName = { $regex: filters.tournamentName, $options: "i" };
+    // Handle tournamentName filter by querying Tournament collection first
+    if (filters.tournamentName) {
+      const tournaments = await Tournament.find({
+        tournamentName: { $regex: filters.tournamentName, $options: "i" }
+      }).select("_id");
+      
+      const tournamentIds = tournaments.map(t => t._id);
+      
+      if (tournamentIds.length > 0) {
+        query.tournamentId = { $in: tournamentIds };
+      } else {
+        // No tournaments match, return empty result
+        return {
+          matches: [],
+          pagination: {
+            page: Number(page),
+            limit: Number(limit),
+            total: 0,
+            totalPages: 0,
+          }
+        };
       }
-
-      if (filters.roundName) {
-        query.roundName = { $regex: filters.roundName, $options: "i" };
-      }
-
-      if (filters.matchType) {
-        query.matchType = { $regex: filters.matchType, $options: "i" };
-      }
-
-      if (filters.status) {
-        query.status = { $regex: filters.status, $options: "i" };
-      }
-      if (filters.tournamentId) {
-        query.tournamentId = filters.tournamentId;
-      }
-
-      const skip = (page - 1) * limit;
-      const total = await Match.countDocuments(query);
-
-      const matches = await Match.find(query)
-        .populate("tournamentId", "tournamentName sportName format")
-        .populate("roundId", "roundName roundNumber date")
-        .populate("player1Id", "fullName email")
-        .populate("player2Id", "fullName email")
-        .populate("pair1Id", "pairName")
-        .populate("pair2Id", "pairName")
-        .populate("roundId", "roundName roundNumber date")
-        // .populate("players.userId", "fullName email") // For stats
-        // .populate("teams.players.userId", "fullName email") // For stats
-        .populate("createdBy", "fullName email")
-        .sort({ teeTime: 1 })
-        .skip(skip)
-        .limit(limit);
-
-      return {
-        matches,
-        pagination: {
-          page: Number(page),
-          limit: Number(limit),
-          total: total,
-          totalPages: Math.ceil(total / limit),
-        }
-      };
-    } catch (error) {
-      throw new Error(`Failed to fetch matches: ${error.message}`);
     }
+
+    // Other filters remain the same
+    if (filters.roundName) {
+      query.roundName = { $regex: filters.roundName, $options: "i" };
+    }
+
+    if (filters.matchType) {
+      query.matchType = { $regex: filters.matchType, $options: "i" };
+    }
+
+    if (filters.status) {
+      query.status = { $regex: filters.status, $options: "i" };
+    }
+    
+    if (filters.tournamentId) {
+      query.tournamentId = filters.tournamentId;
+    }
+
+    const skip = (page - 1) * limit;
+    const total = await Match.countDocuments(query);
+
+    const matches = await Match.find(query)
+      .populate("tournamentId", "tournamentName sportName format")
+      .populate("roundId", "roundName roundNumber date")
+      .populate("player1Id", "fullName email")
+      .populate("player2Id", "fullName email")
+      .populate({
+        path: "pair1Id",
+        populate: {
+          path: "player1 player2",
+          select: "fullName email profileImage"
+        }
+      })
+      .populate({
+        path: "pair2Id",
+        populate: {
+          path: "player1 player2",
+          select: "fullName email profileImage"
+        }
+      })
+      .populate("createdBy", "fullName email")
+      .sort({ teeTime: 1 })
+      .skip(skip)
+      .limit(limit);
+
+    return {
+      matches,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        total: total,
+        totalPages: Math.ceil(total / limit),
+      }
+    };
+  } catch (error) {
+    throw new Error(`Failed to fetch matches: ${error.message}`);
   }
+}
 
   // async getAllTournamentMatches(filters = {}, page = 1, limit = 10) {
   //   const query = {};
