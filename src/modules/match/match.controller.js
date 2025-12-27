@@ -64,12 +64,12 @@ export const createTournamentMatch = async (req, res) => {
     // Status validation (match schema enum)
     if (
       status &&
-      !["Upcoming", "In Progress", "Completed", "Cancelled"].includes(status)
+      !["scheduled", "completed", "cancelled", "pending"].includes(status)
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "Invalid status. Must be 'Upcoming', 'In Progress', 'Completed', or 'Cancelled'"
+          "Invalid status. Must be 'scheduled', 'completed', 'cancelled', or 'pending'"
       });
     }
 
@@ -79,7 +79,7 @@ export const createTournamentMatch = async (req, res) => {
       matchType,
       date,
       score,
-      status: status || "Upcoming",
+      status: status || "pending",
       createdBy: req.user._id,
       ...(time && { time }),
       ...(startingHole && { startingHole }),
@@ -128,14 +128,14 @@ export const updateTournamentMatch = async (req, res) => {
     // Validate status if provided
     if (
       updateData.status &&
-      !["Upcoming", "In Progress", "Completed", "Cancelled"].includes(
+      !["scheduled", "in Progress", "completed", "cancelled", "pending"].includes(
         updateData.status
       )
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "Invalid status. Must be 'Upcoming', 'In Progress', 'Completed', or 'Cancelled'"
+          "Invalid status. Must be 'scheduled', 'in Progress', 'completed', 'cancelled', or 'pending'"
       });
     }
 
