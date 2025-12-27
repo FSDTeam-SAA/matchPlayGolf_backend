@@ -72,9 +72,9 @@ const TournamentSchema = new mongoose.Schema(
       enum: ["upcoming", "in progress", "completed", "cancelled", "scheduled"],
       default: "upcoming"
     },
-    rules: {
+    rules: [{
         type:String
-      },
+      }],
     totalParticipants: { type: Number, default: 0 },
     registeredPlayers: [{
       type: mongoose.Schema.Types.ObjectId,
