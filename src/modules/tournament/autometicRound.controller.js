@@ -103,6 +103,88 @@ export const initializeKnockout = async (req, res) => {
   }
 };
 
+// // Auto-generate next round matches
+// export const generateNextRound = async (req, res) => {
+//   try {
+//     const { tournamentId } = req.params;
+    
+//     const knockoutStage = await KnockoutStage.findOne({ tournamentId });
+
+//     if (!knockoutStage || !knockoutStage.isActive) {
+//       return res.status(400).json({ message: 'Knockout stage not active' });
+//     }
+//     console.log('Knockout Stage:', knockoutStage);
+//     const { currentRound, totalRounds } = knockoutStage;
+
+//     // Get current round matches
+//     const currentRoundMatches = await Match.find({
+//       knockoutStageId: knockoutStage._id,
+//       round: currentRound
+//     }).populate('player1Id player2Id pair1Id pair2Id winner');
+
+//     // Check if current round is complete
+//     const allMatchesComplete = currentRoundMatches.every(m => m.status === 'completed' && m.winner);
+//     console.log('All Matches Complete:', allMatchesComplete, currentRoundMatches);
+//     if (!allMatchesComplete) {
+//       return res.status(400).json({ 
+//         message: 'Current round not complete. All matches must have winners.' 
+//       });
+//     }
+
+//     // Check if tournament is complete
+//     if (currentRound >= totalRounds) {
+//       knockoutStage.isActive = false;
+//       await knockoutStage.save();
+
+//       const tournament = await Tournament.findById(tournamentId);
+//       tournament.status = 'completed';
+//       await tournament.save();
+
+//       return res.status(200).json({ 
+//         message: 'Tournament completed!',
+//         winner: currentRoundMatches[0].winner 
+//       });
+//     }
+//     let rounds = [];
+//     let date = null;
+
+//     rounds = await Round.find({ tournamentId: tournamentId }).sort({ roundNumber: 1 });
+//     if (rounds.length > 0) {
+
+//       const currentRoundInfo = rounds.find(r => r.roundNumber === currentRound + 1);
+
+//       if (currentRoundInfo) {
+
+//         date = currentRoundInfo.date;
+
+//       }
+//     }
+//     // FIXED: Add await here
+//     const nextRoundMatchesData = await generateNextRoundMatches(
+//       currentRoundMatches, 
+//       currentRound + 1, 
+//       tournamentId, 
+//       knockoutStage._id,
+//       req.user?._id,
+//       date
+//     );
+    
+//     const nextRoundMatches = await Match.insertMany(nextRoundMatchesData);
+
+//     // Update knockout stage
+//     knockoutStage.currentRound += 1;
+//     knockoutStage.matchIds.push(...nextRoundMatches.map(m => m._id));
+//     await knockoutStage.save();
+
+//     res.status(200).json({
+//       message: `Round ${currentRound + 1} generated successfully`,
+//       nextRoundMatches
+//     });
+//   } catch (error) {
+//     console.error('Generate Next Round Error:', error);
+//     res.status(500).json({ message: error.message });
+//   }
+// };
 // Auto-generate next round matches
 export const generateNextRound = async (req, res) => {
   try {
@@ -113,7 +195,7 @@ export const generateNextRound = async (req, res) => {
     if (!knockoutStage || !knockoutStage.isActive) {
       return res.status(400).json({ message: 'Knockout stage not active' });
     }
-    console.log('Knockout Stage:', knockoutStage);
+    
     const { currentRound, totalRounds } = knockoutStage;
 
     // Get current round matches
@@ -122,12 +204,49 @@ export const generateNextRound = async (req, res) => {
       round: currentRound
     }).populate('player1Id player2Id pair1Id pair2Id winner');
 
+    // **FIX: Auto-determine winners based on scores if winner is null**
+    for (let match of currentRoundMatches) {
+      if (match.status === 'completed' && !match.winner) {
+        let winnerId = null;
+        
+        if (match.matchType === 'Pair') {
+          // Determine winner for pair matches
+          if (match.pair1Score > match.pair2Score) {
+            winnerId = match.pair1Id?._id;
+          } else if (match.pair2Score > match.pair1Score) {
+            winnerId = match.pair2Id?._id;
+          }
+          match.winnerModel = 'TournamentPair';
+        } else if (match.matchType === 'Single') {
+          // Determine winner for single matches
+          if (match.player1Score > match.player2Score) {
+            winnerId = match.player1Id?._id;
+          } else if (match.player2Score > match.player1Score) {
+            winnerId = match.player2Id?._id;
+          }
+          match.winnerModel = 'User';
+        }
+        
+        if (winnerId) {
+          match.winner = winnerId;
+          await match.save();
+        }
+      }
+    }
+
     // Check if current round is complete
-    const allMatchesComplete = currentRoundMatches.every(m => m.status === 'completed' && m.winner);
-    console.log('All Matches Complete:', allMatchesComplete, currentRoundMatches);
+    const allMatchesComplete = currentRoundMatches.every(m => 
+      m.status === 'completed' && m.winner
+    );
+    
+    console.log('All Matches Complete:', allMatchesComplete);
+    
     if (!allMatchesComplete) {
       return res.status(400).json({ 
-        message: 'Current round not complete. All matches must have winners.' 
+        message: 'Current round not complete. All matches must have winners.',
+        incompleteMatches: currentRoundMatches
+          .filter(m => !m.winner)
+          .map(m => ({ matchNumber: m.matchNumber, status: m.status }))
       });
     }
 
@@ -145,21 +264,18 @@ export const generateNextRound = async (req, res) => {
         winner: currentRoundMatches[0].winner 
       });
     }
+    
     let rounds = [];
     let date = null;
 
     rounds = await Round.find({ tournamentId: tournamentId }).sort({ roundNumber: 1 });
     if (rounds.length > 0) {
-
       const currentRoundInfo = rounds.find(r => r.roundNumber === currentRound + 1);
-
       if (currentRoundInfo) {
-
         date = currentRoundInfo.date;
-
       }
     }
-    // FIXED: Add await here
+    
     const nextRoundMatchesData = await generateNextRoundMatches(
       currentRoundMatches, 
       currentRound + 1, 
@@ -185,7 +301,6 @@ export const generateNextRound = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 // Update match result and auto-advance winner
 export const updateMatchResult = async (req, res) => {
   try {
