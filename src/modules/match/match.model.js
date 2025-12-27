@@ -16,8 +16,8 @@ const knockoutMatchSchema = new mongoose.Schema({
     required: true
   },
   matchNumber: { type: Number, required: true },
-  round: { type: Number, required: true }, // 1 = Round of 16, 2 = Quarterfinals, etc.
-  roundName: { type: String }, // e.g., "Quarterfinals"
+  round: { type: Number, required: true },
+  roundName: { type: String }, 
   matchType: { 
     type: String, 
     enum: ["Single", "Pair", "Team"],
