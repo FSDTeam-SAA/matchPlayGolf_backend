@@ -12,8 +12,7 @@ const knockoutMatchSchema = new mongoose.Schema({
   },
   knockoutStageId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'KnockoutStage',
-    required: true
+    ref: 'KnockoutStage'
   },
   matchNumber: { type: Number, required: true },
   round: { type: Number, required: true },
