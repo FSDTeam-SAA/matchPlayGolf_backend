@@ -231,12 +231,9 @@ class MatchService {
         .populate("roundId", "roundName roundNumber date")
         .populate("player1Id", "fullName email")
         .populate("player2Id", "fullName email")
-        .populate("pair1Id", "pairName")
-        .populate("pair2Id", "pairName")
-        .populate("players.userId", "fullName email")
-        .populate("teams.players.userId", "fullName email")
-        .populate("createdBy", "fullName email")
-        .populate("updatedBy", "fullName email");
+        .populate("pair1Id", "teamName")
+        .populate("pair2Id", "teamName")
+  
 
       if (!match) {
         throw new Error("Match not found");
