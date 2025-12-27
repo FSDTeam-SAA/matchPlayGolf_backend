@@ -226,7 +226,7 @@ export const deleteTournamentMatch = async (req, res) => {
   try {
     // 🔥 GET MATCH BEFORE DELETING (to get participant IDs)
     const match = await matchService.getTournamentMatchById(req.params.matchId);
-
+    console.log("Deleting match:", match);
     const result = await matchService.deleteTournamentMatch(
       req.params.matchId,
       req.user._id,
