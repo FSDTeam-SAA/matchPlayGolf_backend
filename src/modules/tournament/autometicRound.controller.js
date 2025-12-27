@@ -523,9 +523,29 @@ async function generateFirstRoundMatches(entries, tournamentId, knockoutStageId,
     if (format === 'Pair') {
       matchData.pair1Id = shuffledEntries[i].pairId;
       matchData.pair2Id = shuffledEntries[i + 1].pairId;
+      const pair1 = await TournamentPlayer.findOne({ tournamentId, pairId: shuffledEntries[i].pairId, isActive: true });
+      const pair2 = await TournamentPlayer.findOne({ tournamentId, pairId: shuffledEntries[i + 1].pairId, isActive: true });
+      if (pair1) {
+        pair1.assignMatch = true;
+        await pair1.save();
+      }
+      if (pair2) {
+        pair2.assignMatch = true;
+        await pair2.save();
+      }
     } else {
       matchData.player1Id = shuffledEntries[i].playerId;
       matchData.player2Id = shuffledEntries[i + 1].playerId;
+      const player1 = await TournamentPlayer.findOne({ tournamentId, playerId: shuffledEntries[i].playerId });
+      const player2 = await TournamentPlayer.findOne({ tournamentId, playerId: shuffledEntries[i + 1].playerId });
+      if (player1) {
+        player1.assignMatch = true;
+        await player1.save();
+      }
+      if (player2) {
+        player2.assignMatch = true;
+        await player2.save();
+      }
     }
 
     matches.push(matchData);
