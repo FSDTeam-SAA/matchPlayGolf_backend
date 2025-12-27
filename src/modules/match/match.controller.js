@@ -90,9 +90,29 @@ export const createTournamentMatch = async (req, res) => {
     if (matchType === "Single" || matchType === "Team") {
       matchData.player1Id = player1Id;
       matchData.player2Id = player2Id;
+      const player1 = await TournamentPlayer.findOne({ tournamentId, playerId: player1Id });
+      const player2 = await TournamentPlayer.findOne({ tournamentId, playerId: player2Id });
+      if (player1) {
+        player1.assignMatch = true;
+        await player1.save();
+      }
+      if (player2) {
+        player2.assignMatch = true;
+        await player2.save();
+      }
     } else if (matchType === "Pair") {
       matchData.pair1Id = pair1Id;
       matchData.pair2Id = pair2Id;
+      const pair1 = await TournamentPlayer.findOne({ tournamentId, pairId: pair1Id, isActive: true });
+      const pair2 = await TournamentPlayer.findOne({ tournamentId, pairId: pair2Id, isActive: true });
+      if (pair1) {
+        pair1.assignMatch = true;
+        await pair1.save();
+      }
+      if (pair2) {
+        pair2.assignMatch = true;
+        await pair2.save();
+      }
     }
 
     const match = await matchService.createTournamentMatch(matchData);
