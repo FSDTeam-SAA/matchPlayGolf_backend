@@ -10,6 +10,7 @@ import {
   findTournamentPlayer,
   getTournamentMatchesController
 } from "./tournament.controller.js";
+import { getPaymentBystripeSessionId } from "../payment/payment.controller.js";
 import {
   initializeKnockout,
   generateNextRound,
@@ -42,6 +43,7 @@ router.delete("/:id", verifyToken, deleteTournament);
 router.get("/:id", getTournamentById);
 router.get("/findplayer/:tournamentId", verifyToken, findTournamentPlayer);
 router.get("/getAllMatches/:tournamentId", getTournamentMatchesController)
+router.get("/getPayemtInfo/:stripeSessionId", verifyToken, getPaymentBystripeSessionId);
 
 
 

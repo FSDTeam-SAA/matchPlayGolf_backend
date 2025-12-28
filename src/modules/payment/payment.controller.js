@@ -65,10 +65,11 @@ export const verifyCheckoutSession = async (req, res) => {
  * @route   GET /api/payments/:transactionId
  * @access  Private
  */
-export const getPaymentByTransactionId = async (req, res) => {
+export const getPaymentBystripeSessionId = async (req, res) => {
   try {
-    const payment = await paymentService.getPaymentByTransactionId(
-      req.params.transactionId
+    console.log("Fetching payment for Stripe Session ID:", req.params.stripeSessionId);
+    const payment = await paymentService.getPaymentByStripeSessionId(
+      req.params.stripeSessionId
     );
 
     res.status(200).json({
