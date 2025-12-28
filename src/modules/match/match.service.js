@@ -269,7 +269,7 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
       // Check authorization
       const isOwner =
         match.tournamentId.createdBy.toString() === userId.toString();
-      const isAdmin = role === "admin";
+      const isAdmin = role === "Admin";
 
       if (!isAdmin && !isOwner) {
         throw new Error("Not authorized to update this match");
