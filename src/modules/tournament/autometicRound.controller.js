@@ -225,7 +225,7 @@ export const updateMatchResult = async (req, res) => {
     const { tournamentId, matchId } = req.params;
     const { winnerId, player1Score, player2Score, pair1Score, pair2Score } = req.body;
 
-    const match = await KnockoutMatch.findById(matchId);
+    const match = await Match.findById(matchId);
     
     if (!match) {
       return res.status(404).json({ message: 'Match not found' });
@@ -250,7 +250,7 @@ export const updateMatchResult = async (req, res) => {
 
     // Check if round is complete and auto-generate next round
     const currentRound = knockoutStage.currentRound;
-    const currentRoundMatches = await KnockoutMatch.find({
+    const currentRoundMatches = await Match.find({
       knockoutStageId: knockoutStage._id,
       round: currentRound
     });
@@ -267,7 +267,7 @@ export const updateMatchResult = async (req, res) => {
         knockoutStage._id,
         req.user?._id
       );
-      const nextRoundMatches = await KnockoutMatch.insertMany(nextRoundMatchesData);
+      const nextRoundMatches = await Match.insertMany(nextRoundMatchesData);
       
       knockoutStage.currentRound += 1;
       knockoutStage.matchIds.push(...nextRoundMatches.map(m => m._id));
@@ -318,7 +318,7 @@ export const rescheduleMatch = async (req, res) => {
     const { matchId } = req.params;
     const { date, time, venue, notes } = req.body;
 
-    const match = await KnockoutMatch.findById(matchId);
+    const match = await Match.findById(matchId);
     
     if (!match) {
       return res.status(404).json({ message: 'Match not found' });
@@ -355,7 +355,7 @@ export const getKnockoutStage = async (req, res) => {
     }
 
     // Get all matches for this knockout stage
-    const matches = await KnockoutMatch.find({ 
+    const matches = await Match.find({ 
       knockoutStageId: knockoutStage._id 
     })
     .populate('player1 player2 pair1 pair2 winner')
@@ -381,14 +381,18 @@ export const getMatchesByRound = async (req, res) => {
       return res.status(404).json({ message: 'Knockout stage not found' });
     }
 
-    const matches = await KnockoutMatch.find({
+    const matches = await Match.find({
       knockoutStageId: knockoutStage._id,
       round: parseInt(round)
     })
-    .populate('player1 player2 pair1 pair2 winner')
+    .populate('player1Id player2Id pair1Id pair2Id winner')
     .sort({ matchNumber: 1 });
 
-    res.status(200).json({ matches });
+    res.status(200).json({ 
+      success: true, 
+      message: `Matches for Round ${round} fetched successfully`,
+      matches 
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -399,7 +403,7 @@ export const getMatchDetails = async (req, res) => {
   try {
     const { matchId } = req.params;
     
-    const match = await KnockoutMatch.findById(matchId)
+    const match = await Match.findById(matchId)
       .populate('player1 player2 pair1 pair2 winner')
       .populate('createdBy updatedBy', 'name email');
 
