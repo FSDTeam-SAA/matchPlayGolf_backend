@@ -215,14 +215,12 @@ class PaymentService {
   }
 
   /**
-   * Get payment by transaction ID
+   * Get payment by Stripe session ID
    */
-  async getPaymentByTransactionId(transactionId) {
+  async getPaymentByStripeSessionId(stripeSessionId) {
     try {
-      const payment = await Payment.findOne({ transactionId }).populate(
-        "tournamentId",
-        "tournamentName sportName"
-      );
+      const payment = await Payment.findOne({ stripeSessionId })
+      .populate("tournamentId");
 
       if (!payment) {
         throw new Error("Payment not found");
