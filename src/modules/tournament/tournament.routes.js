@@ -32,7 +32,7 @@ router.put('/:tournamentId/match/:matchId', verifyToken, updateMatchResult);
 router.put('/:tournamentId/hold', verifyToken, toggleTournamentHold);
 router.put('/:tournamentId/match/:matchId/reschedule', verifyToken, rescheduleMatch);
 router.get('/knockout/:tournamentId', getKnockoutStage);
-router.get('/round/:tournamentId/:round', verifyToken, getMatchesByRound)
+router.get('/:tournamentId/:round', verifyToken, getMatchesByRound)
 
 router.post("/", verifyToken, createTournament);
 router.get("/", getAllTournaments);
