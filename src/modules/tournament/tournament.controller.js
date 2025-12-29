@@ -5,7 +5,7 @@ import TournamentPlayer from "../others/tournamentPlayer.model.js";
 import User from "../user/user.model.js";
 import Round from "../round/round.model.js";
 import { parse } from 'csv-parse/sync';
-import { invitetationEmailTemplate } from "../../lib/emailTemplates.js";
+import { invitetationEmailTemplate, eventStartInvitationTemplate } from "../../lib/emailTemplates.js";
 import crypto from "crypto";
 import Match from "../match/match.model.js";
 
@@ -470,6 +470,63 @@ export const getTournamentMatchesController = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message,
+    });
+  }
+};
+
+export const eventStartInvitationRegisteredUsers = async (req, res) => {
+  try {
+    const tournamentId = req.params.id;
+
+    const tournament = await Tournament.findById(tournamentId);
+    if (!tournament) {
+      return res.status(404).json({ success: false, message: "Tournament not found" });
+    }
+    tournament.status = "in progress";
+    await tournament.save();
+
+    const allPlayers = await TournamentPlayer.find({ tournamentId })
+        .populate("playerId", "fullName email phone handicap clubName")
+        .populate({
+          path: "pairId",
+          populate: [
+            { path: "player1", select: "fullName email phone handicap clubName" },
+            { path: "player2", select: "fullName email phone handicap clubName" },
+          ],
+      });
+    const frontendUrl = process.env.FRONTEND_URL;
+    let emailCount = 0;
+
+    for (const player of allPlayers) {
+      const eventDrawUrl = `${frontendUrl}/tournament/${tournamentId}`;
+      const dashboardUrl = `${frontendUrl}`;
+      const contactUrl = `${frontendUrl}/contact`;
+      const createEventUrl = `${frontendUrl}`;
+      await sendEmail({
+        to: player.playerId.email,
+        subject: `Event Started: ${tournament.tournamentName}`,
+        html: eventStartInvitationTemplate({
+          eventName: tournament.tournamentName,
+          eventDrawUrl,
+          dashboardUrl,
+          contactUrl,
+          createEventUrl
+        })
+      });
+      emailCount++;
+    }
+    return res.json({
+      success: true,
+      message: "Unique match links sent to all players",
+      totalPlayers: allPlayers.length,
+      totalEmails: emailCount
+    });
+
+  } catch (error) {
+    console.error("❌ Send Invitation Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
     });
   }
 };
