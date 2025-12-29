@@ -3,6 +3,9 @@ import Round from "../round/round.model.js";
 import Tournament from "../tournament/tournament.model.js";
 import mongoose from "mongoose";
 import { uploadToCloudinary } from "../../lib/uploadToCloudinary.js";
+import { matchResultUpdateTemplate } from "../../lib/emailTemplates.js";
+import sendEmail from '../../lib/sendEmail.js';
+import User from "../user/user.model.js";
 
 class MatchService {
   /**
@@ -252,118 +255,257 @@ class MatchService {
   // ============================================
 // SERVICE UPDATE - match.service.js
 // ============================================
-async updateTournamentMatch(id, updateData, userId, role, files) {
-    try {
-      console.log("🔍 Service received files:", files); // Debug log
+// async updateTournamentMatch(id, updateData, userId, role, files) {
+//     try {
+//       console.log("🔍 Service received files:", files); // Debug log
       
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        throw new Error("Invalid match ID");
-      }
+//       if (!mongoose.Types.ObjectId.isValid(id)) {
+//         throw new Error("Invalid match ID");
+//       }
 
-      const match = await Match.findById(id).populate("tournamentId");
+//       const match = await Match.findById(id).populate("tournamentId");
 
-      if (!match) {
-        throw new Error("Match not found");
-      }
+//       if (!match) {
+//         throw new Error("Match not found");
+//       }
+//       const token = updateData.token || null;
+  
+//       const isOwner =
+//         match.tournamentId.createdBy.toString() === userId.toString();
+//       const isAdmin = role === "Admin";
+//       const ableToUpdate = token === match.verifyToken;
 
-      // Check authorization
-      const isOwner =
-        match.tournamentId.createdBy.toString() === userId.toString();
-      const isAdmin = role === "Admin";
+//       if (!isAdmin && !isOwner && !ableToUpdate) {
+//         throw new Error("Not authorized to update this match");
+//       }
 
-      if (!isAdmin && !isOwner) {
-        throw new Error("Not authorized to update this match");
-      }
+//       if (
+//         updateData.status &&
+//         !["pending", "scheduled", "in-progress", "completed", "rescheduled"].includes(
+//           updateData.status
+//         )
+//       ) {
+//         throw new Error(
+//           "Invalid status. Must be 'pending', 'scheduled', 'in-progress', 'completed', or 'rescheduled'"
+//         );
+//       }
 
-      // Validate status if provided
-      if (
-        updateData.status &&
-        !["pending", "scheduled", "in-progress", "completed", "rescheduled"].includes(
-          updateData.status
-        )
-      ) {
-        throw new Error(
-          "Invalid status. Must be 'pending', 'scheduled', 'in-progress', 'completed', or 'rescheduled'"
-        );
-      }
+//       // Validate matchType if provided
+//       if (
+//         updateData.matchType &&
+//         !["Single", "Pair", "Team"].includes(updateData.matchType)
+//       ) {
+//         throw new Error("Invalid match type. Must be 'Single', 'Pair', or 'Team'");
+//       }
 
-      // Validate matchType if provided
-      if (
-        updateData.matchType &&
-        !["Single", "Pair", "Team"].includes(updateData.matchType)
-      ) {
-        throw new Error("Invalid match type. Must be 'Single', 'Pair', or 'Team'");
-      }
+//       // ✅ comments (optional)
+//       if (updateData.comments !== undefined) {
+//         match.comments = updateData.comments;
+//       }
 
-      // ✅ comments (optional)
-      if (updateData.comments !== undefined) {
-        match.comments = updateData.comments;
-      }
-
-      // ✅ photo uploads (single or multiple)
-      if (files && Array.isArray(files) && files.length > 0) {
-        console.log(`📸 Processing ${files.length} file(s)...`);
+//       // ✅ photo uploads (single or multiple)
+//       if (files && Array.isArray(files) && files.length > 0) {
+//         console.log(`📸 Processing ${files.length} file(s)...`);
         
-        const uploadedPhotos = [];
+//         const uploadedPhotos = [];
         
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          console.log(`⬆️ Uploading file ${i + 1}/${files.length}:`, file.originalname);
+//         for (let i = 0; i < files.length; i++) {
+//           const file = files[i];
+//           console.log(`⬆️ Uploading file ${i + 1}/${files.length}:`, file.originalname);
           
-          if (file && file.buffer) {
-            try {
-              const uploadResult = await uploadToCloudinary(
-                file.buffer,
-                file.originalname || `match_photo_${i}`,
-                "match_photos"
-              );
+//           if (file && file.buffer) {
+//             try {
+//               const uploadResult = await uploadToCloudinary(
+//                 file.buffer,
+//                 file.originalname || `match_photo_${i}`,
+//                 "match_photos"
+//               );
               
-              if (uploadResult?.secure_url) {
-                console.log(`✅ Upload success: ${uploadResult.secure_url}`);
-                uploadedPhotos.push(uploadResult.secure_url);
-              }
-            } catch (uploadError) {
-              console.error(`❌ Upload failed for file ${i + 1}:`, uploadError);
-              throw new Error(`Failed to upload file ${file.originalname}: ${uploadError.message}`);
-            }
-          }
-        }
+//               if (uploadResult?.secure_url) {
+//                 console.log(`✅ Upload success: ${uploadResult.secure_url}`);
+//                 uploadedPhotos.push(uploadResult.secure_url);
+//               }
+//             } catch (uploadError) {
+//               console.error(`❌ Upload failed for file ${i + 1}:`, uploadError);
+//               throw new Error(`Failed to upload file ${file.originalname}: ${uploadError.message}`);
+//             }
+//           }
+//         }
         
-        console.log(`✅ Total uploaded: ${uploadedPhotos.length} photo(s)`);
+//         console.log(`✅ Total uploaded: ${uploadedPhotos.length} photo(s)`);
         
-        // Always store as array since model expects array
-        if (uploadedPhotos.length > 0) {
-          // Option 1: Replace all photos
-          match.matchPhoto = uploadedPhotos;
+//         // Always store as array since model expects array
+//         if (uploadedPhotos.length > 0) {
+//           // Option 1: Replace all photos
+//           match.matchPhoto = uploadedPhotos;
           
-          // Option 2: Append to existing photos (uncomment if you want to keep old photos)
-          // match.matchPhoto = [...(match.matchPhoto || []), ...uploadedPhotos];
+//           // Option 2: Append to existing photos (uncomment if you want to keep old photos)
+//           // match.matchPhoto = [...(match.matchPhoto || []), ...uploadedPhotos];
           
-          console.log("💾 Saved matchPhoto:", match.matchPhoto);
+//           console.log("💾 Saved matchPhoto:", match.matchPhoto);
+//         }
+//       }
+
+//       // Apply remaining fields
+//       Object.assign(match, updateData);
+//       match.updatedBy = userId;
+//       const savedMatch = await match.save();
+
+//       console.log("✅ Match updated successfully");
+
+//        await sendEmail({
+//           to: user.email,
+//           subject: "Match Play World Result Confirmation",
+//           html: matchResultUpdateTemplate({ matchDetails, winner, score, matchReportUrl })
+//         });
+      
+//       return await savedMatch.populate([
+//         { path: "tournamentId", select: "tournamentName sportName format" },
+//         { path: "roundId", select: "roundName roundNumber date" },
+//         { path: "player1Id", select: "fullName email" },
+//         { path: "player2Id", select: "fullName email" },
+//         { path: "pair1Id", select: "pairName" },
+//         { path: "pair2Id", select: "pairName" },
+//         { path: "createdBy", select: "fullName email" },
+//         { path: "updatedBy", select: "fullName email" }
+//       ]);
+//     } catch (error) {
+//       console.error("❌ Service error:", error);
+//       throw new Error(`Failed to update match: ${error.message}`);
+//     }
+//   }
+
+async updateTournamentMatch(id, updateData, userId, role, files) {
+  try {
+    console.log("🔍 Service received files:", files); 
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new Error("Invalid match ID");
+    }
+
+    // Populate match with tournament, players, and pairs
+    const match = await Match.findById(id)
+      .populate("tournamentId")
+      .populate("roundId", "roundName roundNumber date")
+      .populate("player1Id", "fullName email")
+      .populate("player2Id", "fullName email")
+      .populate({
+        path: "pair1Id",
+        populate: [
+          { path: "player1", select: "fullName email" },
+          { path: "player2", select: "fullName email" }
+        ]
+      })
+      .populate({
+        path: "pair2Id",
+        populate: [
+          { path: "player1", select: "fullName email" },
+          { path: "player2", select: "fullName email" }
+        ],
+      })
+      .populate("winner", "fullName email");
+
+      // console.log("🔍 Fetched match for update:", match);
+    if (!match) throw new Error("Match not found");
+
+    // Authorization
+    const token = updateData.token || null;
+    const isOwner = match.tournamentId.createdBy.toString() === userId.toString();
+    const isAdmin = role === "Admin";
+    const ableToUpdate = token === match.verifyToken;
+
+    if (!isAdmin && !isOwner && !ableToUpdate) {
+      throw new Error("Not authorized to update this match");
+    }
+
+    // Validate status
+    if (
+      updateData.status &&
+      !["pending", "scheduled", "in-progress", "completed", "rescheduled"].includes(updateData.status)
+    ) throw new Error("Invalid status");
+
+    // Validate matchType
+    if (updateData.matchType && !["Single", "Pair", "Team"].includes(updateData.matchType)) {
+      throw new Error("Invalid match type");
+    }
+
+    // Update comments if provided
+    if (updateData.comments !== undefined) match.comments = updateData.comments;
+
+    // Handle uploaded files
+    if (files && Array.isArray(files) && files.length > 0) {
+      const uploadedPhotos = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file?.buffer) {
+          const uploadResult = await uploadToCloudinary(file.buffer, file.originalname || `match_photo_${i}`, "match_photos");
+          if (uploadResult?.secure_url) uploadedPhotos.push(uploadResult.secure_url);
         }
       }
-
-      // Apply remaining fields
-      Object.assign(match, updateData);
-      match.updatedBy = userId;
-      const savedMatch = await match.save();
-
-      console.log("✅ Match updated successfully");
-      return await savedMatch.populate([
-        { path: "tournamentId", select: "tournamentName sportName format" },
-        { path: "roundId", select: "roundName roundNumber date" },
-        { path: "player1Id", select: "fullName email" },
-        { path: "player2Id", select: "fullName email" },
-        { path: "pair1Id", select: "pairName" },
-        { path: "pair2Id", select: "pairName" },
-        { path: "createdBy", select: "fullName email" },
-        { path: "updatedBy", select: "fullName email" }
-      ]);
-    } catch (error) {
-      console.error("❌ Service error:", error);
-      throw new Error(`Failed to update match: ${error.message}`);
+      if (uploadedPhotos.length > 0) match.matchPhoto = uploadedPhotos;
     }
+
+    // Apply remaining fields
+    Object.assign(match, updateData);
+    match.updatedBy = userId;
+    const savedMatch = await match.save(); 
+
+    const matchDetailsWinner = await User.findById(savedMatch.winner);
+    
+    const playerEmails = [];
+
+    // Single player emails
+    if (savedMatch.player1Id?.email) playerEmails.push(savedMatch.player1Id.email);
+    if (savedMatch.player2Id?.email) playerEmails.push(savedMatch.player2Id.email);
+
+    // Pair match emails
+    if (savedMatch.pair1Id?.player1?.email) playerEmails.push(savedMatch.pair1Id.player1.email);
+    if (savedMatch.pair1Id?.player2?.email) playerEmails.push(savedMatch.pair1Id.player2.email);
+    if (savedMatch.pair2Id?.player1?.email) playerEmails.push(savedMatch.pair2Id.player1.email);
+    if (savedMatch.pair2Id?.player2?.email) playerEmails.push(savedMatch.pair2Id.player2.email);
+
+    // Remove duplicates
+    const uniqueEmails = [...new Set(playerEmails)];
+
+    // Send email if there are emails
+    if (uniqueEmails.length > 0) {
+      await sendEmail({
+        to: uniqueEmails,
+        subject: `Match Result Updated: ${savedMatch.tournamentId.tournamentName}`,
+        html: matchResultUpdateTemplate({
+          matchDetails: {
+            eventName: savedMatch.tournamentId.tournamentName,
+            matchType: savedMatch.matchType,
+            matchRound: savedMatch.round || "N/A",
+            player1: savedMatch.player1Id.fullName,
+            player2: savedMatch.player2Id.fullName,
+            location: savedMatch.location,
+            date: savedMatch.date,
+            winner: matchDetailsWinner ? matchDetailsWinner.fullName : "N/A",
+            player1Score: savedMatch.player1Score || 0,
+            player2Score: savedMatch.player2Score || 0
+          }
+        })
+      });
+      console.log(`📧 Emails sent to: ${uniqueEmails.join(", ")}`);
+    }
+
+    // Populate and return final match
+    return await savedMatch.populate([
+      { path: "tournamentId", select: "tournamentName sportName format" },
+      { path: "roundId", select: "roundName roundNumber date" },
+      { path: "player1Id", select: "fullName email" },
+      { path: "player2Id", select: "fullName email" },
+      { path: "pair1Id", select: "pairName player1 player2" },
+      { path: "pair2Id", select: "pairName player1 player2" },
+      { path: "createdBy", select: "fullName email" },
+      { path: "updatedBy", select: "fullName email" }
+    ]);
+  } catch (error) {
+    console.error("❌ Service error:", error);
+    throw new Error(`Failed to update match: ${error.message}`);
   }
+}
   /**
    * Update match scores
    */
