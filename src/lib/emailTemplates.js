@@ -244,3 +244,385 @@ export const getPaymentSuccessForAdminTemplate = ({ name, email, phone, eventId,
     </div>
   `;
 };
+
+export const welcomeEmailTemplate = ({ user, verifyToken }) => {
+  const setPasswordUrl = `${process.env.FRONTEND_URL}/set-password?token=${verifyToken}`;
+  const accountUrl = `${process.env.FRONTEND_URL}/login`;
+  const logoUrl = `${process.env.LOGO || ""}`;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title style="text-align:center">Welcome to GolfKO</title>
+</head>
+
+<body style="margin:0; padding:0; background-color:#f5f5f5; font-family: Arial, Helvetica, sans-serif; color:#333;">
+  
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; padding:40px;">
+          
+          <!-- Logo -->
+          <tr>
+            <td style="padding-bottom:30px; align-items: center;">
+              ${
+                logoUrl
+                  ? `<img src="${logoUrl}" alt="GolfKO Logo" style="max-width:150px; height:auto; align-items: center;" />`
+                  : `<strong>GolfKO</strong>`
+              }
+            </td>
+          </tr>
+
+          <!-- Greeting -->
+          <tr>
+            <td style="font-size:16px; padding-bottom:20px;">
+              Hi ${user.fullName || "Player"},
+            </td>
+          </tr>
+
+          <!-- Content -->
+          <tr>
+            <td style="font-size:16px; padding-bottom:15px;">
+              Thanks for creating an account on GolfKO. Here’s a copy of your user details.
+            </td>
+          </tr>
+
+          <!-- Username -->
+          <tr>
+            <td style="font-size:16px; padding-bottom:25px;">
+              <strong>Username:</strong> ${user.fullName || "Player"}
+            </td>
+          </tr>
+
+          <!-- Set Password -->
+          <tr>
+            <td style="padding-bottom:25px;">
+              <a href="${setPasswordUrl}" style="color:#0066cc; text-decoration:underline; font-size:16px;">
+                Set your new password.
+              </a>
+            </td>
+          </tr>
+
+          <!-- Account Info -->
+          <tr>
+            <td style="font-size:16px; padding-bottom:15px;">
+              You can access your account area to view tournaments, update match results,
+              change your password, and more via the link below:
+            </td>
+          </tr>
+
+          <!-- My Account -->
+          <tr>
+            <td style="padding-bottom:30px;">
+              <a href="${accountUrl}" style="color:#0066cc; text-decoration:underline; font-size:16px;">
+                My account
+              </a>
+            </td>
+          </tr>
+
+          <!-- Closing -->
+          <tr>
+            <td style="font-size:16px;">
+              We look forward to seeing you soon.
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding-top:20px; font-size:16px; font-weight:bold;">
+              GolfKO Team
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
+`;
+};
+
+
+export const invitetationEmailTemplate = ({tournament, match, updateResultUrl, user}) =>{
+  
+  const tournamentUrl = `${process.env.FRONTEND_URL}/tournament/${tournament._id}`;
+  const dashboardUrl = `${process.env.FRONTEND_URL}`;
+  const contactUrl = `${process.env.FRONTEND_URL}/contact`;
+  const logoUrl = `${process.env.LOGO || ""}`;
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .subject-line {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #000000;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 40px;
+            color: #333333;
+        }
+
+        .content {
+            line-height: 1.6;
+            color: #333333;
+            font-size: 14px;
+        }
+
+        .content p {
+            margin-bottom: 15px;
+        }
+
+        .content a {
+            color: #4a90e2;
+            text-decoration: none;
+        }
+
+        .content a:hover {
+            text-decoration: underline;
+        }
+
+        .section-title {
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 5px;
+            color: #000000;
+        }
+
+        .highlight {
+            background-color: #fff9e6;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .contact-info {
+            color: #666666;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Subject Line -->
+        <div class="subject-line">
+            Subject: ${tournament.tournamentName} UK Men's Pairs Opponent
+        </div>
+
+        <tr>
+            <td style="padding-bottom:30px; align-items: center;">
+              ${
+                logoUrl
+                  ? `<img src="${logoUrl}" alt="GolfKO Logo" style="max-width:150px; height:auto; align-items: center;" />`
+                  : `<strong>GolfKO</strong>`
+              }
+            </td>
+        </tr>
+
+        <!-- Main Content -->
+        <div class="content">
+            <p>
+                Hi. Your opponent in ${match.round} of the UK Men's Pairs Knockout is <strong>${tournament.tournamentName}</strong> and 
+                you can view the full draw at 
+                <a href="${tournamentUrl}" target="_blank">${tournamentUrl}</a>
+            </p>
+
+            <p>
+                Your match is due to be played at ${tournament.location}
+            </p>
+
+            <p>
+                Please contact your opponent and arrange for the match to be played before the 
+                deadline of <strong>${match.date}</strong>. When you have arranged your match please enter the 
+                date in the draw on Golfko website to avoid reminders.
+            </p>
+
+            <p class="section-title">Register As A Player</p>
+            <p>
+                If you register as a player you can view your opponent's details, enter the date of 
+                your match and submit the result of your match. To register click this link here. 
+                <a href="${dashboardUrl}" target="_blank">${dashboardUrl}</a>
+            </p>
+
+            <p>
+                If your opponent is also a registered player then you can view their contact details 
+                by logging into the Golfko site and clicking your opponent's profile.
+            </p>
+
+            <p>
+                When you have played your match, please enter the result on the GolfKO as soon 
+                as possible.
+            </p>
+
+            <p>
+                <a href="${updateResultUrl}" target="_blank">${updateResultUrl}</a>
+            </p>
+
+            <p>
+                For any questions please contact your event organiser.
+            </p>
+
+            <p>
+                Thank you and good luck!
+            </p>
+
+            <!-- Footer -->
+            <div class="footer">
+                <p class="contact-info">
+                    GolfKO – <a href="mailto:info@golfko.co.uk">info@golfko.co.uk</a>
+                </p>
+                <p class="contact-info">
+                   Contact Us: <a href="${contactUrl}" target="_blank">${contactUrl}</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
+}
+
+export const matchResultUpdateTemplate = ({ 
+  matchDetails
+}) => {
+  const logoUrl = `${process.env.LOGO || ""}`;
+  const websiteUrl = `${process.env.WEBSITE_URL || "http://www.golfko.co.uk"}`;
+  const matchReportUrl = `${process.env.FRONTEND_URL}/event/match`;
+
+  console.log(logoUrl);
+  
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+</head>
+
+<body style="margin:0; padding:0; background-color:#f5f5f5; font-family: Arial, Helvetica, sans-serif; color:#333;">
+  
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f5;">
+    <tr>
+      <td align="center" style="padding:40px 20px;">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;">
+
+          <!-- Horizontal Line -->
+          <tr>
+            <td style="padding:0 40px;">
+              <div style="height:1px; background-color:#e0e0e0; margin:20px 0;"></div>
+            </td>
+          </tr>
+
+          <!-- Logo -->
+         <tr>
+          <td style="padding:20px 40px 30px 40px; align-items: center;">
+            ${
+              logoUrl
+                ? `<img src="${logoUrl}" alt="Golfko logo" style="max-width:120px; height:auto; display:block; align-items: center;" />`
+                : `<span style="font-size:14px; color:#666;">Golfko logo</span>`
+            }
+          </td>
+        </tr>
+
+
+          <!-- Horizontal Line -->
+          <tr>
+            <td style="padding:0 40px;">
+              <div style="height:3px; background-color:#d0d0d0; margin:20px 0;"></div>
+            </td>
+          </tr>
+
+          <!-- Match Details -->
+          <tr>
+            <td style="padding:20px 40px; font-size:15px; line-height:1.6;">
+              <p style="margin:0 0 5px 0; font-weight:bold; color:#333;">
+                ${matchDetails.eventName} - Round ${matchDetails.matchRound}
+              </p>
+              <p style="margin:0 0 20px 0; color:#333;">
+                ${matchDetails.location} ${matchDetails.date} at ${matchDetails.location}
+              </p>
+              
+              <p style="margin:0 0 15px 0; color:#333;">
+                Thank you for submitting the result of the match between ${matchDetails.player1} and ${matchDetails.player2}
+              </p>
+              
+              <p style="margin:0 0 5px 0; color:#333;">
+                <strong>Winner:</strong> <span style="text-decoration:underline;">${matchDetails.winner}</span>
+              </p>
+              <p style="margin:0 0 20px 0; color:#333;">
+                <strong>Score:</strong> ${matchDetails.player1Score} - ${matchDetails.player2Score}
+              </p>
+              
+              <p style="margin:0 0 10px 0; color:#333;">
+                You can view the Match Play Moments report for this match here
+              </p>
+              <p style="margin:0 0 25px 0;">
+                <a href="${matchReportUrl}" style="color:#0066cc; text-decoration:underline; font-size:15px;">
+                  ${matchReportUrl}
+                </a>
+              </p>
+              
+              <p style="margin:0 0 10px 0; color:#333;">
+                For any queries please contact your event organiser.
+              </p>
+              
+              <p style="margin:0 0 5px 0; color:#333;">
+                Golfko – info@golfko.co.uk
+              </p>
+              <p style="margin:0;">
+                <a href="${websiteUrl}" style="color:#0066cc; text-decoration:underline; font-size:15px;">
+                  ${websiteUrl}
+                </a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Bottom Spacing -->
+          <tr>
+            <td style="padding:0 0 40px 0;"></td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
+`;
+};

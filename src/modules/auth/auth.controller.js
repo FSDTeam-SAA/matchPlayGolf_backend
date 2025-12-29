@@ -33,7 +33,6 @@ export const registerUser = async (req, res, next) => {
      const existingUser = await User.findOne({
       $or: [{ email }, { phone }]
     });
-    console.log(existingUser);
     if(existingUser){
        generateResponse(res, 400, false, 'User already registered', null);
     }

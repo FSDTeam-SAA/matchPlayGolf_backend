@@ -26,14 +26,19 @@ router.get("/round/:roundId", getTournamentMatchesByRound);
 
 
 router.post("/", verifyToken, createTournamentMatch);
+router.put(
+  "/",
+  verifyToken,
+  multerUpload.array("matchPhotos", 10), 
+  updateTournamentMatch
+);
 
 router.put(
   "/:id",
   verifyToken,
-  multerUpload.array("matchPhotos", 10), // Changed from single to array, max 10 photos
+  multerUpload.array("matchPhotos", 10), 
   updateTournamentMatch
 );
-
 router.put("/:matchId/scores", verifyToken, updateTournamentMatchScores);
 router.delete("/:matchId", verifyToken, deleteTournamentMatch);
 

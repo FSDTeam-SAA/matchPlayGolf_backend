@@ -6,6 +6,9 @@ import TournamentPair from "../others/tournamentPair.model.js";
 import TournamentPlayer from "../others/tournamentPlayer.model.js";
 import Round from "../round/round.model.js";
 import Match from "../match/match.model.js";
+import crypto from "crypto";
+import { welcomeEmailTemplate } from "../../lib/emailTemplates.js";
+import sendEmail from '../../lib/sendEmail.js';
 // import { number } from "joi";
 
 class TournamentService {
@@ -21,11 +24,11 @@ class TournamentService {
       // Call checkout session using the created tournament record
       if(tournamentData.role === "Organizer"){
           payment = await createCheckoutSession(
-            tournament.price,                                // OK
-            tournament.billingAddress?.email,                // FIXED
-            tournament._id,                                  // FIXED (use saved tournament)
-            tournament.tournamentName,                       // OK
-            tournament.createdBy                             // OK
+            tournament.price,                                
+            tournament.billingAddress?.email,               
+            tournament._id,                                 
+            tournament.tournamentName,                       
+            tournament.createdBy                           
           );
 
       }
@@ -130,256 +133,6 @@ class TournamentService {
       throw new Error(`Failed to fetch tournament: ${error.message}`);
     }
   }
-//   async findOrCreateUsers (players){
-//     const userIds = [];
-    
-//     for (const player of players) {
-//       let user = await User.findOne({ email: player.email });
-      
-//       if (!user) {
-//         user = await User.create({
-//           fullName: player.fullName,
-//           email: player.email,
-//           phone: player.phone,
-//         });
-//       }
-      
-//       userIds.push(user._id);
-//     }
-    
-//     return userIds;
-//   };
-
-//   /**
-//    * Register players for single format tournament
-//    */
-//   async registerSinglePlayers(tournamentId, userIds){
-//     const registrations = [];
-//     console.log("Registering single players:", userIds);
-//     let count = 0;
-    
-//     for (const userId of userIds) {
-//       const existing = await TournamentPlayer.findOne({
-//         tournamentId,
-//         playerId: userId,
-//       });
-      
-//       if (!existing) {
-//         const registration = await TournamentPlayer.create({
-//           tournamentId,
-//           playerId: userId,
-//           pairId: null,
-//         });
-//         registrations.push(registration);
-//         count++;
-//       }
-//     }
-
-//     return { registrations, count };
-//   };
-
-//   /**
-//    * Register players for pair format tournament
-//    */
-//   async registerPairPlayers(tournamentId, players, userIds){
-//     if (userIds.length !== 2) {
-//       throw new Error("Pair format requires exactly 2 players");
-//     }
-    
-//     const pair = await TournamentPair.create({
-//       tournamentId,
-//       teamName: `${players[0].fullName} & ${players[1].fullName}`,
-//       player1: userIds[0],
-//       player2: userIds[1],
-//     });
-
-//     let count = 1;
-    
-//     await TournamentPlayer.create({
-//       tournamentId,
-//       playerId: null,
-//       pairId: pair._id,
-//     });
-
-//     return { pair, count };
-//   };
-
-// async createOrUpdateRounds(tournamentId, rounds, createdBy) {
-//   const resultRounds = [];
-
-//   for (let i = 0; i < rounds.length; i++) {
-//     const data = rounds[i];
-
-//     if (!data.date) {
-//       throw new Error(`Round ${i + 1}: Date is required`);
-//     }
-
-//     const roundNumber = data.roundNumber || i + 1;
-
-//     // Check if same date already used by ANOTHER round
-//     const duplicateDateRound = await Round.findOne({
-//       tournamentId,
-//       date: data.date,
-//       roundNumber: { $ne: roundNumber }
-//     });
-
-//     if (duplicateDateRound) {
-//       throw new Error(
-//         `Duplicate round date detected: ${data.date} is already assigned to another round`
-//       );
-//     }
-
-//     // Check if this round already exists
-//     let round = await Round.findOne({
-//       tournamentId,
-//       roundNumber
-//     });
-
-//     if (round) {
-//       // UPDATE existing round
-//       round.roundName = data.roundName || round.roundName;
-//       round.date = data.date;
-//       round.status = data.status || round.status;
-
-//       await round.save();
-//     } else {
-//       // CREATE new round
-//       round = await Round.create({
-//         tournamentId,
-//         roundName: data.roundName || `Round ${roundNumber}`,
-//         roundNumber,
-//         date: data.date,
-//         status: data.status || "Scheduled",
-//         createdBy,
-//       });
-//     }
-
-//     resultRounds.push(round);
-//   }
-
-//   return resultRounds;
-// }
-
-
-
-//   async updateTournamentService(tournamentId, updateData, userId, role) {
-//     const { status, rules, rounds, players, location, rememberEmail } = updateData;
-    
-//     const tournament = await Tournament.findById(tournamentId);
-//     if (!tournament) {
-//       throw new Error("Tournament not found");
-//     }
-    
-//     const isOwner = tournament.createdBy.toString() === userId.toString();
-//     const isAdmin = role === "admin";
-//     console.log(userId, role, tournament.createdBy);
-
-//     if (!isAdmin && !isOwner) {
-//       throw new Error("Not authorized to update this tournament");
-//     }
-    
-//     const format = tournament.format;
-//     const tournamentUpdateData = {};
-//     let registrationResult = null;
-//     let createdRounds = null;
-//     const totalRounds = Math.log2(Number(tournament.drawSize || 1));
-    
-//     if (status !== undefined) {
-//       tournamentUpdateData.status = status;
-//     }
-    
-//     if (rules !== undefined) {
-//       tournamentUpdateData.rules = rules;
-//     }
-
-//     if (location !== undefined) {
-//       tournamentUpdateData.location = location;
-//     }
-//     if (rememberEmail !== undefined) {
-//       tournamentUpdateData.rememberEmail = rememberEmail;
-//     }
-//     if(totalRounds){
-//       tournamentUpdateData.totalRounds = totalRounds;
-//     }
-    
-//     // Handle player registration (supports bulk upload)
-//     if (players && players.length > 0) {
-//       const allUserIds = [];
-//       const allRegistrations = [];
-//       const allPairs = [];
-      
-//       if (format === "Single" || format === "Team") {
-//        tournamentUpdateData.totalParticipants =  Number(tournamentUpdateData.totalParticipants || 0) + players.length;
-//         // Process all players for Single format
-//         const userIds = await this.findOrCreateUsers(players);
-//         const { registrations, count } = await this.registerSinglePlayers(tournamentId, userIds);
-        
-//         allUserIds.push(...userIds);
-//         allRegistrations.push(...registrations);
-        
-//         tournamentUpdateData.$addToSet = { players: { $each: userIds } };
-//         if(count){
-//           tournamentUpdateData.totalParticipants =  Number(tournamentUpdateData.totalParticipants || 0) + count;
-//         }
-        
-//         registrationResult = {
-//           type: format,
-//           users: allUserIds,
-//           registrations: allRegistrations,
-//         };
-//       } else if (format === "Pair") {
-//         // Process players in pairs (every 2 players = 1 pair)
-//         if (players.length % 2 !== 0) {
-//           throw new Error("Pair format requires an even number of players");
-//         }
-//         tournamentUpdateData.totalParticipants =  Number(tournamentUpdateData.totalParticipants || 0) + players.length / 2;
-        
-//         for (let i = 0; i < players.length; i += 2) {
-//           const pairPlayers = [players[i], players[i + 1]];
-//           const userIds = await this.findOrCreateUsers(pairPlayers);
-//           const { pair, count } = await this.registerPairPlayers(tournamentId, pairPlayers, userIds);
-//           if(count){
-//             tournamentUpdateData.totalParticipants =  Number(tournamentUpdateData.totalParticipants || 0) + count;
-//           }
-          
-//           allUserIds.push(...userIds);
-//           allPairs.push(pair);
-//         }
-        
-//         tournamentUpdateData.$addToSet = { 
-//           pairs: { $each: allPairs.map(p => p._id) } 
-//         };
-        
-//         registrationResult = {
-//           type: format,
-//           users: allUserIds,
-//           pairs: allPairs,
-//         };
-//       }
-//     }
-//     // Handle rounds creation
-//     if (rounds && rounds.length > 0) {
-//       const createdBy = registrationResult?.users?.[0] || tournament.createdBy;
-//       createdRounds = await this.createOrUpdateRounds(tournamentId, rounds, createdBy);
-//     }
-    
-//     let updatedTournament = tournament;
-//     if (Object.keys(tournamentUpdateData).length > 0) {
-//       updatedTournament = await Tournament.findByIdAndUpdate(
-//         tournamentId,
-//         tournamentUpdateData,
-//         { new: true }
-//       );
-//     }
-    
-//     return {
-//       tournament: updatedTournament,
-//       registration: registrationResult,
-//       rounds: createdRounds,
-//     };
-//   }
-
-
 async findOrCreateUsers(players) {
   const userIds = [];
   
@@ -390,13 +143,28 @@ async findOrCreateUsers(players) {
     }
     
     let user = await User.findOne({ email: player.email });
-    
+    console.log("Found user:", user);
     if (!user) {
+
+      const verifyToken = generateToken();
       user = await User.create({
         fullName: player.fullName,
         email: player.email,
         phone: player.phone,
+        verifyToken
       });
+      console.log("Created new user:", user);
+      try {
+        await sendEmail({
+          to: user.email,
+          subject: "Welcome to GolfKO",
+          html: welcomeEmailTemplate({ user, verifyToken })
+        });
+        console.log(`Welcome email sent to ${user.email}`);
+      } catch (emailError) {
+        console.error(`Failed to send welcome email to ${user.email}:`, emailError);
+        // Continue even if email fails - you might want to add a retry mechanism
+      }
     }
     
     userIds.push(user._id);
@@ -809,8 +577,9 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
     }
   };
 }
-
-
 }
+function generateToken() {
+   return crypto.randomBytes(32).toString("hex");
+  }
 
 export default new TournamentService();

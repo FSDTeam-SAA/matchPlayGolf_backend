@@ -17,7 +17,7 @@ class PaymentService {
         line_items: [
           {
             price_data: {
-              currency: "usd",
+              currency: "gbp",
               product_data: {
                 name: tournamentName,
                 description: `Tournament Registration - ${tournamentName}`

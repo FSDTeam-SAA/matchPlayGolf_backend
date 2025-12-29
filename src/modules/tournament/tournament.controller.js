@@ -4,10 +4,15 @@ import sendEmail from '../../lib/sendEmail.js';
 import TournamentPlayer from "../others/tournamentPlayer.model.js";
 import User from "../user/user.model.js";
 import Round from "../round/round.model.js";
-// import fs from 'fs';
-// import csv from 'csv-parser';
 import { parse } from 'csv-parse/sync';
+import { invitetationEmailTemplate } from "../../lib/emailTemplates.js";
+import crypto from "crypto";
+import Match from "../match/match.model.js";
 
+
+function generateToken() {
+  return crypto.randomBytes(32).toString("hex");
+}
 
 export const createTournament = async (req, res) => {
   try {
@@ -324,70 +329,85 @@ export const sendInvitationRegisteredUsers = async (req, res) => {
   try {
     const tournamentId = req.params.id;
 
-    // ✅ Check tournament exists
     const tournament = await Tournament.findById(tournamentId);
     if (!tournament) {
-      return res.status(404).json({
-        success: false,
-        message: "Tournament not found",
-      });
+      return res.status(404).json({ success: false, message: "Tournament not found" });
     }
 
-    // ✅ Find all registered users for this tournament
-    const registeredUsers = await TournamentPlayer
-      .find({ tournamentId })
-      .populate("playerId", "fullName email")
+    const matches = await Match.find({ tournamentId })
+      .populate("player1Id", "fullName email")
+      .populate("player2Id", "fullName email")
       .populate({
-        path: "pairId",
-        populate: {
-          path: "player1 player2",
-          select: "fullName email profileImage"
-        }
+        path: "pair1Id",
+        populate: { path: "player1 player2", select: "fullName email" }
+      })
+      .populate({
+        path: "pair2Id",
+        populate: { path: "player1 player2", select: "fullName email" }
       });
 
-    if (registeredUsers.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No users registered for this tournament",
-      });
+    if (matches.length === 0) {
+      return res.status(404).json({ success: false, message: "No matches found" });
     }
 
-    // ✅ EMAIL SENDING FOR EACH USER
-    for (const regUser of registeredUsers) {
-      const user = regUser.playerId;  // ✅ FIXED: Use 'playerId' not 'userId'
+    const frontendUrl = process.env.FRONTEND_URL;
+    let emailCount = 0;
 
-      if (user?.email) {
+    for (const match of matches) {
+      // ✅ unique token per match
+      const verifyToken = generateToken();
+
+      match.verifyToken = verifyToken;
+      match.updateResultUrl = `${frontendUrl}/match/${match._id}?token=${verifyToken}`;
+      await match.save();
+
+      const recipients = new Set();
+
+      // 🎯 Single Match
+      if (match.player1Id?.email) recipients.add(match.player1Id.email);
+      if (match.player2Id?.email) recipients.add(match.player2Id.email);
+
+      // 🎯 Pair Match (4 players)
+      if (match.pair1Id) {
+        match.pair1Id.player1?.email && recipients.add(match.pair1Id.player1.email);
+        match.pair1Id.player2?.email && recipients.add(match.pair1Id.player2.email);
+      }
+
+      if (match.pair2Id) {
+        match.pair2Id.player1?.email && recipients.add(match.pair2Id.player1.email);
+        match.pair2Id.player2?.email && recipients.add(match.pair2Id.player2.email);
+      }
+
+      for (const email of recipients) {
         await sendEmail({
-          to: user.email,
-          subject: `Tournament Invitation: ${tournament.name}`,
-          html: `
-            <h3>Hello ${user.fullName},</h3>
-            <p>You are invited to participate in the tournament <strong>${tournament.tournamentName}</strong>.</p>
-            <p>Date: ${tournament.startDate} - ${tournament.endDate}</p>
-            <p>Location: ${tournament.location}</p>
-            <p>Please log in to your account to view more details and confirm your participation.</p>
-            <br/>
-            <p>Best regards,<br/>Tournament Team</p>
-          `,
+          to: email,
+          subject: `Match Result Update: ${tournament.tournamentName}`,
+          html: invitetationEmailTemplate({
+            tournament,
+            match,
+            updateResultUrl: match.updateResultUrl
+          })
         });
+        emailCount++;
       }
     }
 
-    // ✅ SUCCESS RESPONSE
-    res.json({
+    return res.json({
       success: true,
-      message: "Invitations sent to all registered users",
-      totalUsers: registeredUsers.length,
-      registeredUsers
+      message: "Unique match links sent to all players",
+      totalMatches: matches.length,
+      totalEmails: emailCount
     });
+
   } catch (error) {
-    console.error("Send Invitation Error:", error);
+    console.error("❌ Send Invitation Error:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error",
+      message: "Internal server error"
     });
   }
 };
+
 
 export const findTournamentPlayer = async (req, res) => {
   try {

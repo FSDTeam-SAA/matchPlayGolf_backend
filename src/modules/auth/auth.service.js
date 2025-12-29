@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { emailExpires } from '../../config/config.js';
 import sendEmail from '../../lib/sendEmail.js';
 import { verificationCodeTemplate } from '../../lib/emailTemplates.js';
+import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -116,17 +117,19 @@ export const setPasswordService = async ({ token, password }) => {
   if (!token || !password)
     throw new Error("Token and password are required");
 
-  let decoded;
-  try {
-    decoded = jwt.verify(token, process.env.JWT_SECRET);
-  } catch (err) {
-    throw new Error("Invalid or expired token");
-  }
+  const user = await User.findOne({
+    verifyToken: token
+  });
 
-  const user = await User.findById(decoded.userId);
-  if (!user) throw new Error("User not found");
+  if (!user) throw new Error("Invalid or expired token");
 
-  user.password = password;
+  // Hash password before saving
+  user.password = await bcrypt.hash(password, 10);
+
+  // Clear token fields
+  user.verifyToken = undefined;
+
+
   await user.save();
 
   return { message: "Password set successfully" };
