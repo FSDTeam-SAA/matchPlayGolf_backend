@@ -144,7 +144,6 @@ export const createTournamentMatch = async (req, res) => {
 export const updateTournamentMatch = async (req, res) => {
   try {
     const updateData = req.body;
-
     // Validate status if provided
     if (
       updateData.status &&
@@ -175,7 +174,7 @@ export const updateTournamentMatch = async (req, res) => {
       updateData,
       req.user._id,
       req.user.role,
-      req.files || null      
+      req.files || null,      
     );
 
     // 🔥 EMIT SOCKET NOTIFICATION - ONLY TO MATCH PARTICIPANTS
@@ -183,6 +182,7 @@ export const updateTournamentMatch = async (req, res) => {
     if (io) {
       emitMatchNotification(io, "MATCH_UPDATED", match);
     }
+
 
     res.status(200).json({
       success: true,

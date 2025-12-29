@@ -93,7 +93,7 @@ async function handleCheckoutSessionCompleted(session) {
    
     if (tournament) {
       tournament.paymentStatus = "completed";
-      tournament.paymentMethod = "card";
+      tournament.paymentMethod = "stripe";
       await tournament.save();
     }
 
