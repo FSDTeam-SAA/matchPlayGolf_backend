@@ -626,3 +626,119 @@ export const matchResultUpdateTemplate = ({
 </html>
 `;
 };
+
+export const eventStartInvitationTemplate = ({ 
+  eventName,
+  eventDrawUrl,
+  dashboardUrl,
+  contactUrl,
+  createEventUrl 
+}) => {
+  const logoUrl = `${process.env.LOGO || ""}`;
+  
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>You're Playing In A Golfko Event</title>
+</head>
+
+<body style="margin:0; padding:0; background-color:#f5f5f5; font-family: Arial, Helvetica, sans-serif; color:#333;">
+  
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f5;">
+    <tr>
+      <td align="center" style="padding:40px 20px;">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;">
+          
+          <!-- Subject Header -->
+          <tr>
+            <td style="padding:30px 40px 20px 40px; font-size:18px; font-weight:bold; color:#333;">
+              Subject: You're Playing In A Golfko Event – ${eventName}
+            </td>
+          </tr>
+
+          <!-- Horizontal Line -->
+          <tr>
+            <td style="padding:0 40px;">
+              <div style="height:1px; background-color:#e0e0e0; margin:20px 0;"></div>
+            </td>
+          </tr>
+
+          <!-- Logo -->
+          <tr>
+            <td style="padding:20px 40px 30px 40px;">
+              ${
+                logoUrl
+                  ? `<img src="${logoUrl}" alt="Golfko Logo" style="max-width:120px; height:auto;" />`
+                  : `<span style="font-size:14px; color:#666;">Golfko Logo</span>`
+              }
+            </td>
+          </tr>
+
+          <!-- Horizontal Line -->
+          <tr>
+            <td style="padding:0 40px;">
+              <div style="height:3px; background-color:#d0d0d0; margin:20px 0;"></div>
+            </td>
+          </tr>
+
+          <!-- Event Details -->
+          <tr>
+            <td style="padding:20px 40px; font-size:15px; line-height:1.6;">
+              <p style="margin:0 0 20px 0; color:#333;">
+                You have been added to the ${eventName} event on Golfko!
+              </p>
+              
+              <p style="margin:0 0 5px 0; color:#333;">
+                You can see the draw here;
+              </p>
+              <p style="margin:0 0 25px 0;">
+                <a href="${eventDrawUrl}" style="color:#0066cc; text-decoration:underline; font-size:15px;">
+                  ${eventDrawUrl}
+                </a>
+              </p>
+              
+              <p style="margin:0 0 5px 0; color:#333;">
+                Please sign in with your account by clicking on the link below;
+              </p>
+              <p style="margin:0 0 25px 0;">
+                <a href="${dashboardUrl}" style="color:#0066cc; text-decoration:underline; font-size:15px;">
+                  ${dashboardUrl}
+                </a>
+              </p>
+              
+              <p style="margin:0 0 5px 0; color:#333;">
+                For more information or if you need to contact us
+              </p>
+              <p style="margin:0 0 25px 0;">
+                <a href="${contactUrl}" style="color:#0066cc; text-decoration:underline; font-size:15px;">
+                  ${contactUrl}
+                </a>
+              </p>
+              
+              <p style="margin:0 0 5px 0; color:#333;">
+                Create your own event at Golfko
+              </p>
+              <p style="margin:0;">
+                <a href="${createEventUrl}" style="color:#0066cc; text-decoration:underline; font-size:15px;">
+                  ${createEventUrl}
+                </a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Bottom Spacing -->
+          <tr>
+            <td style="padding:0 0 40px 0;"></td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
+`;
+};
