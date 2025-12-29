@@ -85,7 +85,8 @@ const knockoutMatchSchema = new mongoose.Schema({
   updatedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
-  }
+  },
+  verifyToken: { type: String, default: "" }
 }, { timestamps: true });
 
 // Indexes

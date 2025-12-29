@@ -90,6 +90,7 @@ const UserSchema = new mongoose.Schema(
     isVerified:  { type: Boolean, default: true },
 
     refreshToken: { type: String, default: "" },
+    verifyToken:  { type: String, default: "" },
   },
   { timestamps: true }
 );
