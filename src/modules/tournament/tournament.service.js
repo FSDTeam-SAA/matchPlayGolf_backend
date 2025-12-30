@@ -334,9 +334,7 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
     tournamentUpdateData.totalRounds = Math.log2(drawSize);
   }
   
-  if (status !== undefined) {
-    tournamentUpdateData.status = status;
-  }
+  tournamentUpdateData.status= "scheduled";
   
   if (rules !== undefined) {
     tournamentUpdateData.rules = rules;
