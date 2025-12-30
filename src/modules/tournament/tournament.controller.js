@@ -15,7 +15,7 @@ import { initializeKnockout, generateNextRound } from './autometicRound.controll
 function generateToken() {
   return crypto.randomBytes(32).toString("hex");
 }
-export const progressTournament = async (req, res) => {
+export const progressTournament = async (req, res,next) => {
   try {
     const { tournamentId } = req.params;
     const userId = req.user._id;
@@ -46,7 +46,7 @@ export const progressTournament = async (req, res) => {
     });
 
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return next(error);
   }
 };
 export const createTournament = async (req, res) => {
