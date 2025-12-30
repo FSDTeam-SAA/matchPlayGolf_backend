@@ -528,24 +528,91 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
     }
   }
 
- async getTournamentMatchesService(tournamentId, page = 1, limit = 10) {
+//  async getTournamentMatchesService(tournamentId, page = 1, limit = 10) {
  
+//   if (!tournamentId) {
+//     throw new Error("Tournament ID is required");
+//   }
+
+//   const tournament = await Tournament.findById(tournamentId);
+
+//   // Correct query object
+//   const query = { tournamentId };
+
+//   const skip = (page - 1) * limit;
+
+//   // Count total matches for pagination
+//   const total = await Match.countDocuments(query);
+//   const rounds = await Round.find({ tournamentId: tournamentId });
+
+//   // Fetch matches
+//   const matches = await Match.find(query)
+//     .populate("player1Id player2Id", "fullName email profileImage score")
+//     .populate({
+//       path: "pair1Id",
+//       populate: {
+//         path: "player1 player2",
+//         select: "fullName email profileImage"
+//       }
+//     })
+//     .populate({
+//       path: "pair2Id",
+//       populate: {
+//         path: "player1 player2",
+//         select: "fullName email profileImage"
+//       }
+//     })
+//     .sort({ createdAt: -1 })
+//     .skip(skip)
+//     .limit(limit);
+
+//   return {
+//     success: true,
+//     tournament,
+//     matches,
+//     rounds,
+//     pagination: {
+//       page: Number(page),
+//       limit: Number(limit),
+//       total: total,
+//       totalPages: Math.ceil(total / limit),
+//     }
+//   };
+// }
+
+async getTournamentMatchesService(
+  tournamentId,
+  roundNumber = null,
+  page = 1,
+  limit = 10
+) {
   if (!tournamentId) {
     throw new Error("Tournament ID is required");
   }
 
   const tournament = await Tournament.findById(tournamentId);
+  if (!tournament) {
+    throw new Error("Tournament not found");
+  }
 
-  // Correct query object
+  // 🔹 Base query
   const query = { tournamentId };
+
+  // 🔥 ROUND FILTER (IMPORTANT)
+  if (roundNumber !== null) {
+    query.round = Number(roundNumber);
+  }
 
   const skip = (page - 1) * limit;
 
-  // Count total matches for pagination
+  // Count total matches
   const total = await Match.countDocuments(query);
-  const rounds = await Round.find({ tournamentId: tournamentId });
 
-  // Fetch matches
+  // 🔹 Fetch rounds (optional: only tournament rounds)
+  const rounds = await Round.find({ tournamentId })
+    .sort({ roundNumber: 1 });
+
+  // 🔹 Fetch matches
   const matches = await Match.find(query)
     .populate("player1Id player2Id", "fullName email profileImage score")
     .populate({
@@ -562,23 +629,25 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
         select: "fullName email profileImage"
       }
     })
-    .sort({ createdAt: -1 })
+    .sort({ matchNumber: 1 }) // round-wise better
     .skip(skip)
     .limit(limit);
 
   return {
     success: true,
     tournament,
+    roundNumber,
     matches,
     rounds,
     pagination: {
       page: Number(page),
       limit: Number(limit),
-      total: total,
-      totalPages: Math.ceil(total / limit),
+      total,
+      totalPages: Math.ceil(total / limit)
     }
   };
 }
+
 }
 function generateToken() {
    return crypto.randomBytes(32).toString("hex");
