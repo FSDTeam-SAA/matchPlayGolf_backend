@@ -490,10 +490,10 @@ export const findTournamentPlayer = async (req, res) => {
 
 export const getTournamentMatchesController = async (req, res) => {
   try {
-    const { tournamentId } = req.params;
+    const { tournamentId, roundNumber } = req.params;
 
 
-    const matches = await tournamentService.getTournamentMatchesService(tournamentId);
+    const matches = await tournamentService.getTournamentMatchesService(tournamentId, roundNumber);
 
     return res.status(200).json({
       success: true,
