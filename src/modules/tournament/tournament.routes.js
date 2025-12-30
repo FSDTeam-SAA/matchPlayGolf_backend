@@ -28,8 +28,15 @@ import { multerUpload } from '../../config/multer.js';
 
 const router = express.Router();
 
-
+router.get("/creator", verifyToken, getTournamentsByCreator);
+router.post("/", verifyToken, createTournament);
+router.get("/", getAllTournaments);
 router.get("/getAllMatches/:tournamentId", getTournamentMatchesController)
+router.get("/findplayer/:tournamentId", verifyToken, findTournamentPlayer);
+router.get("/getPayemtInfo/:stripeSessionId", verifyToken, getPaymentBystripeSessionId);
+router.get('/knockout/:tournamentId', getKnockoutStage);
+
+
 router.post('/:tournamentId/tournament-progress', verifyToken, progressTournament);
 router.post('/:tournamentId/event-started', verifyToken, eventStartInvitationRegisteredUsers)
 router.post('/:tournamentId/next-round', verifyToken, generateNextRound);
@@ -37,19 +44,11 @@ router.post('/:tournamentId/initialize', verifyToken, initializeKnockout);
 router.put('/:tournamentId/match/:matchId', verifyToken, updateMatchResult);
 router.put('/:tournamentId/hold', verifyToken, toggleTournamentHold);
 router.put('/:tournamentId/match/:matchId/reschedule', verifyToken, rescheduleMatch);
-router.get('/knockout/:tournamentId', getKnockoutStage);
-router.get('/:tournamentId/:round', verifyToken, getMatchesByRound)
-
-router.post("/", verifyToken, createTournament);
-router.get("/", getAllTournaments);
-router.get("/creator", verifyToken, getTournamentsByCreator);
+router.get('/:tournamentId/:round', getMatchesByRound)
 router.post("/:id", verifyToken, sendInvitationRegisteredUsers);
 router.put("/:tournamentId", verifyToken, multerUpload.single('csvFile'), updateTournament);
 router.delete("/:id", verifyToken, deleteTournament);
 router.get("/:id", getTournamentById);
-router.get("/findplayer/:tournamentId", verifyToken, findTournamentPlayer);
-
-router.get("/getPayemtInfo/:stripeSessionId", verifyToken, getPaymentBystripeSessionId);
 
 
 
