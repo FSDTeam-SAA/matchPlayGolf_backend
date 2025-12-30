@@ -1,9 +1,10 @@
-import Tournament from '../tournament/tournament.model.js';
-import TournamentPlayer from '../others/tournamentPlayer.model.js';
-import KnockoutStage from '../others/knockoutSchema.model.js';
-import Match from '../match/match.model.js';
-import Round from '../round/round.model.js';
-
+import Tournament from "../tournament/tournament.model.js";
+import TournamentPlayer from "../others/tournamentPlayer.model.js";
+import KnockoutStage from "../others/knockoutSchema.model.js";
+import Match from "../match/match.model.js";
+import Round from "../round/round.model.js";
+import AppError from "../../middleware/errorHandler.js";
+// import { generateResponse } from '../..middleware/responseFormat.js'
 
 // Initialize Knockout Stage
 export const initializeKnockout = async (tournamentId, userId) => {
@@ -26,7 +27,7 @@ export const initializeKnockout = async (tournamentId, userId) => {
     const registeredPlayers = await TournamentPlayer.find({
       tournamentId,
       isActive: true,
-      assignMatch: false
+      assignMatch: false,
     }).select("playerId pairId");
 
     if (registeredPlayers.length === 0) {
@@ -34,8 +35,8 @@ export const initializeKnockout = async (tournamentId, userId) => {
     }
 
     // Extract player or pair IDs based on tournament format
-    const qualifiedEntries = registeredPlayers.map(p => {
-      if (tournament.format === 'Pair') {
+    const qualifiedEntries = registeredPlayers.map((p) => {
+      if (tournament.format === "Pair") {
         return { pairId: p.pairId };
       } else {
         return { playerId: p.playerId };
@@ -45,7 +46,9 @@ export const initializeKnockout = async (tournamentId, userId) => {
     // Validate number of entries (must be power of 2)
     const entryCount = qualifiedEntries.length;
     if (!isPowerOfTwo(entryCount)) {
-      throw new Error('Number of qualified entries must be a power of 2 (8, 16, 32, etc.)');
+      throw new Error(
+        "Number of qualified entries must be a power of 2 (8, 16, 32, etc.)"
+      );
     }
 
     // Calculate total rounds
@@ -57,16 +60,15 @@ export const initializeKnockout = async (tournamentId, userId) => {
 
     rounds = await Round.find({ tournamentId: tournamentId });
     if (rounds.length > 0) {
-
-      const currentRoundInfo = rounds.find(r => r.roundNumber === currentRound + 1);
+      const currentRoundInfo = rounds.find(
+        (r) => r.roundNumber === currentRound + 1
+      );
 
       if (currentRoundInfo) {
-
         date = currentRoundInfo.date;
-
       }
     }
-    
+
     // Create Knockout Stage
     const knockoutStage = await KnockoutStage.create({
       tournamentId,
@@ -75,31 +77,31 @@ export const initializeKnockout = async (tournamentId, userId) => {
       totalRounds,
       createdBy: userId,
       date,
-      status: "in progress"
+      status: "in progress",
     });
 
     // FIXED: Add await here
     const matchesData = await generateFirstRoundMatches(
-      qualifiedEntries, 
-      tournamentId, 
-      knockoutStage._id, 
+      qualifiedEntries,
+      tournamentId,
+      knockoutStage._id,
       userId,
       tournament.format
     );
-    
+
     const matches = await Match.insertMany(matchesData);
 
     // Store match IDs in knockout stage
-    knockoutStage.matchIds = matches.map(m => m._id);
+    knockoutStage.matchIds = matches.map((m) => m._id);
     await knockoutStage.save();
 
-    return ({
-      message: 'Knockout stage initialized successfully',
+    return {
+      message: "Knockout stage initialized successfully",
       knockoutStage,
-      matches
-    });
+      matches,
+    };
   } catch (error) {
-    console.error('Initialize Knockout Error:', error);
+    console.error("Initialize Knockout Error:", error);
     throw new Error(error.message);
   }
 };
@@ -110,40 +112,36 @@ export const generateNextRound = async (tournamentId, userId) => {
     const knockoutStage = await KnockoutStage.findOne({ tournamentId });
 
     if (!knockoutStage || !knockoutStage.isActive) {
-      throw new Error('Knockout stage not found or inactive');
+      throw new Error("Knockout stage not found or inactive");
     }
-    
+
     const { currentRound, totalRounds } = knockoutStage;
 
-    
     const currentRoundMatches = await Match.find({
       knockoutStageId: knockoutStage._id,
-      round: currentRound
-    }).populate('player1Id player2Id pair1Id pair2Id winner');
+      round: currentRound,
+    }).populate("player1Id player2Id pair1Id pair2Id winner");
 
-    
     for (let match of currentRoundMatches) {
-      if (match.status === 'completed' && !match.winner) {
+      if (match.status === "completed" && !match.winner) {
         let winnerId = null;
-        
-        if (match.matchType === 'Pair') {
-         
+
+        if (match.matchType === "Pair") {
           if (match.pair1Score > match.pair2Score) {
             winnerId = match.pair1Id?._id;
           } else if (match.pair2Score > match.pair1Score) {
             winnerId = match.pair2Id?._id;
           }
-          match.winnerModel = 'TournamentPair';
-        } else if (match.matchType === 'Single') {
-         
+          match.winnerModel = "TournamentPair";
+        } else if (match.matchType === "Single") {
           if (match.player1Score > match.player2Score) {
             winnerId = match.player1Id?._id;
           } else if (match.player2Score > match.player1Score) {
             winnerId = match.player2Id?._id;
           }
-          match.winnerModel = 'User';
+          match.winnerModel = "User";
         }
-        
+
         if (winnerId) {
           match.winner = winnerId;
           await match.save();
@@ -152,20 +150,17 @@ export const generateNextRound = async (tournamentId, userId) => {
     }
 
     // Check if current round is complete
-    const allMatchesComplete = currentRoundMatches.every(m => 
-      m.status === 'completed' && m.winner
+    const allMatchesComplete = currentRoundMatches.every(
+      (m) => m.status === "completed" && m.winner
     );
-    
-    console.log('All Matches Complete:', allMatchesComplete);
-    
+
+    console.log("All Matches Complete:", allMatchesComplete);
+
     if (!allMatchesComplete) {
-      // return res.status(400).json({ 
-      //   message: 'Current round not complete. All matches must have winners.',
-      //   incompleteMatches: currentRoundMatches
-      //     .filter(m => !m.winner)
-      //     .map(m => ({ matchNumber: m.matchNumber, status: m.status }))
-      // });
-      throw new Error('Current round not complete. All matches must have winners.');
+      throw new AppError(
+        "Current round not complete. All matches must have winners.",
+        400
+      );
     }
 
     // Check if tournament is complete
@@ -174,41 +169,48 @@ export const generateNextRound = async (tournamentId, userId) => {
       await knockoutStage.save();
 
       const tournament = await Tournament.findById(tournamentId);
-      tournament.status = 'completed';
+      tournament.status = "completed";
       await tournament.save();
 
-      // return res.status(200).json({ 
+      // return res.status(200).json({
       //   message: 'Tournament completed!',
-      //   winner: currentRoundMatches[0].winner 
+      //   winner: currentRoundMatches[0].winner
       // });
-      return { message: 'Tournament completed!', winner: currentRoundMatches[0].winner  };
+      return {
+        message: "Tournament completed!",
+        winner: currentRoundMatches[0].winner,
+      };
     }
-    
+
     let rounds = [];
     let date = null;
 
-    rounds = await Round.find({ tournamentId: tournamentId }).sort({ roundNumber: 1 });
+    rounds = await Round.find({ tournamentId: tournamentId }).sort({
+      roundNumber: 1,
+    });
     if (rounds.length > 0) {
-      const currentRoundInfo = rounds.find(r => r.roundNumber === currentRound + 1);
+      const currentRoundInfo = rounds.find(
+        (r) => r.roundNumber === currentRound + 1
+      );
       if (currentRoundInfo) {
         date = currentRoundInfo.date;
       }
     }
-    
+
     const nextRoundMatchesData = await generateNextRoundMatches(
-      currentRoundMatches, 
-      currentRound + 1, 
-      tournamentId, 
+      currentRoundMatches,
+      currentRound + 1,
+      tournamentId,
       knockoutStage._id,
       userId,
       date
     );
-    
+
     const nextRoundMatches = await Match.insertMany(nextRoundMatchesData);
 
     // Update knockout stage
     knockoutStage.currentRound += 1;
-    knockoutStage.matchIds.push(...nextRoundMatches.map(m => m._id));
+    knockoutStage.matchIds.push(...nextRoundMatches.map((m) => m._id));
     await knockoutStage.save();
 
     // res.status(200).json({
@@ -217,10 +219,10 @@ export const generateNextRound = async (tournamentId, userId) => {
     // });
     return {
       message: `Round ${currentRound + 1} generated successfully`,
-      nextRoundMatches
+      nextRoundMatches,
     };
   } catch (error) {
-    console.error('Generate Next Round Error:', error);
+    console.error("Generate Next Round Error:", error);
     throw new Error(error.message);
   }
 };
@@ -228,18 +230,19 @@ export const generateNextRound = async (tournamentId, userId) => {
 export const updateMatchResult = async (req, res) => {
   try {
     const { tournamentId, matchId } = req.params;
-    const { winnerId, player1Score, player2Score, pair1Score, pair2Score } = req.body;
+    const { winnerId, player1Score, player2Score, pair1Score, pair2Score } =
+      req.body;
 
     const match = await Match.findById(matchId);
-    
+
     if (!match) {
-      return res.status(404).json({ message: 'Match not found' });
+      return res.status(404).json({ message: "Match not found" });
     }
 
     const knockoutStage = await KnockoutStage.findOne({ tournamentId });
-    
+
     if (!knockoutStage) {
-      return res.status(404).json({ message: 'Knockout stage not found' });
+      return res.status(404).json({ message: "Knockout stage not found" });
     }
 
     // Update match details
@@ -248,7 +251,7 @@ export const updateMatchResult = async (req, res) => {
     match.player2Score = player2Score || 0;
     match.pair1Score = pair1Score || 0;
     match.pair2Score = pair2Score || 0;
-    match.status = 'completed';
+    match.status = "completed";
     match.updatedBy = req.user?._id;
 
     await match.save();
@@ -257,36 +260,38 @@ export const updateMatchResult = async (req, res) => {
     const currentRound = knockoutStage.currentRound;
     const currentRoundMatches = await Match.find({
       knockoutStageId: knockoutStage._id,
-      round: currentRound
+      round: currentRound,
     });
 
-    const allComplete = currentRoundMatches.every(m => m.status === 'completed');
+    const allComplete = currentRoundMatches.every(
+      (m) => m.status === "completed"
+    );
 
     let autoAdvanced = false;
     if (allComplete && currentRound < knockoutStage.totalRounds) {
       // FIXED: Add await here
       const nextRoundMatchesData = await generateNextRoundMatches(
-        currentRoundMatches, 
+        currentRoundMatches,
         currentRound + 1,
         tournamentId,
         knockoutStage._id,
         req.user?._id
       );
       const nextRoundMatches = await Match.insertMany(nextRoundMatchesData);
-      
+
       knockoutStage.currentRound += 1;
-      knockoutStage.matchIds.push(...nextRoundMatches.map(m => m._id));
+      knockoutStage.matchIds.push(...nextRoundMatches.map((m) => m._id));
       await knockoutStage.save();
       autoAdvanced = true;
     }
 
     res.status(200).json({
-      message: 'Match result updated successfully',
+      message: "Match result updated successfully",
       match,
-      autoAdvanced
+      autoAdvanced,
     });
   } catch (error) {
-    console.error('Update Match Result Error:', error);
+    console.error("Update Match Result Error:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -298,9 +303,9 @@ export const toggleTournamentHold = async (req, res) => {
     const { holdReason } = req.body;
 
     const knockoutStage = await KnockoutStage.findOne({ tournamentId });
-    
+
     if (!knockoutStage) {
-      return res.status(404).json({ message: 'Knockout stage not found' });
+      return res.status(404).json({ message: "Knockout stage not found" });
     }
 
     knockoutStage.onHold = !knockoutStage.onHold;
@@ -309,8 +314,10 @@ export const toggleTournamentHold = async (req, res) => {
     await knockoutStage.save();
 
     res.status(200).json({
-      message: knockoutStage.onHold ? 'Tournament on hold' : 'Tournament resumed',
-      knockoutStage
+      message: knockoutStage.onHold
+        ? "Tournament on hold"
+        : "Tournament resumed",
+      knockoutStage,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -324,9 +331,9 @@ export const rescheduleMatch = async (req, res) => {
     const { date, time, venue, notes } = req.body;
 
     const match = await Match.findById(matchId);
-    
+
     if (!match) {
-      return res.status(404).json({ message: 'Match not found' });
+      return res.status(404).json({ message: "Match not found" });
     }
 
     // Update schedule
@@ -334,14 +341,14 @@ export const rescheduleMatch = async (req, res) => {
     match.time = time || match.time;
     match.venue = venue || match.venue;
     match.notes = notes || match.notes;
-    match.status = 'rescheduled';
+    match.status = "rescheduled";
     match.updatedBy = req.user?._id;
 
     await match.save();
 
     res.status(200).json({
-      message: 'Match rescheduled successfully',
-      match
+      message: "Match rescheduled successfully",
+      match,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -352,23 +359,23 @@ export const rescheduleMatch = async (req, res) => {
 export const getKnockoutStage = async (req, res) => {
   try {
     const { tournamentId } = req.params;
-    
+
     const knockoutStage = await KnockoutStage.findOne({ tournamentId });
 
     if (!knockoutStage) {
-      return res.status(404).json({ message: 'Knockout stage not found' });
+      return res.status(404).json({ message: "Knockout stage not found" });
     }
 
     // Get all matches for this knockout stage
-    const matches = await Match.find({ 
-      knockoutStageId: knockoutStage._id 
+    const matches = await Match.find({
+      knockoutStageId: knockoutStage._id,
     })
-    .populate('player1 player2 pair1 pair2 winner')
-    .sort({ round: 1, matchNumber: 1 });
+      .populate("player1 player2 pair1 pair2 winner")
+      .sort({ round: 1, matchNumber: 1 });
 
     res.status(200).json({
       knockoutStage,
-      matches
+      matches,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -379,24 +386,24 @@ export const getKnockoutStage = async (req, res) => {
 export const getMatchesByRound = async (req, res) => {
   try {
     const { tournamentId, round } = req.params;
-    
+
     const knockoutStage = await KnockoutStage.findOne({ tournamentId });
 
     if (!knockoutStage) {
-      return res.status(404).json({ message: 'Knockout stage not found' });
+      return res.status(404).json({ message: "Knockout stage not found" });
     }
 
     const matches = await Match.find({
       knockoutStageId: knockoutStage._id,
-      round: parseInt(round)
+      round: parseInt(round),
     })
-    .populate('player1Id player2Id pair1Id pair2Id winner')
-    .sort({ matchNumber: 1 });
+      .populate("player1Id player2Id pair1Id pair2Id winner")
+      .sort({ matchNumber: 1 });
 
-    res.status(200).json({ 
-      success: true, 
+    res.status(200).json({
+      success: true,
       message: `Matches for Round ${round} fetched successfully`,
-      matches 
+      matches,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -407,13 +414,13 @@ export const getMatchesByRound = async (req, res) => {
 export const getMatchDetails = async (req, res) => {
   try {
     const { matchId } = req.params;
-    
+
     const match = await Match.findById(matchId)
-      .populate('player1 player2 pair1 pair2 winner')
-      .populate('createdBy updatedBy', 'name email');
+      .populate("player1 player2 pair1 pair2 winner")
+      .populate("createdBy updatedBy", "name email");
 
     if (!match) {
-      return res.status(404).json({ message: 'Match not found' });
+      return res.status(404).json({ message: "Match not found" });
     }
 
     res.status(200).json({ match });
@@ -428,30 +435,44 @@ function isPowerOfTwo(n) {
 }
 
 // FIXED: Properly handle both Single and Pair formats
-async function generateFirstRoundMatches(entries, tournamentId, knockoutStageId, userId, format) {
+async function generateFirstRoundMatches(
+  entries,
+  tournamentId,
+  knockoutStageId,
+  userId,
+  format
+) {
   const matches = [];
   const shuffledEntries = [...entries].sort(() => Math.random() - 0.5);
   const round = await Round.findOne({ tournamentId, roundNumber: 1 });
   const matchDate = round?.date || null;
-  
+
   for (let i = 0; i < shuffledEntries.length; i += 2) {
     const matchData = {
       tournamentId,
       knockoutStageId,
-      matchNumber: (i / 2) + 1,
+      matchNumber: i / 2 + 1,
       round: 1,
-      status: 'scheduled',
+      status: "scheduled",
       createdBy: userId,
       matchType: format,
-      date: matchDate
+      date: matchDate,
     };
 
     // Set player or pair based on format
-    if (format === 'Pair') {
+    if (format === "Pair") {
       matchData.pair1Id = shuffledEntries[i].pairId;
       matchData.pair2Id = shuffledEntries[i + 1].pairId;
-      const pair1 = await TournamentPlayer.findOne({ tournamentId, pairId: shuffledEntries[i].pairId, isActive: true });
-      const pair2 = await TournamentPlayer.findOne({ tournamentId, pairId: shuffledEntries[i + 1].pairId, isActive: true });
+      const pair1 = await TournamentPlayer.findOne({
+        tournamentId,
+        pairId: shuffledEntries[i].pairId,
+        isActive: true,
+      });
+      const pair2 = await TournamentPlayer.findOne({
+        tournamentId,
+        pairId: shuffledEntries[i + 1].pairId,
+        isActive: true,
+      });
       if (pair1) {
         pair1.assignMatch = true;
         await pair1.save();
@@ -463,8 +484,14 @@ async function generateFirstRoundMatches(entries, tournamentId, knockoutStageId,
     } else {
       matchData.player1Id = shuffledEntries[i].playerId;
       matchData.player2Id = shuffledEntries[i + 1].playerId;
-      const player1 = await TournamentPlayer.findOne({ tournamentId, playerId: shuffledEntries[i].playerId });
-      const player2 = await TournamentPlayer.findOne({ tournamentId, playerId: shuffledEntries[i + 1].playerId });
+      const player1 = await TournamentPlayer.findOne({
+        tournamentId,
+        playerId: shuffledEntries[i].playerId,
+      });
+      const player2 = await TournamentPlayer.findOne({
+        tournamentId,
+        playerId: shuffledEntries[i + 1].playerId,
+      });
       if (player1) {
         player1.assignMatch = true;
         await player1.save();
@@ -477,17 +504,23 @@ async function generateFirstRoundMatches(entries, tournamentId, knockoutStageId,
 
     matches.push(matchData);
   }
-  
+
   return matches;
 }
 
 // FIXED: Properly handle winners based on format
-async function generateNextRoundMatches(completedMatches, nextRound, tournamentId, knockoutStageId, userId) {
+async function generateNextRoundMatches(
+  completedMatches,
+  nextRound,
+  tournamentId,
+  knockoutStageId,
+  userId
+) {
   const matches = [];
   const tournament = await Tournament.findById(tournamentId);
-  
+
   if (!tournament) {
-    throw new Error('Tournament not found');
+    throw new Error("Tournament not found");
   }
 
   for (let i = 0; i < completedMatches.length; i += 2) {
@@ -507,16 +540,16 @@ async function generateNextRoundMatches(completedMatches, nextRound, tournamentI
     const matchData = {
       tournamentId,
       knockoutStageId,
-      matchNumber: (i / 2) + 1,
+      matchNumber: i / 2 + 1,
       round: nextRound,
-      status: 'scheduled',
+      status: "scheduled",
       createdBy: userId,
       matchType: tournament.format,
-      date: matchDate
+      date: matchDate,
     };
 
     // Set winners based on format
-    if (tournament.format === 'Pair') {
+    if (tournament.format === "Pair") {
       matchData.pair1Id = match1.winner;
       matchData.pair2Id = match2?.winner || null;
     } else {
@@ -526,6 +559,6 @@ async function generateNextRoundMatches(completedMatches, nextRound, tournamentI
 
     matches.push(matchData);
   }
-  
+
   return matches;
 }
