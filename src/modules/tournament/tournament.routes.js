@@ -28,15 +28,17 @@ import { multerUpload } from '../../config/multer.js';
 
 const router = express.Router();
 
+//static route
 router.get("/creator", verifyToken, getTournamentsByCreator);
 router.post("/", verifyToken, createTournament);
 router.get("/", getAllTournaments);
-router.get("/getAllMatches/:tournamentId", getTournamentMatchesController)
+router.get("/getAllMatches/:tournamentId/:roundNumber", getTournamentMatchesController)
 router.get("/findplayer/:tournamentId", verifyToken, findTournamentPlayer);
 router.get("/getPayemtInfo/:stripeSessionId", verifyToken, getPaymentBystripeSessionId);
 router.get('/knockout/:tournamentId', getKnockoutStage);
 
 
+//dynamic route
 router.post('/:tournamentId/tournament-progress', verifyToken, progressTournament);
 router.post('/:tournamentId/event-started', verifyToken, eventStartInvitationRegisteredUsers)
 router.post('/:tournamentId/next-round', verifyToken, generateNextRound);
