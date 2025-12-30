@@ -8,12 +8,47 @@ import { parse } from 'csv-parse/sync';
 import { invitetationEmailTemplate, eventStartInvitationTemplate } from "../../lib/emailTemplates.js";
 import crypto from "crypto";
 import Match from "../match/match.model.js";
+import KnockoutStage from '../others/knockoutSchema.model.js';
+import { initializeKnockout, generateNextRound } from './autometicRound.controller.js';
 
 
 function generateToken() {
   return crypto.randomBytes(32).toString("hex");
 }
+export const progressTournament = async (req, res) => {
+  try {
+    const { tournamentId } = req.params;
+    const userId = req.user._id;
+    console.log("mahabur", tournamentId, userId);
 
+    const tournament = await Tournament.findById(tournamentId);
+    if (!tournament) {
+      return res.status(404).json({ message: 'Tournament not found' });
+    }
+
+    const knockoutStage = await KnockoutStage.findOne({ tournamentId });
+
+    if (!knockoutStage) {
+
+      const initializeKnockoutResult = await initializeKnockout(tournamentId, userId);
+
+      return res.status(200).json({
+        message: 'Tournament initialized and first round created',
+        data: initializeKnockoutResult
+      });
+    }
+
+    const nextRound = await generateNextRound(tournamentId, userId);
+
+    return res.status(200).json({
+      message: 'Next round generated successfully',
+      data: nextRound
+    });
+
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
 export const createTournament = async (req, res) => {
   try {
     const {
@@ -476,7 +511,7 @@ export const getTournamentMatchesController = async (req, res) => {
 
 export const eventStartInvitationRegisteredUsers = async (req, res) => {
   try {
-    const tournamentId = req.params.id;
+    const { tournamentId } = req.params;
 
     const tournament = await Tournament.findById(tournamentId);
     if (!tournament) {
@@ -496,7 +531,7 @@ export const eventStartInvitationRegisteredUsers = async (req, res) => {
       });
     const frontendUrl = process.env.FRONTEND_URL;
     let emailCount = 0;
-
+    
     for (const player of allPlayers) {
       const eventDrawUrl = `${frontendUrl}/tournament/${tournamentId}`;
       const dashboardUrl = `${frontendUrl}`;
