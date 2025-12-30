@@ -148,7 +148,7 @@ export const generateNextRound = async (tournamentId, userId) => {
         }
       }
     }
-
+    console.log(currentRoundMatches);
     // Check if current round is complete
     const allMatchesComplete = currentRoundMatches.every(
       (m) => m.status === "completed" && m.winner
