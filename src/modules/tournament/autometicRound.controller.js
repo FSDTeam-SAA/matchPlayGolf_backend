@@ -4,20 +4,22 @@ import KnockoutStage from '../others/knockoutSchema.model.js';
 import Match from '../match/match.model.js';
 import Round from '../round/round.model.js';
 
+
 // Initialize Knockout Stage
-export const initializeKnockout = async (req, res) => {
+export const initializeKnockout = async (tournamentId, userId) => {
   try {
-    const { tournamentId } = req.params;
+    // const { tournamentId } = req.params;
     const tournament = await Tournament.findById(tournamentId);
 
     if (!tournament) {
-      return res.status(404).json({ message: "Tournament not found" });
+      // return res.status(404).json({ message: "Tournament not found" });
+      throw new Error("Tournament not found");
     }
 
     // Check if knockout stage already exists
     const existingStage = await KnockoutStage.findOne({ tournamentId });
     if (existingStage) {
-      return res.status(400).json({ message: "Knockout stage already initialized" });
+      throw new Error("Knockout stage already initialized");
     }
 
     // Auto-fetch all active registered players
@@ -28,7 +30,7 @@ export const initializeKnockout = async (req, res) => {
     }).select("playerId pairId");
 
     if (registeredPlayers.length === 0) {
-      return res.status(400).json({ message: "No registered players found" });
+      throw new Error("No registered players found");
     }
 
     // Extract player or pair IDs based on tournament format
@@ -43,9 +45,7 @@ export const initializeKnockout = async (req, res) => {
     // Validate number of entries (must be power of 2)
     const entryCount = qualifiedEntries.length;
     if (!isPowerOfTwo(entryCount)) {
-      return res.status(400).json({ 
-        message: 'Number of qualified entries must be a power of 2 (8, 16, 32, etc.)' 
-      });
+      throw new Error('Number of qualified entries must be a power of 2 (8, 16, 32, etc.)');
     }
 
     // Calculate total rounds
@@ -73,8 +73,9 @@ export const initializeKnockout = async (req, res) => {
       isActive: true,
       currentRound: 1,
       totalRounds,
-      createdBy: req.user?._id,
-      date
+      createdBy: userId,
+      date,
+      status: "in progress"
     });
 
     // FIXED: Add await here
@@ -82,7 +83,7 @@ export const initializeKnockout = async (req, res) => {
       qualifiedEntries, 
       tournamentId, 
       knockoutStage._id, 
-      req.user?._id,
+      userId,
       tournament.format
     );
     
@@ -92,43 +93,41 @@ export const initializeKnockout = async (req, res) => {
     knockoutStage.matchIds = matches.map(m => m._id);
     await knockoutStage.save();
 
-    res.status(200).json({
+    return ({
       message: 'Knockout stage initialized successfully',
       knockoutStage,
       matches
     });
   } catch (error) {
     console.error('Initialize Knockout Error:', error);
-    res.status(500).json({ message: error.message });
+    throw new Error(error.message);
   }
 };
 
 // Auto-generate next round matches
-export const generateNextRound = async (req, res) => {
+export const generateNextRound = async (tournamentId, userId) => {
   try {
-    const { tournamentId } = req.params;
-    
     const knockoutStage = await KnockoutStage.findOne({ tournamentId });
 
     if (!knockoutStage || !knockoutStage.isActive) {
-      return res.status(400).json({ message: 'Knockout stage not active' });
+      throw new Error('Knockout stage not found or inactive');
     }
     
     const { currentRound, totalRounds } = knockoutStage;
 
-    // Get current round matches
+    
     const currentRoundMatches = await Match.find({
       knockoutStageId: knockoutStage._id,
       round: currentRound
     }).populate('player1Id player2Id pair1Id pair2Id winner');
 
-    // **FIX: Auto-determine winners based on scores if winner is null**
+    
     for (let match of currentRoundMatches) {
       if (match.status === 'completed' && !match.winner) {
         let winnerId = null;
         
         if (match.matchType === 'Pair') {
-          // Determine winner for pair matches
+         
           if (match.pair1Score > match.pair2Score) {
             winnerId = match.pair1Id?._id;
           } else if (match.pair2Score > match.pair1Score) {
@@ -136,7 +135,7 @@ export const generateNextRound = async (req, res) => {
           }
           match.winnerModel = 'TournamentPair';
         } else if (match.matchType === 'Single') {
-          // Determine winner for single matches
+         
           if (match.player1Score > match.player2Score) {
             winnerId = match.player1Id?._id;
           } else if (match.player2Score > match.player1Score) {
@@ -160,12 +159,13 @@ export const generateNextRound = async (req, res) => {
     console.log('All Matches Complete:', allMatchesComplete);
     
     if (!allMatchesComplete) {
-      return res.status(400).json({ 
-        message: 'Current round not complete. All matches must have winners.',
-        incompleteMatches: currentRoundMatches
-          .filter(m => !m.winner)
-          .map(m => ({ matchNumber: m.matchNumber, status: m.status }))
-      });
+      // return res.status(400).json({ 
+      //   message: 'Current round not complete. All matches must have winners.',
+      //   incompleteMatches: currentRoundMatches
+      //     .filter(m => !m.winner)
+      //     .map(m => ({ matchNumber: m.matchNumber, status: m.status }))
+      // });
+      throw new Error('Current round not complete. All matches must have winners.');
     }
 
     // Check if tournament is complete
@@ -177,10 +177,11 @@ export const generateNextRound = async (req, res) => {
       tournament.status = 'completed';
       await tournament.save();
 
-      return res.status(200).json({ 
-        message: 'Tournament completed!',
-        winner: currentRoundMatches[0].winner 
-      });
+      // return res.status(200).json({ 
+      //   message: 'Tournament completed!',
+      //   winner: currentRoundMatches[0].winner 
+      // });
+      return { message: 'Tournament completed!', winner: currentRoundMatches[0].winner  };
     }
     
     let rounds = [];
@@ -199,7 +200,7 @@ export const generateNextRound = async (req, res) => {
       currentRound + 1, 
       tournamentId, 
       knockoutStage._id,
-      req.user?._id,
+      userId,
       date
     );
     
@@ -210,13 +211,17 @@ export const generateNextRound = async (req, res) => {
     knockoutStage.matchIds.push(...nextRoundMatches.map(m => m._id));
     await knockoutStage.save();
 
-    res.status(200).json({
+    // res.status(200).json({
+    //   message: `Round ${currentRound + 1} generated successfully`,
+    //   nextRoundMatches
+    // });
+    return {
       message: `Round ${currentRound + 1} generated successfully`,
       nextRoundMatches
-    });
+    };
   } catch (error) {
     console.error('Generate Next Round Error:', error);
-    res.status(500).json({ message: error.message });
+    throw new Error(error.message);
   }
 };
 // Update match result and auto-advance winner

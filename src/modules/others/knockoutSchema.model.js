@@ -13,7 +13,10 @@ const knockoutStageSchema = new mongoose.Schema({
   totalRounds: { type: Number, required: true },
   onHold: { type: Boolean, default: false },
   holdReason: { type: String },
-  
+  status:{
+    type:String,
+    default: "pending"
+  },
   // Optional: Store match IDs for quick reference
   matchIds: [{
     type: mongoose.Schema.Types.ObjectId,
