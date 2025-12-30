@@ -10,6 +10,7 @@ import crypto from "crypto";
 import Match from "../match/match.model.js";
 import KnockoutStage from '../others/knockoutSchema.model.js';
 import { initializeKnockout, generateNextRound } from './autometicRound.controller.js';
+import mongoose from "mongoose";
 
 
 function generateToken() {
@@ -360,16 +361,125 @@ export const generateUniqueOrderCode = async () => {
   };
 
 
+// export const sendInvitationRegisteredUsers = async (req, res) => {
+//   try {
+//     const tournamentId = req.params.id;
+
+//     const tournament = await Tournament.findById(tournamentId);
+//     if (!tournament) {
+//       return res.status(404).json({ success: false, message: "Tournament not found" });
+//     }
+
+//     const matches = await Match.find({ tournamentId })
+//       .populate("player1Id", "fullName email")
+//       .populate("player2Id", "fullName email")
+//       .populate({
+//         path: "pair1Id",
+//         populate: { path: "player1 player2", select: "fullName email" }
+//       })
+//       .populate({
+//         path: "pair2Id",
+//         populate: { path: "player1 player2", select: "fullName email" }
+//       });
+
+//     if (matches.length === 0) {
+//       return res.status(404).json({ success: false, message: "No matches found" });
+//     }
+
+//     const frontendUrl = process.env.FRONTEND_URL;
+//     let emailCount = 0;
+
+//     for (const match of matches) {
+//       // ✅ unique token per match
+//       const verifyToken = generateToken();
+
+//       match.verifyToken = verifyToken;
+//       match.updateResultUrl = `${frontendUrl}/match/${match._id}?token=${verifyToken}`;
+//       await match.save();
+
+//       const recipients = new Set();
+
+//       // 🎯 Single Match
+//       if (match.player1Id?.email) recipients.add(match.player1Id.email);
+//       if (match.player2Id?.email) recipients.add(match.player2Id.email);
+
+//       // 🎯 Pair Match (4 players)
+//       if (match.pair1Id) {
+//         match.pair1Id.player1?.email && recipients.add(match.pair1Id.player1.email);
+//         match.pair1Id.player2?.email && recipients.add(match.pair1Id.player2.email);
+//       }
+
+//       if (match.pair2Id) {
+//         match.pair2Id.player1?.email && recipients.add(match.pair2Id.player1.email);
+//         match.pair2Id.player2?.email && recipients.add(match.pair2Id.player2.email);
+//       }
+
+//       for (const email of recipients) {
+//         await sendEmail({
+//           to: email,
+//           subject: `Match Result Update: ${tournament.tournamentName}`,
+//           html: invitetationEmailTemplate({
+//             tournament,
+//             match,
+//             updateResultUrl: match.updateResultUrl
+//           })
+//         });
+//         emailCount++;
+//       }
+//     }
+
+//     return res.json({
+//       success: true,
+//       message: "Unique match links sent to all players",
+//       totalMatches: matches.length,
+//       totalEmails: emailCount
+//     });
+
+//   } catch (error) {
+//     console.error("❌ Send Invitation Error:", error);
+//     res.status(500).json({
+//       success: false,
+//       message: "Internal server error"
+//     });
+//   }
+// };
 export const sendInvitationRegisteredUsers = async (req, res) => {
   try {
     const tournamentId = req.params.id;
 
-    const tournament = await Tournament.findById(tournamentId);
-    if (!tournament) {
-      return res.status(404).json({ success: false, message: "Tournament not found" });
+    // ✅ Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(tournamentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid tournament ID"
+      });
     }
 
-    const matches = await Match.find({ tournamentId })
+    // ✅ Tournament check
+    const tournament = await Tournament.findById(tournamentId);
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: "Tournament not found"
+      });
+    }
+
+    // ✅ Get knockout stage
+    const knockoutStage = await KnockoutStage.findOne({ tournamentId });
+    if (!knockoutStage) {
+      return res.status(404).json({
+        success: false,
+        message: "Knockout stage not found"
+      });
+    }
+
+    const currentRound = knockoutStage.currentRound;
+
+    // ✅ CURRENT ROUND MATCHES ONLY
+    const matches = await Match.find({
+      tournamentId,
+      round: currentRound
+    })
       .populate("player1Id", "fullName email")
       .populate("player2Id", "fullName email")
       .populate({
@@ -382,7 +492,10 @@ export const sendInvitationRegisteredUsers = async (req, res) => {
       });
 
     if (matches.length === 0) {
-      return res.status(404).json({ success: false, message: "No matches found" });
+      return res.status(404).json({
+        success: false,
+        message: `No matches found for round ${currentRound}`
+      });
     }
 
     const frontendUrl = process.env.FRONTEND_URL;
@@ -398,21 +511,17 @@ export const sendInvitationRegisteredUsers = async (req, res) => {
 
       const recipients = new Set();
 
-      // 🎯 Single Match
-      if (match.player1Id?.email) recipients.add(match.player1Id.email);
-      if (match.player2Id?.email) recipients.add(match.player2Id.email);
+      // 🎯 Single players
+      match.player1Id?.email && recipients.add(match.player1Id.email);
+      match.player2Id?.email && recipients.add(match.player2Id.email);
 
-      // 🎯 Pair Match (4 players)
-      if (match.pair1Id) {
-        match.pair1Id.player1?.email && recipients.add(match.pair1Id.player1.email);
-        match.pair1Id.player2?.email && recipients.add(match.pair1Id.player2.email);
-      }
+      // 🎯 Pair players
+      match.pair1Id?.player1?.email && recipients.add(match.pair1Id.player1.email);
+      match.pair1Id?.player2?.email && recipients.add(match.pair1Id.player2.email);
+      match.pair2Id?.player1?.email && recipients.add(match.pair2Id.player1.email);
+      match.pair2Id?.player2?.email && recipients.add(match.pair2Id.player2.email);
 
-      if (match.pair2Id) {
-        match.pair2Id.player1?.email && recipients.add(match.pair2Id.player1.email);
-        match.pair2Id.player2?.email && recipients.add(match.pair2Id.player2.email);
-      }
-
+      // ✅ Send emails
       for (const email of recipients) {
         await sendEmail({
           to: email,
@@ -429,20 +538,20 @@ export const sendInvitationRegisteredUsers = async (req, res) => {
 
     return res.json({
       success: true,
-      message: "Unique match links sent to all players",
+      message: "Match links sent to current round players only",
+      currentRound,
       totalMatches: matches.length,
       totalEmails: emailCount
     });
 
   } catch (error) {
     console.error("❌ Send Invitation Error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Internal server error"
     });
   }
 };
-
 
 export const findTournamentPlayer = async (req, res) => {
   try {
@@ -518,59 +627,114 @@ export const eventStartInvitationRegisteredUsers = async (req, res) => {
   try {
     const { tournamentId } = req.params;
 
+    // ✅ Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(tournamentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid tournament ID"
+      });
+    }
+
+    // ✅ Tournament
     const tournament = await Tournament.findById(tournamentId);
     if (!tournament) {
-      return res.status(404).json({ success: false, message: "Tournament not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Tournament not found"
+      });
     }
+
     tournament.status = "in progress";
     await tournament.save();
 
-    const allPlayers = await TournamentPlayer.find({ tournamentId })
-        .populate("playerId", "fullName email phone handicap clubName")
-        .populate({
-          path: "pairId",
-          populate: [
-            { path: "player1", select: "fullName email phone handicap clubName" },
-            { path: "player2", select: "fullName email phone handicap clubName" },
-          ],
+    // ✅ Get active knockout stage
+    const knockoutStage = await KnockoutStage.findOne({ tournamentId });
+    if (!knockoutStage) {
+      return res.status(404).json({
+        success: false,
+        message: "Knockout stage not found"
       });
+    }
+
+    const currentRound = knockoutStage.currentRound;
+
+    // ✅ Get matches of CURRENT ROUND ONLY
+    const matches = await Match.find({
+      tournamentId,
+      round: currentRound
+    })
+      .populate("player1Id player2Id", "fullName email")
+      .populate({
+        path: "pair1Id",
+        populate: [
+          { path: "player1", select: "fullName email" },
+          { path: "player2", select: "fullName email" }
+        ]
+      })
+      .populate({
+        path: "pair2Id",
+        populate: [
+          { path: "player1", select: "fullName email" },
+          { path: "player2", select: "fullName email" }
+        ]
+      });
+
+    // ✅ Collect UNIQUE emails
+    const emailMap = new Map();
+
+    const addPlayer = (player) => {
+      if (player?.email) {
+        emailMap.set(player.email, player);
+      }
+    };
+
+    for (const match of matches) {
+      // Single players
+      addPlayer(match.player1Id);
+      addPlayer(match.player2Id);
+
+      // Pair players
+      match.pair1Id?.player1 && addPlayer(match.pair1Id.player1);
+      match.pair1Id?.player2 && addPlayer(match.pair1Id.player2);
+      match.pair2Id?.player1 && addPlayer(match.pair2Id.player1);
+      match.pair2Id?.player2 && addPlayer(match.pair2Id.player2);
+    }
+
     const frontendUrl = process.env.FRONTEND_URL;
     let emailCount = 0;
-    
-    for (const player of allPlayers) {
-      const eventDrawUrl = `${frontendUrl}/tournament/${tournamentId}`;
-      const dashboardUrl = `${frontendUrl}`;
-      const contactUrl = `${frontendUrl}/contact`;
-      const createEventUrl = `${frontendUrl}`;
+
+    // ✅ Send emails
+    for (const [email] of emailMap) {
       await sendEmail({
-        to: player.playerId.email,
+        to: email,
         subject: `Event Started: ${tournament.tournamentName}`,
         html: eventStartInvitationTemplate({
           eventName: tournament.tournamentName,
-          eventDrawUrl,
-          dashboardUrl,
-          contactUrl,
-          createEventUrl
+          eventDrawUrl: `${frontendUrl}/tournament/${tournamentId}`,
+          dashboardUrl: `${frontendUrl}`,
+          contactUrl: `${frontendUrl}/contact`,
+          createEventUrl: `${frontendUrl}`
         })
       });
       emailCount++;
     }
+
     return res.json({
       success: true,
-      message: "Unique match links sent to all players",
-      totalPlayers: allPlayers.length,
+      message: "Emails sent to current round players only",
+      currentRound,
+      totalMatches: matches.length,
       totalEmails: emailCount
     });
 
   } catch (error) {
     console.error("❌ Send Invitation Error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Internal server error"
     });
   }
 };
-
 
 export const handleCsvFile = async(req, res) => {
   try {
