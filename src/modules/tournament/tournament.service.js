@@ -543,7 +543,7 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
 
   // Count total matches for pagination
   const total = await Match.countDocuments(query);
-  const rounds = await Round.findOne({ tournamentId: tournamentId });
+  const rounds = await Round.find({ tournamentId: tournamentId });
 
   // Fetch matches
   const matches = await Match.find(query)
