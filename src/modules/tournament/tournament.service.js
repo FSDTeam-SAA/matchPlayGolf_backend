@@ -344,7 +344,7 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
   }
   
   const isOwner = tournament.createdBy.toString() === userId.toString();
-  const isAdmin = role === "admin";
+  const isAdmin = role === "Admin";
   console.log(userId, role, tournament.createdBy);
 
   if (!isAdmin && !isOwner) {
@@ -504,7 +504,7 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
 
       // Authorization: Creator OR Admin can delete
       const isOwner = tournament.createdBy.toString() === userId.toString();
-      const isAdmin = role === "admin";
+      const isAdmin = role === "Admin";
 
       if (!isOwner && !isAdmin) {
         throw new Error("Not authorized to delete this tournament");
