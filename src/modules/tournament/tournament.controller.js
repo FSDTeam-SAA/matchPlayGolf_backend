@@ -20,12 +20,18 @@ export const progressTournament = async (req, res,next) => {
   try {
     const { tournamentId } = req.params;
     const userId = req.user._id;
-    console.log("mahabur", tournamentId, userId);
 
     const tournament = await Tournament.findById(tournamentId);
     if (!tournament) {
       return res.status(404).json({ message: 'Tournament not found' });
     }
+
+   if (tournament.tournamentStatus !== "approved") {
+    return res.status(403).json({
+      success: false,
+      message: "You are not allowed to create a tournament unless it is approved."
+    });
+  }
 
     const knockoutStage = await KnockoutStage.findOne({ tournamentId });
 
@@ -652,6 +658,45 @@ export const eventStartInvitationRegisteredUsers = async (req, res) => {
     });
   }
 };
+export const approvedTournament = async (req, res) => {
+  try {
+    const role = req.user?.role;
+    const { tournamentId } = req.params;
+
+    // Role check
+    if (role !== "Admin") {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to approve this tournament"
+      });
+    }
+
+    // Tournament check
+    const tournament = await Tournament.findById(tournamentId);
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: "Tournament not found"
+      });
+    }
+
+    // Approve tournament
+    tournament.tournamentStatus = "approved";
+    await tournament.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Tournament approved successfully"
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
 
 export const handleCsvFile = async(req, res) => {
   try {

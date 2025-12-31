@@ -37,6 +37,14 @@ export const createTournamentMatch = async (req, res) => {
       });
     }
 
+    const tournament = await Tournament.findById(tournamentId);
+    if(tournament.tournamentStatus != "approved"){
+      return res.status(400).json({
+        success:false,
+        message: "You are not allowed for create match"
+      })
+    };
+
     // Match type validation (case-sensitive to match schema)
     if (!["Single", "Pair", "Team"].includes(matchType)) {
       return res.status(400).json({

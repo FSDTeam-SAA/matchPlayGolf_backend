@@ -10,7 +10,8 @@ import {
   findTournamentPlayer,
   getTournamentMatchesController,
   progressTournament,
-  eventStartInvitationRegisteredUsers
+  eventStartInvitationRegisteredUsers,
+  approvedTournament
 } from "./tournament.controller.js";
 import { getPaymentBystripeSessionId } from "../payment/payment.controller.js";
 import {
@@ -37,6 +38,7 @@ router.get("/findplayer/:tournamentId", verifyToken, findTournamentPlayer);
 router.get("/getPayemtInfo/:stripeSessionId", verifyToken, getPaymentBystripeSessionId);
 router.get('/knockout/:tournamentId', getKnockoutStage);
 router.get("/getAllMatches/:tournamentId", getTournamentMatchesController)
+router.put('/approved/:tournamentId', verifyToken, approvedTournament);
 
 
 //dynamic route
@@ -52,6 +54,7 @@ router.post("/:id", verifyToken, sendInvitationRegisteredUsers);
 router.put("/:tournamentId", verifyToken, multerUpload.single('csvFile'), updateTournament);
 router.delete("/:id", verifyToken, deleteTournament);
 router.get("/:id", getTournamentById);
+router.put('/:tournamentId', verifyToken, approvedTournament);
 
 
 
