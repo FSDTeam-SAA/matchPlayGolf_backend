@@ -20,8 +20,8 @@ const RoundSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Scheduled", "In Progress", "Completed", "Cancelled"],
-      default: "Scheduled"
+      enum: ["scheduled", "in progress", "completed", "cancelled"],
+      default: "scheduled"
     },
     weatherConditions: {
       type: String,

@@ -28,10 +28,10 @@ class MatchService {
         throw new Error("Invalid round ID");
       }
 
-      const round = await Round.findById(matchData.roundId);
-      if (!round) {
+     const round = await Round.findById(matchData.roundId);
+     if (!round || !round.tournamentId.equals(matchData.tournamentId) || round?.status == "completed") {
         throw new Error("Round not found");
-      }
+     }
 
       // Validate matchType (case-sensitive)
       if (!["Single", "Pair", "Team"].includes(matchData.matchType)) {
