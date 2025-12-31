@@ -195,6 +195,23 @@ async registerSinglePlayers(tournamentId, userIds) {
     userId => !existingPlayerIds.has(userId.toString())
   );
   
+  const tournament = await Tournament.findById(tournamentId);
+
+  if (!tournament) {
+    throw new Error("Tournament not found");
+  }
+
+  if (!Array.isArray(newUserIds)) {
+    throw new Error("newUserIds must be an array");
+  }
+
+  const totalAfterAdd =
+    Number(tournament.totalParticipants) + newUserIds.length;
+
+  if (totalAfterAdd > Number(tournament.drawSize)) {
+    throw new Error("Participant size exceeds tournament draw size");
+  }
+
   // Bulk insert new registrations
   if (newUserIds.length > 0) {
     const newRegistrations = newUserIds.map(userId => ({
@@ -240,7 +257,19 @@ async registerPairPlayers(tournamentId, players, userIds) {
     player1: userIds[0],
     player2: userIds[1],
   });
-  
+  const tournament = await Tournament.findById(tournamentId);
+
+  if (!tournament) {
+    throw new Error("Tournament not found");
+  }
+
+  const totalAfterAdd =
+    Number(tournament.totalParticipants) + 1;
+
+  if (totalAfterAdd > Number(tournament.drawSize)) {
+    throw new Error("Participant size exceeds tournament draw size");
+  }
+
   await TournamentPlayer.create({
     tournamentId,
     playerId: null,
