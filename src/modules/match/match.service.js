@@ -569,7 +569,7 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
 
       // Check authorization
       const isOwner = match.tournamentId.createdBy.toString() === userId.toString();
-      const isAdmin = role === "admin";
+      const isAdmin = role === "Admin";
 
       if (!isOwner && !isAdmin) {
         throw new Error("Not authorized to delete this match");
