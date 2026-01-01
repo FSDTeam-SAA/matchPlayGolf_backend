@@ -114,6 +114,7 @@ export const importMultipleUsersService = async (users, tournamentId, createdBy)
 };
 
 export const setPasswordService = async ({ token, password }) => {
+  
   if (!token || !password)
     throw new Error("Token and password are required");
 
@@ -136,6 +137,7 @@ export const setPasswordService = async ({ token, password }) => {
 };
 
 export const loginUserService = async ({ email, password }) => {
+  
   if (!email || !password) throw new Error('Email and password are required');
 
   const user = await User.findOne({ email }).select("_id fullName email role profileImage color dob newsletterPreference receiveOrderUpdates");

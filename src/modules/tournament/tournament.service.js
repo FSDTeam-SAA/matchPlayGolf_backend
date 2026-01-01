@@ -208,6 +208,7 @@ async registerSinglePlayers(tournamentId, userIds) {
   const totalAfterAdd =
     Number(tournament.totalParticipants) + newUserIds.length;
 
+  console.log(newUserIds.length, "dfastgdtyuhre5rt erfs");
   if (totalAfterAdd > Number(tournament.drawSize)) {
     throw new Error("Participant size exceeds tournament draw size");
   }

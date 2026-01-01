@@ -349,7 +349,7 @@ export const welcomeEmailTemplate = ({ user, verifyToken }) => {
 
 export const invitetationEmailTemplate = ({tournament, match, updateResultUrl, user}) =>{
   
-  const tournamentUrl = `${process.env.FRONTEND_URL}/tournament/${tournament._id}`;
+  const tournamentUrl = `${process.env.FRONTEND_URL}/tournaments/${tournament._id}`;
   const dashboardUrl = `${process.env.FRONTEND_URL}`;
   const contactUrl = `${process.env.FRONTEND_URL}/contact`;
   const logoUrl = `${process.env.LOGO || ""}`;
