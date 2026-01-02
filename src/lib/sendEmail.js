@@ -7,31 +7,56 @@ import {
   emailFrom,
 } from "../config/config.js"; 
 
+// const sendEmail = async ({ to, subject, html }) => {
+//   try {
+//     const transporter = nodemailer.createTransport({
+//       host: emailHost,
+//       port: emailPort,
+//       secure: false,
+//       auth: {
+//         user: emailAddress,
+//         pass: emailPass,
+//       },
+//     });
+
+//     const mailOptions = {
+//       from: emailFrom,
+//       to,
+//       subject,
+//       html,
+//     };
+
+//     await transporter.sendMail(mailOptions);
+//     return { success: true };
+//   } catch (error) {
+//     console.error("Email send error:", error);
+//     return { success: false, error: error.message };
+//   }
+// };
+
+// export default sendEmail;
+
+// emailTransporter.js
+// import nodemailer from "nodemailer";
+
+const transporter = nodemailer.createTransport({
+  host: emailHost,
+  port: emailPort,
+  secure: false,
+  auth: {
+    user: emailAddress,
+    pass: emailPass,
+  },
+});
+// sendEmail.js
+
 const sendEmail = async ({ to, subject, html }) => {
-  try {
-    const transporter = nodemailer.createTransport({
-      host: emailHost,
-      port: emailPort,
-      secure: false,
-      auth: {
-        user: emailAddress,
-        pass: emailPass,
-      },
-    });
-
-    const mailOptions = {
-      from: emailFrom,
-      to,
-      subject,
-      html,
-    };
-
-    await transporter.sendMail(mailOptions);
-    return { success: true };
-  } catch (error) {
-    console.error("Email send error:", error);
-    return { success: false, error: error.message };
-  }
+  await transporter.sendMail({
+    from: emailFrom,
+    to,
+    subject,
+    html,
+  });
 };
 
 export default sendEmail;

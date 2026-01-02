@@ -125,7 +125,7 @@ export const setPasswordService = async ({ token, password }) => {
   if (!user) throw new Error("Invalid or expired token");
 
   // Hash password before saving
-  user.password = await bcrypt.hash(password, 10);
+  user.password = password;
 
   // Clear token fields
   user.verifyToken = undefined;
@@ -135,42 +135,42 @@ export const setPasswordService = async ({ token, password }) => {
 
   return { message: "Password set successfully" };
 };
-
 export const loginUserService = async ({ email, password }) => {
   
-  if (!email || !password) throw new Error('Email and password are required');
+  if (!email || !password) {
+    throw new Error("Email and password are required");
+  }
 
-  const user = await User.findOne({ email }).select("_id fullName email role profileImage color dob newsletterPreference receiveOrderUpdates");
+  const user = await User.findOne({ email }).select(
+    "+password _id fullName email role profileImage color dob newsletterPreference receiveOrderUpdates"
+  );
 
-  if (!user) throw new Error('User not found');
+  if (!user) throw new Error("User not found");
 
-  const isMatch = await user.comparePassword(user._id, password);
-  if (!isMatch) throw new Error('Invalid password');
+  const isMatch = await user.comparePassword(password);
+  if (!isMatch) throw new Error("Invalid password");
 
   const payload = { _id: user._id, role: user.role };
 
+  const accessToken = user.generateAccessToken(payload);
+  const refreshToken = user.generateRefreshToken(payload);
 
-    const accessToken = user.generateAccessToken(payload);
-    const refreshToken = user.generateRefreshToken(payload);
-
-
-    return {
+  return {
     accessToken,
     refreshToken,
     user: {
       _id: user._id,
-      fullName: user.fullName,  
+      fullName: user.fullName,
       email: user.email,
       role: user.role,
       profileImage: user.profileImage,
       color: user.color,
       dob: user.dob,
       newsletterPreference: user.newsletterPreference,
-      receiveOrderUpdates: user.receiveOrderUpdates
-    }
+      receiveOrderUpdates: user.receiveOrderUpdates,
+    },
   };
 };
-
 
 
 export const refreshAccessTokenService = async (refreshToken) => {
