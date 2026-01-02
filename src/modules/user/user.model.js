@@ -112,11 +112,16 @@ UserSchema.pre("save", async function (next) {
 
 
 // Compare password
-UserSchema.methods.comparePassword = async function (id, plainPassword) {
-  const user = await this.model("User").findById(id).select("password");
-  if (!user) return false;
-  return bcrypt.compare(plainPassword, user.password);
+// UserSchema.methods.comparePassword = async function (id, plainPassword) {
+//   const user = await this.model("User").findById(id).select("password");
+//   if (!user) return false;
+//   return bcrypt.compare(plainPassword, user.password);
+// };
+UserSchema.methods.comparePassword = async function (plainPassword) {
+  if (!this.password) return false;
+  return bcrypt.compare(plainPassword, this.password);
 };
+
 
 // Generate access token
 UserSchema.methods.generateAccessToken = function (payload) {
