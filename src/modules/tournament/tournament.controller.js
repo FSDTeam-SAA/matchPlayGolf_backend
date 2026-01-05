@@ -662,6 +662,7 @@ export const approvedTournament = async (req, res) => {
   try {
     const role = req.user?.role;
     const { tournamentId } = req.params;
+    const tournamentStatus = req.body.tournamentStatus;
 
     // Role check
     if (role !== "Admin") {
@@ -681,12 +682,13 @@ export const approvedTournament = async (req, res) => {
     }
 
     // Approve tournament
-    tournament.tournamentStatus = "approved";
-    await tournament.save();
+    tournament.tournamentStatus = tournamentStatus;
+    const updateTournament = await tournament.save();
 
     return res.status(200).json({
       success: true,
-      message: "Tournament approved successfully"
+      message: "Tournament approved successfully",
+      data: updateTournament
     });
 
   } catch (error) {
