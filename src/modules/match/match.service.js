@@ -407,6 +407,9 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
 
       // console.log("🔍 Fetched match for update:", match);
     if (!match) throw new Error("Match not found");
+    if(match.tournamentId == null){
+      throw new Error("Tournament not found");
+    }
 
     // Authorization
     const token = updateData.token || null;
@@ -466,26 +469,43 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
 
     // Remove duplicates
     const uniqueEmails = [...new Set(playerEmails)];
+    const matchDetails = {
+        eventName: savedMatch.tournamentId.tournamentName,
+        matchType: savedMatch.matchType,
+        matchRound: savedMatch.round || "N/A",
+        location: savedMatch.location,
+        date: savedMatch.date,
+        winner: matchDetailsWinner?.fullName || "N/A",
+      };
+
+      // SINGLE MATCH
+      if (savedMatch.matchType === "Single") {
+        matchDetails.player1 = savedMatch.player1Id?.fullName || "N/A";
+        matchDetails.player2 = savedMatch.player2Id?.fullName || "N/A";
+        matchDetails.player1Score = savedMatch.player1Score || 0;
+        matchDetails.player2Score = savedMatch.player2Score || 0;
+      }
+
+      // PAIR MATCH
+      if (savedMatch.matchType === "Pair") {
+        matchDetails.player1 = savedMatch.pair1Id
+          ? `${savedMatch.pair1Id.player1?.fullName || "N/A"} & ${savedMatch.pair1Id.player2?.fullName || "N/A"}`
+          : "N/A";
+
+        matchDetails.player2 = savedMatch.pair2Id
+          ? `${savedMatch.pair2Id.player1?.fullName || "N/A"} & ${savedMatch.pair2Id.player2?.fullName || "N/A"}`
+          : "N/A";
+
+        matchDetails.player1Score = savedMatch.pair1Score || 0;
+        matchDetails.player2Score = savedMatch.pair2Score || 0;
+      }
 
     // Send email if there are emails
     if (uniqueEmails.length > 0) {
       await sendEmail({
         to: uniqueEmails,
         subject: `Match Result Updated: ${savedMatch.tournamentId.tournamentName}`,
-        html: matchResultUpdateTemplate({
-          matchDetails: {
-            eventName: savedMatch.tournamentId.tournamentName,
-            matchType: savedMatch.matchType,
-            matchRound: savedMatch.round || "N/A",
-            player1: savedMatch.player1Id.fullName,
-            player2: savedMatch.player2Id.fullName,
-            location: savedMatch.location,
-            date: savedMatch.date,
-            winner: matchDetailsWinner ? matchDetailsWinner.fullName : "N/A",
-            player1Score: savedMatch.player1Score || 0,
-            player2Score: savedMatch.player2Score || 0
-          }
-        })
+        html: matchResultUpdateTemplate({ matchDetails })
       });
       console.log(`📧 Emails sent to: ${uniqueEmails.join(", ")}`);
     }
