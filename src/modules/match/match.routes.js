@@ -13,6 +13,7 @@ import {
 } from "./match.controller.js";
 import { verifyToken } from "../../middleware/authMiddleware.js";
 import { multerUpload } from "../../config/multer.js";
+import { conditionalAuth}  from "./match.controller.js";
 
 const router = express.Router();
 
@@ -27,15 +28,8 @@ router.get("/round/:roundId", getTournamentMatchesByRound);
 
 router.post("/", verifyToken, createTournamentMatch);
 router.put(
-  "/",
-  verifyToken,
-  multerUpload.array("matchPhotos", 10), 
-  updateTournamentMatch
-);
-
-router.put(
-  "/:id",
-  verifyToken,
+  "/:matchId",
+  conditionalAuth,
   multerUpload.array("matchPhotos", 10), 
   updateTournamentMatch
 );

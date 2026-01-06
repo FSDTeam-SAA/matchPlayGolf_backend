@@ -325,7 +325,7 @@ async createOrUpdateRounds(tournamentId, rounds, createdBy) {
         roundName: data.roundName || `Round ${roundNumber}`,
         roundNumber,
         date: data.date,
-        status: data.status || "Scheduled",
+        status: data.status || "scheduled",
         createdBy,
       });
     }
