@@ -443,7 +443,7 @@ export const invitetationEmailTemplate = ({tournament, match, updateResultUrl, u
     <div class="email-container">
         <!-- Subject Line -->
         <div class="subject-line">
-            Subject: ${tournament.tournamentName} UK Men's Pairs Opponent
+            Subject: Invitation to Participate in ${tournament.tournamentName}
         </div>
 
         <tr>
@@ -459,7 +459,7 @@ export const invitetationEmailTemplate = ({tournament, match, updateResultUrl, u
         <!-- Main Content -->
         <div class="content">
             <p>
-                Hi. Your opponent in ${match.round} of the UK Men's Pairs Knockout is <strong>${tournament.tournamentName}</strong> and 
+                Hi. Your opponent in Round ${match.round} of the  <strong>${tournament.tournamentName}</strong> and 
                 you can view the full draw at 
                 <a href="${tournamentUrl}" target="_blank">${tournamentUrl}</a>
             </p>
