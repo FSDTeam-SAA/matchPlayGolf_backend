@@ -411,13 +411,14 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
       throw new Error("Tournament not found");
     }
 
-    // Authorization
-    const token = updateData.token || null;
-    const isOwner = match.tournamentId.createdBy.toString() === userId.toString();
-    const isAdmin = role === "Admin";
-    const ableToUpdate = token === match.verifyToken;
+     const isAdmin = role === "Admin";
+     const isOwner =
+      role !== "token-access" &&
+      match.tournamentId.createdBy.toString() === userId.toString();
 
-    if (!isAdmin && !isOwner && !ableToUpdate) {
+    const isTokenAccess = role === "token-access";
+
+    if (!isAdmin && !isOwner && !isTokenAccess) {
       throw new Error("Not authorized to update this match");
     }
 
@@ -432,10 +433,8 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
       throw new Error("Invalid match type");
     }
 
-    // Update comments if provided
     if (updateData.comments !== undefined) match.comments = updateData.comments;
 
-    // Handle uploaded files
     if (files && Array.isArray(files) && files.length > 0) {
       const uploadedPhotos = [];
       for (let i = 0; i < files.length; i++) {
@@ -448,7 +447,6 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
       if (uploadedPhotos.length > 0) match.matchPhoto = uploadedPhotos;
     }
 
-    // Apply remaining fields
     Object.assign(match, updateData);
     match.updatedBy = userId;
     const savedMatch = await match.save(); 
@@ -457,17 +455,13 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
     
     const playerEmails = [];
 
-    // Single player emails
     if (savedMatch.player1Id?.email) playerEmails.push(savedMatch.player1Id.email);
     if (savedMatch.player2Id?.email) playerEmails.push(savedMatch.player2Id.email);
-
-    // Pair match emails
     if (savedMatch.pair1Id?.player1?.email) playerEmails.push(savedMatch.pair1Id.player1.email);
     if (savedMatch.pair1Id?.player2?.email) playerEmails.push(savedMatch.pair1Id.player2.email);
     if (savedMatch.pair2Id?.player1?.email) playerEmails.push(savedMatch.pair2Id.player1.email);
     if (savedMatch.pair2Id?.player2?.email) playerEmails.push(savedMatch.pair2Id.player2.email);
 
-    // Remove duplicates
     const uniqueEmails = [...new Set(playerEmails)];
     const matchDetails = {
         eventName: savedMatch.tournamentId.tournamentName,
@@ -478,7 +472,6 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
         winner: matchDetailsWinner?.fullName || "N/A",
       };
 
-      // SINGLE MATCH
       if (savedMatch.matchType === "Single") {
         matchDetails.player1 = savedMatch.player1Id?.fullName || "N/A";
         matchDetails.player2 = savedMatch.player2Id?.fullName || "N/A";
@@ -486,7 +479,6 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
         matchDetails.player2Score = savedMatch.player2Score || 0;
       }
 
-      // PAIR MATCH
       if (savedMatch.matchType === "Pair") {
         matchDetails.player1 = savedMatch.pair1Id
           ? `${savedMatch.pair1Id.player1?.fullName || "N/A"} & ${savedMatch.pair1Id.player2?.fullName || "N/A"}`
@@ -500,7 +492,6 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
         matchDetails.player2Score = savedMatch.pair2Score || 0;
       }
 
-    // Send email if there are emails
     if (uniqueEmails.length > 0) {
       await sendEmail({
         to: uniqueEmails,
@@ -510,7 +501,6 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
       console.log(`📧 Emails sent to: ${uniqueEmails.join(", ")}`);
     }
 
-    // Populate and return final match
     return await savedMatch.populate([
       { path: "tournamentId", select: "tournamentName sportName format" },
       { path: "roundId", select: "roundName roundNumber date" },
@@ -526,9 +516,6 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
     throw new Error(`Failed to update match: ${error.message}`);
   }
 }
-  /**
-   * Update match scores
-   */
   async updateTournamentMatchScores(id, scoresData, userId) {
     try {
       if (!mongoose.Types.ObjectId.isValid(id)) {
