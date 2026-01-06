@@ -187,7 +187,8 @@ export const getTournamentById = async (req, res) => {
 export const updateTournament = async (req, res) => {
   try {
     const { tournamentId } = req.params;
-    let updateData = req.body;
+    let updateData = { ...req.body };
+    let allPlayers = [];
     
     if (!tournamentId) {
       return res.status(400).json({
@@ -195,7 +196,14 @@ export const updateTournament = async (req, res) => {
         message: "Tournament ID is required",
       });
     }
-
+    
+    if (req.body.players) {
+      const jsonPlayers = typeof req.body.players === 'string' 
+        ? JSON.parse(req.body.players) 
+        : req.body.players;
+      allPlayers = [...jsonPlayers];
+    }
+    
     if (req.file && req.file.mimetype === 'text/csv') {
       try {
         const csvData = req.file.buffer.toString('utf-8');
@@ -212,25 +220,23 @@ export const updateTournament = async (req, res) => {
           });
         }
         
-        // Transform CSV records to players array
-        const players = records.map(record => ({
+        const csvPlayers = records.map(record => ({
           fullName: record.fullName || record.name || '',
           email: record.email || '',
           phone: record.phone || '',
         }));
         
-        // Validate player data
-        for (let i = 0; i < players.length; i++) {
-          if (!players[i].fullName || !players[i].email) {
+        for (let i = 0; i < csvPlayers.length; i++) {
+          if (!csvPlayers[i].fullName || !csvPlayers[i].email) {
             return res.status(400).json({
               success: false,
-              message: `Row ${i + 1}: fullName and email are required`,
+              message: `CSV Row ${i + 1}: fullName and email are required`,
             });
           }
         }
         
-        updateData.players = players;
-        // console.log(updateData);
+        allPlayers = [...allPlayers, ...csvPlayers];
+        
       } catch (csvError) {
         return res.status(400).json({
           success: false,
@@ -240,7 +246,10 @@ export const updateTournament = async (req, res) => {
       }
     }
     
-    // Call service
+    if (allPlayers.length > 0) {
+      updateData.players = allPlayers;
+    }
+    
     const result = await tournamentService.updateTournamentService(
       tournamentId, 
       updateData,  
@@ -248,7 +257,6 @@ export const updateTournament = async (req, res) => {
       req.user.role
     );
     
-    // Build response message
     let message = "Tournament updated successfully";
     if (result.registration) {
       const count = result.registration.users.length;
@@ -269,7 +277,6 @@ export const updateTournament = async (req, res) => {
   } catch (error) {
     console.error("TOURNAMENT UPDATE ERROR:", error);
     
-    // Handle specific errors
     if (error.message === "Tournament not found") {
       return res.status(404).json({
         success: false,
@@ -287,7 +294,6 @@ export const updateTournament = async (req, res) => {
       });
     }
     
-    // Generic error
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -370,7 +376,6 @@ export const sendInvitationRegisteredUsers = async (req, res) => {
   try {
     const tournamentId = req.params.id;
 
-    // ✅ Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(tournamentId)) {
       return res.status(400).json({
         success: false,
@@ -378,7 +383,6 @@ export const sendInvitationRegisteredUsers = async (req, res) => {
       });
     }
 
-    // ✅ Tournament check
     const tournament = await Tournament.findById(tournamentId);
     if (!tournament) {
       return res.status(404).json({
@@ -387,7 +391,6 @@ export const sendInvitationRegisteredUsers = async (req, res) => {
       });
     }
 
-    // ✅ Get knockout stage
     const knockoutStage = await KnockoutStage.findOne({ tournamentId });
     if (!knockoutStage) {
       return res.status(404).json({
@@ -398,7 +401,6 @@ export const sendInvitationRegisteredUsers = async (req, res) => {
 
     const currentRound = knockoutStage.currentRound;
 
-    // ✅ CURRENT ROUND MATCHES ONLY
     const matches = await Match.find({
       tournamentId,
       round: currentRound
@@ -425,7 +427,7 @@ export const sendInvitationRegisteredUsers = async (req, res) => {
     let emailCount = 0;
 
     for (const match of matches) {
-      // ✅ unique token per match
+  
       const verifyToken = generateToken();
 
       match.verifyToken = verifyToken;
@@ -434,17 +436,13 @@ export const sendInvitationRegisteredUsers = async (req, res) => {
 
       const recipients = new Set();
 
-      // 🎯 Single players
       match.player1Id?.email && recipients.add(match.player1Id.email);
       match.player2Id?.email && recipients.add(match.player2Id.email);
-
-      // 🎯 Pair players
       match.pair1Id?.player1?.email && recipients.add(match.pair1Id.player1.email);
       match.pair1Id?.player2?.email && recipients.add(match.pair1Id.player2.email);
       match.pair2Id?.player1?.email && recipients.add(match.pair2Id.player1.email);
       match.pair2Id?.player2?.email && recipients.add(match.pair2Id.player2.email);
 
-      // ✅ Send emails
       for (const email of recipients) {
         await sendEmail({
           to: email,
@@ -487,7 +485,6 @@ export const findTournamentPlayer = async (req, res) => {
       });
     }
 
-    // Fetch all players for this tournament
     const players = await TournamentPlayer.find({ tournamentId, isActive: true, assignMatch:false })
       .populate("playerId", "fullName email phone handicap clubName")
       .populate({
@@ -550,15 +547,12 @@ export const eventStartInvitationRegisteredUsers = async (req, res) => {
   try {
     const { tournamentId } = req.params;
 
-    // ✅ Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(tournamentId)) {
       return res.status(400).json({
         success: false,
         message: "Invalid tournament ID"
       });
     }
-
-    // ✅ Tournament
     const tournament = await Tournament.findById(tournamentId);
     if (!tournament) {
       return res.status(404).json({
@@ -570,7 +564,6 @@ export const eventStartInvitationRegisteredUsers = async (req, res) => {
     tournament.status = "in progress";
     await tournament.save();
 
-    // ✅ Get active knockout stage
     const knockoutStage = await KnockoutStage.findOne({ tournamentId });
     if (!knockoutStage) {
       return res.status(404).json({
@@ -581,7 +574,6 @@ export const eventStartInvitationRegisteredUsers = async (req, res) => {
 
     const currentRound = knockoutStage.currentRound;
 
-    // ✅ Get matches of CURRENT ROUND ONLY
     const matches = await Match.find({
       tournamentId,
       round: currentRound
@@ -602,7 +594,6 @@ export const eventStartInvitationRegisteredUsers = async (req, res) => {
         ]
       });
 
-    // ✅ Collect UNIQUE emails
     const emailMap = new Map();
 
     const addPlayer = (player) => {
@@ -612,11 +603,10 @@ export const eventStartInvitationRegisteredUsers = async (req, res) => {
     };
 
     for (const match of matches) {
-      // Single players
+
       addPlayer(match.player1Id);
       addPlayer(match.player2Id);
 
-      // Pair players
       match.pair1Id?.player1 && addPlayer(match.pair1Id.player1);
       match.pair1Id?.player2 && addPlayer(match.pair1Id.player2);
       match.pair2Id?.player1 && addPlayer(match.pair2Id.player1);
@@ -626,14 +616,13 @@ export const eventStartInvitationRegisteredUsers = async (req, res) => {
     const frontendUrl = process.env.FRONTEND_URL;
     let emailCount = 0;
 
-    // ✅ Send emails
     for (const [email] of emailMap) {
       await sendEmail({
         to: email,
         subject: `Event Started: ${tournament.tournamentName}`,
         html: eventStartInvitationTemplate({
           eventName: tournament.tournamentName,
-          eventDrawUrl: `${frontendUrl}/tournament/${tournamentId}`,
+          eventDrawUrl: `${frontendUrl}/tournaments/${tournamentId}`,
           dashboardUrl: `${frontendUrl}`,
           contactUrl: `${frontendUrl}/contact`,
           createEventUrl: `${frontendUrl}`

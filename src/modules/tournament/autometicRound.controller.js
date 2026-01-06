@@ -4,26 +4,22 @@ import KnockoutStage from "../others/knockoutSchema.model.js";
 import Match from "../match/match.model.js";
 import Round from "../round/round.model.js";
 import AppError from "../../middleware/errorHandler.js";
-// import { generateResponse } from '../..middleware/responseFormat.js'
 
-// Initialize Knockout Stage
 export const initializeKnockout = async (tournamentId, userId) => {
   try {
-    // const { tournamentId } = req.params;
+   
     const tournament = await Tournament.findById(tournamentId);
 
     if (!tournament) {
-      // return res.status(404).json({ message: "Tournament not found" });
+    
       throw new Error("Tournament not found");
     }
 
-    // Check if knockout stage already exists
     const existingStage = await KnockoutStage.findOne({ tournamentId });
     if (existingStage) {
       throw new Error("Knockout stage already initialized");
     }
 
-    // Auto-fetch all active registered players
     const registeredPlayers = await TournamentPlayer.find({
       tournamentId,
       isActive: true,
@@ -34,7 +30,6 @@ export const initializeKnockout = async (tournamentId, userId) => {
       throw new Error("No registered players found");
     }
 
-    // Extract player or pair IDs based on tournament format
     const qualifiedEntries = registeredPlayers.map((p) => {
       if (tournament.format === "Pair") {
         return { pairId: p.pairId };
@@ -43,7 +38,6 @@ export const initializeKnockout = async (tournamentId, userId) => {
       }
     });
 
-    // Validate number of entries (must be power of 2)
     const entryCount = qualifiedEntries.length;
     if (!isPowerOfTwo(entryCount)) {
       throw new Error(
@@ -51,7 +45,6 @@ export const initializeKnockout = async (tournamentId, userId) => {
       );
     }
 
-    // Calculate total rounds
     const totalRounds = Math.log2(entryCount);
 
     let rounds = [];
@@ -69,7 +62,6 @@ export const initializeKnockout = async (tournamentId, userId) => {
       }
     }
 
-    // Create Knockout Stage
     const knockoutStage = await KnockoutStage.create({
       tournamentId,
       isActive: true,
@@ -80,7 +72,6 @@ export const initializeKnockout = async (tournamentId, userId) => {
       status: "in progress",
     });
 
-    // FIXED: Add await here
     const matchesData = await generateFirstRoundMatches(
       qualifiedEntries,
       tournamentId,
@@ -91,7 +82,6 @@ export const initializeKnockout = async (tournamentId, userId) => {
 
     const matches = await Match.insertMany(matchesData);
 
-    // Store match IDs in knockout stage
     knockoutStage.matchIds = matches.map((m) => m._id);
     await knockoutStage.save();
 
@@ -106,7 +96,6 @@ export const initializeKnockout = async (tournamentId, userId) => {
   }
 };
 
-// Auto-generate next round matches
 export const generateNextRound = async (tournamentId, userId) => {
   try {
     const knockoutStage = await KnockoutStage.findOne({ tournamentId });
@@ -172,10 +161,6 @@ export const generateNextRound = async (tournamentId, userId) => {
       tournament.status = "completed";
       await tournament.save();
 
-      // return res.status(200).json({
-      //   message: 'Tournament completed!',
-      //   winner: currentRoundMatches[0].winner
-      // });
       return {
         message: "Tournament completed!",
         winner: currentRoundMatches[0].winner,
@@ -213,10 +198,6 @@ export const generateNextRound = async (tournamentId, userId) => {
     knockoutStage.matchIds.push(...nextRoundMatches.map((m) => m._id));
     await knockoutStage.save();
 
-    // res.status(200).json({
-    //   message: `Round ${currentRound + 1} generated successfully`,
-    //   nextRoundMatches
-    // });
     return {
       message: `Round ${currentRound + 1} generated successfully`,
       nextRoundMatches,

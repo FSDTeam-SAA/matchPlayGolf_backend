@@ -23,11 +23,6 @@ const tournamentPlayerSchema = new mongoose.Schema({
     min: 0,
     max: 54,
   },
-  // invitationStatus: {
-  //   type: String,
-  //   enum: Object.values(INVITATION_STATUS),
-  //   default: INVITATION_STATUS.PENDING,
-  // },
   invitationSentAt: Date,
   invitationToken: {
     type: String,
