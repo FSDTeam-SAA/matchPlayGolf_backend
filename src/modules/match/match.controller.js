@@ -5,12 +5,40 @@ import TournamentPair from "../others/tournamentPair.model.js";
 import TournamentPlayer from "../others/tournamentPlayer.model.js";
 import Tournament from "../tournament/tournament.model.js";
 import mongoose from "mongoose";
+import { verifyToken } from "../../middleware/authMiddleware.js";
 
-/**
- * @desc    Create a new match
- * @route   POST /api/matches
- * @access  Private
- */
+
+export const conditionalAuth = async (req, res, next) => {
+  try {
+    const uniqueToken =
+      req.query.verifyToken ||
+      req.headers["x-unique-token"];
+
+    if (uniqueToken) {
+      const match = await Match.findOne({
+        verifyToken: uniqueToken,
+        _id: req.params.matchId, 
+      });
+
+      if (!match) {
+        return res.status(401).json({ message: "Invalid or expired token" });
+      }
+
+      req.user = {
+        id: match._id,
+        role: "token-access",
+      };
+
+      return next();
+    }
+
+    return verifyToken(req, res, next);
+
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const createTournamentMatch = async (req, res) => {
   try {
     const {
@@ -144,15 +172,11 @@ export const createTournamentMatch = async (req, res) => {
   }
 };
 
-/**
- * @desc    Update match
- * @route   PUT /api/matches/:id
- * @access  Private
- */
 export const updateTournamentMatch = async (req, res) => {
   try {
     const updateData = req.body;
-    // Validate status if provided
+    const userId = req.user?.id || req.user?._id || null;
+    const role = req.user?.role || "token-access";
     if (
       updateData.status &&
       !["scheduled", "in Progress", "completed", "cancelled", "pending"].includes(
@@ -176,12 +200,12 @@ export const updateTournamentMatch = async (req, res) => {
         message: "Invalid match type. Must be 'Single' or 'Pair'"
       });
     }
-
+    console.log(req.params.matchId);
     const match = await matchService.updateTournamentMatch(
-      req.params.id,
+      req.params.matchId,
       updateData,
-      req.user._id,
-      req.user.role,
+      userId,
+      role,
       req.files || null,      
     );
 
