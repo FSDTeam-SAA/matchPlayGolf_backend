@@ -12,16 +12,13 @@ import sendEmail from '../../lib/sendEmail.js';
 // import { number } from "joi";
 
 class TournamentService {
-  /**
-   * Create a new tournament
-   */
+
   async createTournament(tournamentData) {
     try {
       console.log(tournamentData);
       const tournament = await Tournament.create(tournamentData);
       let payment = {};
 
-      // Call checkout session using the created tournament record
       if(tournamentData.role === "Organizer"){
           payment = await createCheckoutSession(
             tournament.price,                                
@@ -44,14 +41,10 @@ class TournamentService {
     }
   }
 
-  /**
-   * Get all tournaments with pagination and filtering
-   */
   async getAllTournaments(filters = {}, page = 1, limit = 10) {
   try {
     const query = {};
 
-    // ------- FILTERS -------
     if (filters.sportName) {
       query.sportName = { $regex: filters.sportName, $options: "i" };
     }
@@ -83,7 +76,6 @@ class TournamentService {
       .skip(skip)
       .limit(limit);
 
-    // ------- GET PLAYER COUNT FOR EACH TOURNAMENT -------
     const tournamentsWithPlayerCount = await Promise.all(
       tournaments.map(async (tournament) => {
         const playerCount = await TournamentPlayer.countDocuments({
@@ -112,10 +104,6 @@ class TournamentService {
   }
 }
 
-
-  /**
-   * Get tournament by ID
-   */
   async getTournamentById(id) {
     try {
       if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -137,7 +125,7 @@ async findOrCreateUsers(players) {
   const userIds = [];
   
   for (const player of players) {
-    // Validate player data
+    
     if (!player.email) {
       throw new Error("Player email is required");
     }
@@ -163,7 +151,6 @@ async findOrCreateUsers(players) {
         console.log(`Welcome email sent to ${user.email}`);
       } catch (emailError) {
         console.error(`Failed to send welcome email to ${user.email}:`, emailError);
-        // Continue even if email fails - you might want to add a retry mechanism
       }
     }
     
@@ -173,14 +160,10 @@ async findOrCreateUsers(players) {
   return userIds;
 }
 
-/**
- * Register players for single format tournament
- */
 async registerSinglePlayers(tournamentId, userIds) {
   const registrations = [];
   console.log("Registering single players:", userIds);
   
-  // FIXED: Bulk check for existing registrations to avoid N+1 queries
   const existingRegistrations = await TournamentPlayer.find({
     tournamentId,
     playerId: { $in: userIds },
@@ -190,7 +173,6 @@ async registerSinglePlayers(tournamentId, userIds) {
     existingRegistrations.map(reg => reg.playerId.toString())
   );
   
-  // Filter out already registered players
   const newUserIds = userIds.filter(
     userId => !existingPlayerIds.has(userId.toString())
   );
@@ -213,7 +195,6 @@ async registerSinglePlayers(tournamentId, userIds) {
     throw new Error("Participant size exceeds tournament draw size");
   }
 
-  // Bulk insert new registrations
   if (newUserIds.length > 0) {
     const newRegistrations = newUserIds.map(userId => ({
       tournamentId,
@@ -227,19 +208,15 @@ async registerSinglePlayers(tournamentId, userIds) {
 
   return { 
     registrations, 
-    count: newUserIds.length // FIXED: Return actual new registrations count
+    count: newUserIds.length 
   };
 }
 
-/**
- * Register players for pair format tournament
- */
 async registerPairPlayers(tournamentId, players, userIds) {
   if (userIds.length !== 2) {
     throw new Error("Pair format requires exactly 2 players");
   }
   
-  // FIXED: Check if this exact pair already exists
   const existingPair = await TournamentPair.findOne({
     tournamentId,
     $or: [
@@ -292,7 +269,6 @@ async createOrUpdateRounds(tournamentId, rounds, createdBy) {
 
     const roundNumber = data.roundNumber || i + 1;
 
-    // Check if same date already used by ANOTHER round
     const duplicateDateRound = await Round.findOne({
       tournamentId,
       date: data.date,
@@ -305,21 +281,20 @@ async createOrUpdateRounds(tournamentId, rounds, createdBy) {
       );
     }
 
-    // Check if this round already exists
     let round = await Round.findOne({
       tournamentId,
       roundNumber
     });
 
     if (round) {
-      // UPDATE existing round
+
       round.roundName = data.roundName || round.roundName;
       round.date = data.date;
       round.status = data.status || round.status;
 
       await round.save();
     } else {
-      // CREATE new round
+  
       round = await Round.create({
         tournamentId,
         roundName: data.roundName || `Round ${roundNumber}`,
@@ -357,10 +332,9 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
   let registrationResult = null;
   let createdRounds = null;
   
-  // FIXED: Calculate totalRounds only if drawSize is valid
   const drawSize = Number(tournament.drawSize);
   if (drawSize && drawSize > 0 && (drawSize & (drawSize - 1)) === 0) {
-    // Check if drawSize is a power of 2
+
     tournamentUpdateData.totalRounds = Math.log2(drawSize);
   }
   
@@ -399,15 +373,14 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
     tournamentUpdateData.range = range;
   }
 
-  
-  // Handle player registration (supports bulk upload)
+
   if (players && players.length > 0) {
     const allUserIds = [];
     const allRegistrations = [];
     const allPairs = [];
     
     if (format === "Single" || format === "Team") {
-      // Process all players for Single format
+
       const userIds = await this.findOrCreateUsers(players);
       const { registrations, count } = await this.registerSinglePlayers(tournamentId, userIds);
       
@@ -416,7 +389,6 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
       
       tournamentUpdateData.$addToSet = { players: { $each: userIds } };
       
-      // FIXED: Only increment once with the actual count
       if (count > 0) {
         tournamentUpdateData.$inc = { totalParticipants: count };
       }
@@ -427,7 +399,7 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
         registrations: allRegistrations,
       };
     } else if (format === "Pair") {
-      // Process players in pairs (every 2 players = 1 pair)
+    
       if (players.length % 2 !== 0) {
         throw new Error("Pair format requires an even number of players");
       }
@@ -453,7 +425,6 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
         };
       }
       
-      // FIXED: Only increment once with total new pairs
       if (totalNewPairs > 0) {
         tournamentUpdateData.$inc = { totalParticipants: totalNewPairs };
       }
@@ -487,9 +458,7 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
     rounds: createdRounds,
   };
 }
-  /**
-   * Delete tournament
-   */
+
   async deleteTournament(id, userId, role) {
     try {
       // Validate ID format
@@ -519,9 +488,6 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
     }
   }
 
-  /**
-   * Get tournaments by creator
-   */
   async getTournamentsByCreator(creatorId, filters = {}, page = 1, limit = 10) {
     try {
       const query = { createdBy: creatorId };
@@ -556,58 +522,6 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
     }
   }
 
-//  async getTournamentMatchesService(tournamentId, page = 1, limit = 10) {
- 
-//   if (!tournamentId) {
-//     throw new Error("Tournament ID is required");
-//   }
-
-//   const tournament = await Tournament.findById(tournamentId);
-
-//   // Correct query object
-//   const query = { tournamentId };
-
-//   const skip = (page - 1) * limit;
-
-//   // Count total matches for pagination
-//   const total = await Match.countDocuments(query);
-//   const rounds = await Round.find({ tournamentId: tournamentId });
-
-//   // Fetch matches
-//   const matches = await Match.find(query)
-//     .populate("player1Id player2Id", "fullName email profileImage score")
-//     .populate({
-//       path: "pair1Id",
-//       populate: {
-//         path: "player1 player2",
-//         select: "fullName email profileImage"
-//       }
-//     })
-//     .populate({
-//       path: "pair2Id",
-//       populate: {
-//         path: "player1 player2",
-//         select: "fullName email profileImage"
-//       }
-//     })
-//     .sort({ createdAt: -1 })
-//     .skip(skip)
-//     .limit(limit);
-
-//   return {
-//     success: true,
-//     tournament,
-//     matches,
-//     rounds,
-//     pagination: {
-//       page: Number(page),
-//       limit: Number(limit),
-//       total: total,
-//       totalPages: Math.ceil(total / limit),
-//     }
-//   };
-// }
-
 async getTournamentMatchesService(
   tournamentId,
   roundNumber = null,
@@ -623,24 +537,19 @@ async getTournamentMatchesService(
     throw new Error("Tournament not found");
   }
 
-  // 🔹 Base query
   const query = { tournamentId };
 
-  // 🔥 ROUND FILTER (IMPORTANT)
   if (roundNumber !== null) {
     query.round = Number(roundNumber);
   }
 
   const skip = (page - 1) * limit;
 
-  // Count total matches
   const total = await Match.countDocuments(query);
 
-  // 🔹 Fetch rounds (optional: only tournament rounds)
   const rounds = await Round.find({ tournamentId })
     .sort({ roundNumber: 1 });
 
-  // 🔹 Fetch matches
   const matches = await Match.find(query)
     .populate("player1Id player2Id", "fullName email profileImage score")
     .populate({
@@ -657,7 +566,7 @@ async getTournamentMatchesService(
         select: "fullName email profileImage"
       }
     })
-    .sort({ matchNumber: 1 }) // round-wise better
+    .sort({ matchNumber: 1 })
     .skip(skip)
     .limit(limit);
 
