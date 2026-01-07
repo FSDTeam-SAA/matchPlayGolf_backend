@@ -551,19 +551,19 @@ async getTournamentMatchesService(
     .sort({ roundNumber: 1 });
 
   const matches = await Match.find(query)
-    .populate("player1Id player2Id", "fullName email profileImage score")
+    .populate("player1Id player2Id", "fullName email profileImage score handicap clubName")
     .populate({
       path: "pair1Id",
       populate: {
         path: "player1 player2",
-        select: "fullName email profileImage"
+        select: "fullName email profileImage score handicap clubName"
       }
     })
     .populate({
       path: "pair2Id",
       populate: {
         path: "player1 player2",
-        select: "fullName email profileImage"
+        select: "fullName email profileImage score handicap clubName"
       }
     })
     .sort({ matchNumber: 1 })
