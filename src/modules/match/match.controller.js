@@ -200,7 +200,7 @@ export const updateTournamentMatch = async (req, res) => {
         message: "Invalid match type. Must be 'Single' or 'Pair'"
       });
     }
-    console.log(req.params.matchId);
+    
     const match = await matchService.updateTournamentMatch(
       req.params.matchId,
       updateData,
