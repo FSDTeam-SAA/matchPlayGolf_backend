@@ -252,132 +252,9 @@ class MatchService {
       throw new Error(`Failed to fetch round matches: ${error.message}`);
     }
   }
-  // ============================================
-// SERVICE UPDATE - match.service.js
-// ============================================
-// async updateTournamentMatch(id, updateData, userId, role, files) {
-//     try {
-//       console.log("🔍 Service received files:", files); // Debug log
-      
-//       if (!mongoose.Types.ObjectId.isValid(id)) {
-//         throw new Error("Invalid match ID");
-//       }
-
-//       const match = await Match.findById(id).populate("tournamentId");
-
-//       if (!match) {
-//         throw new Error("Match not found");
-//       }
-//       const token = updateData.token || null;
-  
-//       const isOwner =
-//         match.tournamentId.createdBy.toString() === userId.toString();
-//       const isAdmin = role === "Admin";
-//       const ableToUpdate = token === match.verifyToken;
-
-//       if (!isAdmin && !isOwner && !ableToUpdate) {
-//         throw new Error("Not authorized to update this match");
-//       }
-
-//       if (
-//         updateData.status &&
-//         !["pending", "scheduled", "in-progress", "completed", "rescheduled"].includes(
-//           updateData.status
-//         )
-//       ) {
-//         throw new Error(
-//           "Invalid status. Must be 'pending', 'scheduled', 'in-progress', 'completed', or 'rescheduled'"
-//         );
-//       }
-
-//       // Validate matchType if provided
-//       if (
-//         updateData.matchType &&
-//         !["Single", "Pair", "Team"].includes(updateData.matchType)
-//       ) {
-//         throw new Error("Invalid match type. Must be 'Single', 'Pair', or 'Team'");
-//       }
-
-//       // ✅ comments (optional)
-//       if (updateData.comments !== undefined) {
-//         match.comments = updateData.comments;
-//       }
-
-//       // ✅ photo uploads (single or multiple)
-//       if (files && Array.isArray(files) && files.length > 0) {
-//         console.log(`📸 Processing ${files.length} file(s)...`);
-        
-//         const uploadedPhotos = [];
-        
-//         for (let i = 0; i < files.length; i++) {
-//           const file = files[i];
-//           console.log(`⬆️ Uploading file ${i + 1}/${files.length}:`, file.originalname);
-          
-//           if (file && file.buffer) {
-//             try {
-//               const uploadResult = await uploadToCloudinary(
-//                 file.buffer,
-//                 file.originalname || `match_photo_${i}`,
-//                 "match_photos"
-//               );
-              
-//               if (uploadResult?.secure_url) {
-//                 console.log(`✅ Upload success: ${uploadResult.secure_url}`);
-//                 uploadedPhotos.push(uploadResult.secure_url);
-//               }
-//             } catch (uploadError) {
-//               console.error(`❌ Upload failed for file ${i + 1}:`, uploadError);
-//               throw new Error(`Failed to upload file ${file.originalname}: ${uploadError.message}`);
-//             }
-//           }
-//         }
-        
-//         console.log(`✅ Total uploaded: ${uploadedPhotos.length} photo(s)`);
-        
-//         // Always store as array since model expects array
-//         if (uploadedPhotos.length > 0) {
-//           // Option 1: Replace all photos
-//           match.matchPhoto = uploadedPhotos;
-          
-//           // Option 2: Append to existing photos (uncomment if you want to keep old photos)
-//           // match.matchPhoto = [...(match.matchPhoto || []), ...uploadedPhotos];
-          
-//           console.log("💾 Saved matchPhoto:", match.matchPhoto);
-//         }
-//       }
-
-//       // Apply remaining fields
-//       Object.assign(match, updateData);
-//       match.updatedBy = userId;
-//       const savedMatch = await match.save();
-
-//       console.log("✅ Match updated successfully");
-
-//        await sendEmail({
-//           to: user.email,
-//           subject: "Match Play World Result Confirmation",
-//           html: matchResultUpdateTemplate({ matchDetails, winner, score, matchReportUrl })
-//         });
-      
-//       return await savedMatch.populate([
-//         { path: "tournamentId", select: "tournamentName sportName format" },
-//         { path: "roundId", select: "roundName roundNumber date" },
-//         { path: "player1Id", select: "fullName email" },
-//         { path: "player2Id", select: "fullName email" },
-//         { path: "pair1Id", select: "pairName" },
-//         { path: "pair2Id", select: "pairName" },
-//         { path: "createdBy", select: "fullName email" },
-//         { path: "updatedBy", select: "fullName email" }
-//       ]);
-//     } catch (error) {
-//       console.error("❌ Service error:", error);
-//       throw new Error(`Failed to update match: ${error.message}`);
-//     }
-//   }
 
 async updateTournamentMatch(id, updateData, userId, role, files) {
   try {
-    console.log("🔍 Service received files:", files); 
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new Error("Invalid match ID");
@@ -409,6 +286,9 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
     if (!match) throw new Error("Match not found");
     if(match.tournamentId == null){
       throw new Error("Tournament not found");
+    }
+    if(match.tournamentId.status != "in progress"){
+      throw new Error("The tournament has not started yet. You can update the match only after the tournament begins.");
     }
 
      const isAdmin = role === "Admin";

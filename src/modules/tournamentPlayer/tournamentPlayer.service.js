@@ -67,49 +67,73 @@ class TournamentPlayerService {
         };
       }
 
-      // 📊 Total count (before pagination)
-      const totalRecords = await TournamentPlayer.countDocuments(filters);
-
-      // 🎯 Query with population and optional player search
-      let query = TournamentPlayer.find(filters)
+      // 🎯 Query tournament players
+      let tournamentPlayers = await TournamentPlayer.find(filters)
         .populate({
           path: "tournamentId",
           select: "tournamentName sportName format"
         })
         .populate({
           path: "playerId",
-          select: "fullName email profileImage status handicap clubName country phone",
-          match: search ? playerQuery : {}
+          select: "fullName email profileImage status handicap clubName country phone"
         })
         .populate({
           path: "pairId",
           populate: [
             {
               path: "player1",
-              select: "fullName email profileImage"
+              select: "fullName email profileImage status handicap clubName country phone"
             },
             {
               path: "player2",
-              select: "fullName email profileImage"
+              select: "fullName email profileImage status handicap clubName country phone"
             }
           ]
         })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit);
+        .sort({ createdAt: -1 });
 
-      let players = await query;
+      let allPlayers = [];
+      
+      tournamentPlayers.forEach(tp => {
+        if (tp.pairId) {
+          if (tp.pairId.player1) {
+            allPlayers.push({
+              playerDetails: tp.pairId.player1,
+              tournamentDetails: tp.tournamentId
+            });
+          }
+          if (tp.pairId.player2) {
+            allPlayers.push({
+              playerDetails: tp.pairId.player2,
+              tournamentDetails: tp.tournamentId
+            });
+          }
+        } 
+        if (tp.playerId) {
+          allPlayers.push({
+            playerDetails: tp.playerId,
+            tournamentDetails: tp.tournamentId
+          });
+        }
+      });
 
-      // 🧹 Filter out null playerId results (when search doesn't match)
+      // 🔎 Apply search filter on flattened players
       if (search) {
-        players = players.filter(p => p.playerId !== null);
+        const searchLower = search.toLowerCase();
+        allPlayers = allPlayers.filter(p => 
+          p.playerDetails.fullName?.toLowerCase().includes(searchLower) ||
+          p.playerDetails.email?.toLowerCase().includes(searchLower)
+        );
       }
 
+      // 📊 Pagination on flattened array
+      const totalRecords = allPlayers.length;
+      const paginatedPlayers = allPlayers.slice(skip, skip + limit);
       const totalPages = Math.ceil(totalRecords / limit);
 
       return {
         success: true,
-        count: players.length,
+        count: paginatedPlayers.length,
         pagination: {
           page,
           limit,
@@ -120,13 +144,12 @@ class TournamentPlayerService {
           tournamentName: tournamentName || null,
           search: search || null
         },
-        data: players
+        data: paginatedPlayers
       };
     } catch (error) {
       throw new Error(`Failed to get players: ${error.message}`);
     }
   }
-
   async getPlayersByTournament(tournamentId, userId, userRole) {
     try {
       // Verify organizer owns this tournament
