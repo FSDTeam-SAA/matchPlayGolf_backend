@@ -99,20 +99,23 @@ class TournamentPlayerService {
           if (tp.pairId.player1) {
             allPlayers.push({
               playerDetails: tp.pairId.player1,
-              tournamentDetails: tp.tournamentId
+              tournamentDetails: tp.tournamentId,
+              playerId:tp._id,
             });
           }
           if (tp.pairId.player2) {
             allPlayers.push({
               playerDetails: tp.pairId.player2,
-              tournamentDetails: tp.tournamentId
+              tournamentDetails: tp.tournamentId,
+              playerId:tp._id,
             });
           }
         } 
         if (tp.playerId) {
           allPlayers.push({
             playerDetails: tp.playerId,
-            tournamentDetails: tp.tournamentId
+            tournamentDetails: tp.tournamentId,
+            playerId:tp._id,
           });
         }
       });
@@ -200,36 +203,6 @@ class TournamentPlayerService {
       throw new Error(`Error fetching player: ${error.message}`);
     }
   }
-
-  // async updatePlayer(playerId, updateData, userId, userRole){
-  //   try{
-  //     const player = await TournamentPlayer.findById(playerId)
-  //                   .populate('tournamentId')
-  //                   .populate('playerId', 'firstName lastName email phone')
-  //                   .populate('pairId');
-
-  //     if(!player){
-  //       throw new Error ('Player not found', 404);
-  //     }
-  //     if(userRole === "Organizer"){
-  //       const tournament = await Tournament.findOne({
-  //         _id: player.tournamentId,
-  //         createdBy: userId
-  //       })
-  //       console.log(tournament);
-
-  //       if(!tournament){
-  //         throw new Error("Unauthorized access");
-  //       }
-  //     }
-      
-
-  //     return player;
-  //   }catch(err){
-  //     throw new Error("player not found", 404);
-  //   }
-
-  // }
 
   async deletePlayer(playerId, userId, userRole) {
     try {
