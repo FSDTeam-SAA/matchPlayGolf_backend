@@ -64,8 +64,8 @@ class AdminDashboardService {
     status: { $nin: ["Cancelled", "Completed"] }
   });
 
-  // Unique players across all tournament registrations
-  const totalPlayers = await TournamentPlayer.distinct("playerId").then(ids => ids.length);
+  // Count of active tournament registrations (not just unique players)
+  const totalPlayers = await TournamentPlayer.countDocuments({ isActive: true });
 
   const ongoingMatches = await Match.countDocuments({ status: { $in: ["Upcoming", "In Progress"] }});
   console.log(ongoingMatches);
