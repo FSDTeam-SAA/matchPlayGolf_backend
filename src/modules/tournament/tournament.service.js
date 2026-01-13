@@ -9,7 +9,6 @@ import Match from "../match/match.model.js";
 import crypto from "crypto";
 import { welcomeEmailTemplate } from "../../lib/emailTemplates.js";
 import sendEmail from '../../lib/sendEmail.js';
-// import { number } from "joi";
 
 class TournamentService {
 
@@ -488,39 +487,70 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
     }
   }
 
-  async getTournamentsByCreator(creatorId, filters = {}, page = 1, limit = 10) {
-    try {
-      const query = { createdBy: creatorId };
 
-      // Apply filters
-      if (filters.paymentStatus) {
-        query.paymentStatus = { $regex: filters.paymentStatus, $options: "i" };
-      }
+async getTournamentsByCreator(creatorId, filters = {}, page = 1, limit = 10) {
+  try {
 
-      const skip = (page - 1) * limit;
+    const query = {
+      createdBy: creatorId
+    };
 
-      // Count with filters
-      const total = await Tournament.countDocuments(query);
+    if (filters.sportName) {
+      query.sportName = { $regex: filters.sportName, $options: 'i' };
+    }
 
-      const tournaments = await Tournament.find(query)
-        .populate("createdBy", "fullName email")
+    if (filters.drawFormat) {
+      query.drawFormat = filters.drawFormat;
+    }
+
+    if (filters.format) {
+      query.format = filters.format;
+    }
+
+    if (filters.tournamentName) {
+      query.tournamentName = { $regex: filters.tournamentName, $options: 'i' };
+    }
+
+    if (filters.location) {
+      query.location = filters.location;
+    }
+
+    if (filters.paymentStatus) {
+      query.paymentStatus = filters.paymentStatus;
+    }
+
+    if (filters.status) {
+      query.status = { $regex: filters.status, $options: "i" };
+    }
+
+    page = Math.max(1, page);
+    limit = Math.max(1, limit);
+    const skip = (page - 1) * limit;
+
+    const [total, tournaments] = await Promise.all([
+      Tournament.countDocuments(query),
+      Tournament.find(query)
+        .populate('createdBy', 'fullName email')
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit);
+        .limit(limit)
+        .lean()
+    ]);
 
-      return {
-        tournaments,
-        pagination: {
-          page: Number(page),
-          limit: Number(limit),
-          total: total,
-          totalPages: Math.ceil(total / limit),
-        }
-      };
-    } catch (error) {
-      throw new Error(`Failed to fetch creator tournaments: ${error.message}`);
-    }
+    return {
+      tournaments,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  } catch (error) {
+    throw new Error(`Failed to fetch creator tournaments: ${error.message}`);
   }
+}
+
 
 async getTournamentMatchesService(
   tournamentId,
