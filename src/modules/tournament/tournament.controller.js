@@ -330,16 +330,35 @@ export const deleteTournament = async (req, res) => {
 
 export const getTournamentsByCreator = async (req, res) => {
   try {
-    const { page = 1, limit = 10, paymentStatus } = req.query;
     const creatorId = req.user._id;
 
-    const filters = { paymentStatus };
+    const {
+      page = 1,
+      limit = 10,
+      sportName,
+      drawFormat,
+      format,
+      tournamentName,
+      location,
+      paymentStatus,
+      status
+    } = req.query;
+
+    const filters = {
+      sportName,
+      drawFormat,
+      format,
+      tournamentName,
+      location,
+      paymentStatus,
+      status
+    };
 
     const result = await tournamentService.getTournamentsByCreator(
       creatorId,
       filters,
-      parseInt(page),
-      parseInt(limit)
+      Number(page),
+      Number(limit)
     );
 
     res.status(200).json({
@@ -353,6 +372,7 @@ export const getTournamentsByCreator = async (req, res) => {
     });
   }
 };
+
 
 export const generateUniqueOrderCode = async () => {
     let unique = false;
