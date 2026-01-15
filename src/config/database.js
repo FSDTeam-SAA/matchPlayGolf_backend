@@ -4,9 +4,10 @@
 
 import mongoose from 'mongoose';
 import { logger } from '../utils/logger.js';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const MONGODB_URI = process.env.MONGODB_URI || 
-  "mongodb+srv://fsdteamsaa:7skzQQLzi0conWhl@cluster0.fnmxebl.mongodb.net/match_play_golf?retryWrites=true&w=majority&appName=Cluster0";
+const MONGODB_URI = process.env.MONGO_URI;
 
 export const connectDatabase = async () => {
   try {
