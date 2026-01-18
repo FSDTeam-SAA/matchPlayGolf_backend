@@ -109,13 +109,16 @@ class TournamentService {
         throw new Error("Invalid tournament ID");
       }
 
-      const tournament = await Tournament.findById(id);
+      const tournament = await Tournament.findById(id)
+      .populate("createdBy", "fullName email role");
+
+      const rounds = await Round.find({ tournamentId: id }).sort({ roundNumber: 1 });
 
       if (!tournament) {
         throw new Error("Tournament not found");
       }
 
-      return tournament;
+      return { tournament, rounds };
     } catch (error) {
       throw new Error(`Failed to fetch tournament: ${error.message}`);
     }
