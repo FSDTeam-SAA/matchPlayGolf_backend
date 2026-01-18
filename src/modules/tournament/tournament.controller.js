@@ -169,11 +169,11 @@ export const getAllTournaments = async (req, res) => {
 
 export const getTournamentById = async (req, res) => {
   try {
-    const tournament = await tournamentService.getTournamentById(req.params.id);
+    const result = await tournamentService.getTournamentById(req.params.id);
 
     res.status(200).json({
       success: true,
-      data: tournament
+      data: result
     });
   } catch (error) {
     const statusCode = error.message === "Tournament not found" ? 404 : 500;
