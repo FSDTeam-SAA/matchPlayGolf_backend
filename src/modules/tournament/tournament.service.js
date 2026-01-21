@@ -400,7 +400,7 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
         users: allUserIds,
         registrations: allRegistrations,
       };
-    } else if (format === "Pair") {
+    } else if (format === "Pairs") {
     
       if (players.length % 2 !== 0) {
         throw new Error("Pair format requires an even number of players");

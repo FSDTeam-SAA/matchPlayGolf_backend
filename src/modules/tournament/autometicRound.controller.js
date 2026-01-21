@@ -31,7 +31,7 @@ export const initializeKnockout = async (tournamentId, userId) => {
     }
 
     const qualifiedEntries = registeredPlayers.map((p) => {
-      if (tournament.format === "Pair") {
+      if (tournament.format === "Pairs") {
         return { pairId: p.pairId };
       } else {
         return { playerId: p.playerId };
@@ -115,7 +115,7 @@ export const generateNextRound = async (tournamentId, userId) => {
       if (match.status === "completed" && !match.winner) {
         let winnerId = null;
 
-        if (match.matchType === "Pair") {
+        if (match.matchType === "Pairs") {
           if (match.pair1Score > match.pair2Score) {
             winnerId = match.pair1Id?._id;
           } else if (match.pair2Score > match.pair1Score) {
@@ -441,7 +441,7 @@ async function generateFirstRoundMatches(
     };
 
     // Set player or pair based on format
-    if (format === "Pair") {
+    if (format === "Pairs") {
       matchData.pair1Id = shuffledEntries[i].pairId;
       matchData.pair2Id = shuffledEntries[i + 1].pairId;
       const pair1 = await TournamentPlayer.findOne({
@@ -530,7 +530,7 @@ async function generateNextRoundMatches(
     };
 
     // Set winners based on format
-    if (tournament.format === "Pair") {
+    if (tournament.format === "Pairs") {
       matchData.pair1Id = match1.winner;
       matchData.pair2Id = match2?.winner || null;
     } else {
