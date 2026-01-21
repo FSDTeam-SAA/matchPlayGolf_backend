@@ -22,7 +22,7 @@ const TournamentSchema = new mongoose.Schema(
     },
     format: {
       type: String,
-      enum: ["Single", "Pair", "Team"],
+      enum: ["Single", "Pairs", "Team"],
       default: "Single"
     },
     drawSize: {

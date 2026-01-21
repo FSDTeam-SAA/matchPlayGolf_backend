@@ -85,7 +85,7 @@ export const createTournament = async (req, res) => {
       });
     }
 
-    if (format && !["Single", "Pair", "Team"].includes(format)) {
+    if (format && !["Single", "Pairs", "Team"].includes(format)) {
       return res.status(400).json({
         success: false,
         message: "Invalid format. Must be Single, Pair, or Team"
@@ -260,7 +260,7 @@ export const updateTournament = async (req, res) => {
     let message = "Tournament updated successfully";
     if (result.registration) {
       const count = result.registration.users.length;
-      const regType = result.registration.type === "pair" ? "Pair" : "Single player";
+      const regType = result.registration.type === "pair" ? "Pairs" : "Single player";
       message = `${count} ${regType} registration(s) + Tournament updated successfully`;
     }
     
