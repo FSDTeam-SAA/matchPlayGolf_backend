@@ -6,16 +6,52 @@ import {
   resetPasswordService,
   verifyCodeService,
   forgetPasswordService,
+  setPasswordService,
+  importMultipleUsersService
 } from './auth.service.js';
 import dotenv from 'dotenv';
+import User from '../user/user.model.js';
 dotenv.config();
 
 
 export const registerUser = async (req, res, next) => {
-  const { fullName, email, password, phone } = req.body;
+  const {
+    fullName,
+    email,
+    password,
+    phone,
+    clubName,
+    handicap,
+    role,
+    organizationName,
+    color,
+    dob,
+    newsletterPreference,
+    receiveOrderUpdates,
+  } = req.body;
   try {
+     const existingUser = await User.findOne({
+      $or: [{ email }, { phone }]
+    });
+    if(existingUser){
+       generateResponse(res, 400, false, 'User already registered', null);
+    }
 
-    const data = await registerUserService({ fullName, email, password, phone });
+    const data = await registerUserService({
+      fullName,
+      email,
+      password,
+      phone,
+      clubName,
+      handicap,
+      role,
+      organizationName,
+      color,
+      dob,
+      newsletterPreference,
+      receiveOrderUpdates,
+    });
+    console.log(data);
     generateResponse(res, 201, true, 'Registered user successfully!', data);
   }
 
@@ -31,6 +67,27 @@ export const registerUser = async (req, res, next) => {
   }
 };
 
+export const importPlayers = async (players, tournamentId, userId, res) => {
+  try {
+    const createdBy = req.user._id
+    const results = await importMultipleUsersService(players, tournamentId, userId);
+    res.status(200).json({ success: true, results });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+
+
+export const setPassword = async (req, res) => {
+  try {
+    await setPasswordService(req.body);
+    res.status(200).json({ success: true, message: "Password set" });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
 
 export const loginUser = async (req, res, next) => {
   const { email, password } = req.body;
@@ -40,9 +97,6 @@ export const loginUser = async (req, res, next) => {
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,        
       secure: true, 
-      sameSite: 'strict',   
-      path: '/',             
-      maxAge: 30 * 24 * 60 * 60 * 1000, 
     });
     generateResponse(res, 200, true, 'Login successful', { accessToken, refreshToken, user });
   }
@@ -126,8 +180,10 @@ export const verifyCode = async (req, res, next) => {
 
 
 export const resetPassword = async (req, res, next) => {
+
   const { email, newPassword } = req.body;
   try {
+
     await resetPasswordService({ email, newPassword });
     generateResponse(res, 200, true, 'Password reset successfully', null);
   }
@@ -153,6 +209,7 @@ export const resetPassword = async (req, res, next) => {
 
 
 export const changePassword = async (req, res, next) => {
+  
   const { oldPassword, newPassword } = req.body;
   const userId = req.user._id;
   console.log('User ID in changePassword controller:', userId);

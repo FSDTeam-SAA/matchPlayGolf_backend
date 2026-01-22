@@ -1,73 +1,181 @@
 import User from '../user/user.model.js';
+import RegisterUser from '../others/tournamentPlayer.model.js';
 import jwt from 'jsonwebtoken';
-// import { refreshTokenSecrete, emailExpires } from '../../core/config/config.js';
-// import sendEmail from '../../lib/sendEmail.js';
-// import verificationCodeTemplate from '../../lib/emailTemplates.js';
+import { emailExpires } from '../../config/config.js';
+import sendEmail from '../../lib/sendEmail.js';
+import { verificationCodeTemplate } from '../../lib/emailTemplates.js';
+import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 dotenv.config();
 
 
+/**
+ * Register a single user
+ */
 export const registerUserService = async ({
   fullName,
   email,
-  password, 
+  password,
   phone,
+  clubName,
+  handicap,
+  role,
+  organizationName,
+  color,
+  dob,
+  newsletterPreference,
+  receiveOrderUpdates,
 }) => {
-  const existingUser1 = await User.findOne({ email });
-  const existingUser2 = await User.findOne({ phone });
-  if (existingUser1 || existingUser2) throw new Error('User already registered.');
 
+
+  // Create new user
   const newUser = new User({
     fullName,
     email,
-    password,
+    password: password || null,
     phone,
-    isVerified: true ,
+    clubName,
+    handicap,
+    role: role || "User",
+    organizationName,
+    color,
+    dob,
+    newsletterPreference,
+    receiveOrderUpdates
   });
 
   const user = await newUser.save();
 
-  const { _id, profileImage } = user;
-  return { _id, fullName, email, profileImage };
+
+  return { user };
 };
 
+export const importMultipleUsersService = async (users, tournamentId, createdBy) => {
+  const results = [];
 
+  for (const u of users) {
+    try {
+      const {
+        fullName,
+        email,
+        phone,
+        clubName,
+        handicap,
+        organizationName,
+        color,
+        dob,
+        newsletterPreference,
+        receiveOrderUpdates,
+      } = u;
+
+      // Validate required fields
+      if (!fullName || !email || !phone) {
+        results.push({
+          email,
+          status: "failed",
+          error: "fullName, email & phone are required"
+        });
+        continue;
+      }
+
+      // Register or update user
+      const createdUser = await registerUserService({
+        fullName,
+        email,
+        phone,
+        clubName,
+        handicap,
+        organizationName,
+        color,
+        dob,
+        newsletterPreference,
+        receiveOrderUpdates,
+        password: null,
+        tournamentId,
+        createdBy
+      });
+
+      results.push({
+        email,
+        status: createdUser.isExisting ? "updated" : "created",
+        user: createdUser
+      });
+
+    } catch (err) {
+      results.push({
+        email: u.email,
+        status: "failed",
+        error: err.message
+      });
+    }
+  }
+
+  return results;
+};
+
+export const setPasswordService = async ({ token, password }) => {
+  
+  if (!token || !password)
+    throw new Error("Token and password are required");
+
+  const user = await User.findOne({
+    verifyToken: token
+  });
+
+  if (!user) throw new Error("Invalid or expired token");
+
+  // Hash password before saving
+  user.password = password;
+
+  // Clear token fields
+  user.verifyToken = undefined;
+
+
+  await user.save();
+
+  return { message: "Password set successfully" };
+};
 export const loginUserService = async ({ email, password }) => {
-  if (!email || !password) throw new Error('Email and password are required');
+  
+  if (!email || !password) {
+    throw new Error("Email and password are required");
+  }
 
-  const user = await User.findOne({ email }).select("_id fullName email role profileImage");
+  const user = await User.findOne({ email }).select(
+    "+password _id fullName email role profileImage color dob newsletterPreference receiveOrderUpdates"
+  );
 
-  if (!user) throw new Error('User not found');
+  if (!user) throw new Error("User not found");
 
-  const isMatch = await user.comparePassword(user._id, password);
-  if (!isMatch) throw new Error('Invalid password');
+  const isMatch = await user.comparePassword(password);
+  if (!isMatch) throw new Error("Invalid password");
 
   const payload = { _id: user._id, role: user.role };
 
+  const accessToken = user.generateAccessToken(payload);
+  const refreshToken = user.generateRefreshToken(payload);
 
-    const accessToken = user.generateAccessToken(payload);
-    const refreshToken = user.generateRefreshToken(payload);
-
-
-    return {
+  return {
     accessToken,
     refreshToken,
     user: {
       _id: user._id,
-      fullName: user.fullName,  
+      fullName: user.fullName,
       email: user.email,
       role: user.role,
-      profileImage: user.profileImage
-    }
+      profileImage: user.profileImage,
+      color: user.color,
+      dob: user.dob,
+      newsletterPreference: user.newsletterPreference,
+      receiveOrderUpdates: user.receiveOrderUpdates,
+    },
   };
 };
-
 
 
 export const refreshAccessTokenService = async (refreshToken) => {
   
 
-  // ✅ Step 1: Verify token first
   let decoded;
   try {
     decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
@@ -75,7 +183,6 @@ export const refreshAccessTokenService = async (refreshToken) => {
     throw new Error('Invalid refresh token');
   }
 
-  // ✅ Step 2: Find user
   const user = await User.findById(decoded._id);
   if (!user) {
     throw new Error('Invalid refresh token');
@@ -95,6 +202,7 @@ export const refreshAccessTokenService = async (refreshToken) => {
 
 
 export const forgetPasswordService = async (email) => {
+
   if (!email) throw new Error('Email is required');
 
   const user = await User.findOne({ email });
@@ -140,7 +248,7 @@ export const verifyCodeService = async ({ email, otp }) => {
   user.otpExpires = undefined;
   user.otpVerified = true;
   user.isVerified = true;
-  // user.resetExpires = new Date(Date.now() + 15 * 60 * 1000); 
+  user.resetExpires = new Date(Date.now() + 15 * 60 * 1000); 
 
   await user.save();
 
@@ -149,6 +257,7 @@ export const verifyCodeService = async ({ email, otp }) => {
 
 
 export const resetPasswordService = async ({ email, newPassword }) => {
+
   if (!email || !newPassword)
     throw new Error('Email and new password are required');
 
@@ -171,6 +280,7 @@ export const resetPasswordService = async ({ email, newPassword }) => {
 
 
 export const changePasswordService = async ({ userId, oldPassword, newPassword }) => {
+  
   if (!userId || !oldPassword || !newPassword) throw new Error('User id, old password and new password are required');
 
   const user = await User.findById(userId);

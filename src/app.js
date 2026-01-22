@@ -1,34 +1,44 @@
-// ============================================
-// FILE: src/app.js (Main Application)
-// ============================================
-
 import express from 'express';
 import dotenv from 'dotenv';
+import cors from 'cors';
 import { applyMiddleware } from './middleware/security.js';
-import { errorHandler } from './middleware/errorHandler.js';
+// import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
-import  routes  from './routes/index.js';
+import routes from './routes/index.js';
+import { handleStripeWebhook } from './modules/payment/webhook.controller.js';
+import cookieParser from 'cookie-parser';
+
 dotenv.config();
 
 const app = express();
+app.use(cookieParser());
 
-// Apply security and parsing middleware
+// ---------------------------------------------
+// 3️⃣ Stripe Webhook (before body parsers)
+// ---------------------------------------------
+app.post(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json" }),
+  handleStripeWebhook
+);
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true}));
+
 applyMiddleware(app);
 
-// Health check
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    message: 'Server is healthy',
-    timestamp: new Date().toISOString(),
+app.use('/api', routes);
+
+app.use(notFound);
+// app.use(errorHandler);
+
+app.use((err, req, res, next) => {
+  res.status(err.statusCode || 500).json({
+    success: false,
+    statusCode: err.statusCode || 500,
+    message: err.message || 'Internal server error'
   });
 });
 
-// API routes
-app.use('/api', routes);
-
-// Error handling
-app.use(notFound);
-app.use(errorHandler);
 
 export default app;
