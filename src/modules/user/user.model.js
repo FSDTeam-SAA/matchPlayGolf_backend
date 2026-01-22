@@ -1,136 +1,141 @@
-// import RoleType from '../../lib/types.js';
-import mongoose from 'mongoose';
+// src/modules/user/user.model.js
+import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
-import bcrypt from 'bcrypt';
-import { accessTokenExpires, accessTokenSecrete, refreshTokenExpires, refreshTokenSecrete } from '../../config/config.js';
-
-
-const AddressSchema = new mongoose.Schema({
-  country: { type: String, default: '' },
-  cityState: { type: String, default: '' },
-  roadArea: { type: String, default: '' },
-  postalCode: { type: String, default: '' },
-  taxId: { type: String, default: '' }
-}, { _id: false });
-
+import bcrypt from "bcrypt";
+import {
+  accessTokenExpires,
+  accessTokenSecrete,
+  refreshTokenExpires,
+  refreshTokenSecrete,
+} from "../../config/config.js";
 
 const UserSchema = new mongoose.Schema(
   {
-      fullName: { type: String, required: true },
-      email: { type: String, required: true, unique: true },
-      password: { type: String, required: true },
-      username: { type: String },
-      phone: {type: String},
-      dob: { type: Date, default: null },
-      gender: {
-        type: String,
-        enum: ['male', 'female', 'other'],
-        default: 'male'
-      },
+    fullName: { type: String, required: true },
+    email:    { type: String, required: true, unique: true },
+    password: { type: String, select:false },
 
-      role: {
-        type: String,
-        default: "USER",
-        enum: ['USER', 'ADMIN'],
-      },
 
-      stripeAccountId: { type: String, default: null },
+    username: { type: String },
+    phone:    { type: String },
+    
 
-      bio: { type: String, default: '' },
-      address: { type: AddressSchema, default: () => ({}) },
+    organizationName: { type: String, default: "" },
 
-      profileImage: { type: String, default: '' },
-      multiProfileImage: { type: [String], default: [] },
-      pdfFile: { type: String, default: '' },
-      about: {
+    dob: { type: Date, default: null },
+
+    gender: {
       type: String,
-      default: 'Hey there! I am using WhatsApp'
+      enum: ["male", "female", "other"],
+      default: "male",
     },
-    isOnline: {
-      type: Boolean,
-      default: false
+
+    // FIXED ROLE ENUM
+    role: {
+      type: String,
+      enum: ["User", "Admin", "Organizer"],
+      default: "User",
     },
-    lastSeen: {
-      type: Date,
-      default: Date.now
-    },
-    contacts: [{
+
+    clubName:  { type: String, default: "" },
+    country:   { type: String, default: "" },
+    handicap:  { type: String, default: "4.5" },
+    whsNumber: { type: String, default: "" },
+
+    tournamentId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }],
-    blockedUsers: [{
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }],
+      ref: "User",
+    },
 
-    otp: {
+    stripeAccountId: { type: String, default: null },
+
+    bio:   { type: String, default: "" },
+    about: { type: String, default: "Hey there! I am using WhatsApp" },
+    color: { type: String, default: "" },
+
+    newsletterPreference: {
       type: String,
-      default: null
+      enum: ["subscribe", "unsubscribe", "none"],
+      default: "none",
     },
+    receiveOrderUpdates: { type: Boolean, default: false },
+    status:             { type: String, default: "active" },
+    profileImage:      { type: String, default: "" },
+    organizerLogo:     { type: String, default: "" },
+    sportNationalId:   { type: String, default: "" },
+    multiProfileImage: { type: [String], default: [] },
+    pdfFile:           { type: String, default: "" },
 
-    otpExpires: {
-      type: Date,
-      default: null
-    },
+    isOnline: { type: Boolean, default: false },
+    lastSeen: { type: Date, default: Date.now },
 
-    otpVerified : {
-      type: Boolean,
-      default: false
-    },
+    contacts: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
 
-    resetExpires : {
-      type: Date,
-      default: null
-    },
+    blockedUsers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
 
-    isVerified: {
-      type: Boolean,
-      default: false,
-    },
+    otp:         { type: String, default: null },
+    otpExpires:  { type: Date, default: null },
+    otpVerified: { type: Boolean, default: false },
+    resetExpires:{ type: Date, default: null },
+    isVerified:  { type: Boolean, default: true },
 
-    refreshToken: {
-      type: String,
-      default: ''
-    },
-
-    hasActiveSubscription: { type: Boolean, default: false },
-    subscriptionExpireDate: { type: Date, default: null },
-    blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    language: { type: String, default: 'en' }
+    refreshToken: { type: String, default: "" },
+    verifyToken:  { type: String, default: "" },
   },
   { timestamps: true }
 );
 
-
-// Hashing password
+// Hash password
+// UserSchema.pre("save", async function (next) {
+//   if (!this.isModified("password")) return next();
+//   this.password = await bcrypt.hash(this.password, 10);
+//   next();
+// });
 UserSchema.pre("save", async function (next) {
+  if (!this.isModified("password") || !this.password) {
+    return next();
+  }
 
-  if (!this.isModified("password")) return next();
-
-  const hashedPassword = await bcrypt.hash(this.password, 10);
-
-  this.password = hashedPassword;
+  this.password = await bcrypt.hash(this.password, 10);
   next();
 });
 
-// Password comparison method (bcrypt)
-UserSchema.methods.comparePassword = async function (id, plainPassword) {
-  const { password: hashedPassword } = await User.findById(id).select('password')
 
-  const isMatched = await bcrypt.compare(plainPassword, hashedPassword)
+// Compare password
+// UserSchema.methods.comparePassword = async function (id, plainPassword) {
+//   const user = await this.model("User").findById(id).select("password");
+//   if (!user) return false;
+//   return bcrypt.compare(plainPassword, user.password);
+// };
+UserSchema.methods.comparePassword = async function (plainPassword) {
+  if (!this.password) return false;
+  return bcrypt.compare(plainPassword, this.password);
+};
 
-  return isMatched
-}
 
-// Generate ACCESS_TOKEN
+// Generate access token
 UserSchema.methods.generateAccessToken = function (payload) {
-  return jwt.sign(payload, accessTokenSecrete, { expiresIn: accessTokenExpires });
+  return jwt.sign(payload, accessTokenSecrete, {
+    expiresIn: accessTokenExpires,
+  });
 };
 
-// Generate REFRESH_TOKEN
+// Generate refresh token
 UserSchema.methods.generateRefreshToken = function (payload) {
-  return jwt.sign(payload, refreshTokenSecrete, { expiresIn: refreshTokenExpires });
+  return jwt.sign(payload, refreshTokenSecrete, {
+    expiresIn: refreshTokenExpires,
+  });
 };
 
-const User = mongoose.models.User || mongoose.model('User', UserSchema);
+const User = mongoose.models.User || mongoose.model("User", UserSchema);
 export default User;
