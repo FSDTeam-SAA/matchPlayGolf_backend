@@ -9,6 +9,7 @@ import Match from "../match/match.model.js";
 import crypto from "crypto";
 import { welcomeEmailTemplate } from "../../lib/emailTemplates.js";
 import sendEmail from '../../lib/sendEmail.js';
+import AppError from "../../middleware/errorHandler.js";
 
 class TournamentService {
 
@@ -36,7 +37,7 @@ class TournamentService {
 
       return {tournamentDetails, payment};
     } catch (error) {
-      throw new Error(`Failed to create tournament: ${error.message}`);
+      throw new AppError(400, false, `Failed to create tournament: ${error.message}`);
     }
   }
 
