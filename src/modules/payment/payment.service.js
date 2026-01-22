@@ -1,17 +1,15 @@
 import Payment from "./payment.model.js";
 import Stripe from "stripe";
+import AppError from "../../middleware/errorHandler.js";
+import dotenv from 'dotenv';
+dotenv.config();
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 class PaymentService {
-  /**
-   * Create Stripe Checkout Session
-   */
   async createCheckoutSession(tournamentData, userId) {
     try {
       const { tournamentId, tournamentName, amount } = tournamentData;
-
-      // Create checkout session
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         line_items: [
@@ -36,8 +34,6 @@ class PaymentService {
         },
         customer_email: tournamentData.email || undefined
       });
-
-      // Create pending payment record
       const payment = await Payment.create({
         tournamentId,
         amount,
@@ -49,20 +45,15 @@ class PaymentService {
         status: "pending",
         paymentMethod: "card"
       });
-      
       return {
         sessionId: session.id,
         checkoutUrl: session.url,
         transactionId: payment.transactionId
       };
     } catch (error) {
-      throw new Error(`Failed to create checkout session: ${error.message}`);
+      throw new AppError(400, false, `Failed to create checkout session: ${error.message}`);
     }
   }
-
-  /**
-   * Verify checkout session and update payment
-   */
   async verifyCheckoutSession(sessionId) {
     try {
       const session = await stripe.checkout.sessions.retrieve(sessionId);
@@ -71,14 +62,11 @@ class PaymentService {
         throw new Error("Session not found");
       }
 
-      // Find payment record
       const payment = await Payment.findOne({ stripeSessionId: sessionId });
 
       if (!payment) {
         throw new Error("Payment record not found");
       }
-
-      // Update payment with card details from session
       if (session.payment_status === "paid") {
         const paymentIntent = await stripe.paymentIntents.retrieve(
           session.payment_intent
@@ -112,18 +100,13 @@ class PaymentService {
     }
   }
 
-  /**
-   * Process direct card payment (without Checkout)
-   */
   async processCardPayment(paymentData) {
     try {
       const { amount, cardNumber, cardName, expiryDate, cvv, tournamentId } = paymentData;
 
-      // Parse expiry date
       const [expMonth, expYear] = expiryDate.split("/");
       const fullYear = expYear.length === 2 ? `20${expYear}` : expYear;
 
-      // Create payment method with card details
       const paymentMethod = await stripe.paymentMethods.create({
         type: "card",
         card: {
@@ -137,7 +120,6 @@ class PaymentService {
         }
       });
 
-      // Create payment intent
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(parseFloat(amount) * 100),
         currency: "usd",
@@ -151,11 +133,7 @@ class PaymentService {
           tournamentId: tournamentId.toString()
         }
       });
-
-      // Mask card number
       const maskedCardNumber = this.maskCardNumber(cardNumber);
-
-      // Create payment record
       const payment = await Payment.create({
         tournamentId,
         amount,
@@ -186,10 +164,6 @@ class PaymentService {
       }
     }
   }
-
-  /**
-   * Map Stripe status to our status
-   */
   mapStripeStatus(stripeStatus) {
     const statusMap = {
       succeeded: "completed",
@@ -204,19 +178,12 @@ class PaymentService {
     };
     return statusMap[stripeStatus] || "pending";
   }
-
-  /**
-   * Mask card number for security
-   */
   maskCardNumber(cardNumber) {
     const cleaned = cardNumber.replace(/\s/g, "");
     const lastFour = cleaned.slice(-4);
     return `**** **** **** ${lastFour}`;
   }
 
-  /**
-   * Get payment by Stripe session ID
-   */
   async getPaymentByStripeSessionId(stripeSessionId) {
     try {
       const payment = await Payment.findOne({ stripeSessionId })
@@ -232,9 +199,6 @@ class PaymentService {
     }
   }
 
-  /**
-   * Get payments by tournament ID
-   */
   async getPaymentsByTournament(tournamentId) {
     try {
       const payments = await Payment.find({ tournamentId }).sort({
@@ -246,10 +210,6 @@ class PaymentService {
       throw new Error(`Failed to fetch payments: ${error.message}`);
     }
   }
-
-  /**
-   * Refund payment
-   */
   async refundPayment(transactionId, amount = null) {
     try {
       const payment = await Payment.findOne({ transactionId });
