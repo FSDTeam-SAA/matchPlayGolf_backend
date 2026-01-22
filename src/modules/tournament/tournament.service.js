@@ -314,7 +314,7 @@ async createOrUpdateRounds(tournamentId, rounds, createdBy) {
 }
 
 async updateTournamentService(tournamentId, updateData, userId, role) {
-  const { status, rules, rounds, players, location, rememberEmail, numberOfSeeds, tournamentName, sportName, drawFormat, description, entryConditions, range } = updateData;
+  const { status,startDate, endDate, rules, rounds, players, location, rememberEmail, numberOfSeeds, tournamentName, sportName, drawFormat, description, entryConditions, range } = updateData;
   
   const tournament = await Tournament.findById(tournamentId);
   if (!tournament) {
@@ -374,6 +374,14 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
   if(range !== undefined){
     tournamentUpdateData.range = range;
   }
+    if(startDate !== undefined){
+    tournamentUpdateData.startDate = startDate;
+  }
+     if(endDate !== undefined){
+    tournamentUpdateData.endDate = endDate;
+  }
+
+
 
 
   if (players && players.length > 0) {
