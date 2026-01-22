@@ -1,19 +1,14 @@
+import AppError from "../../middleware/errorHandler.js";
 import paymentService from "./payment.service.js";
 
-/**
- * @desc    Create Stripe Checkout Session
- * @route   POST /api/payments/create-checkout-session
- * @access  Private
- */
-export const createCheckoutSession = async (amount, email, tournamentId, tournamentName, userId, res) => {
-  try {
 
+export const createCheckoutSession = async (amount, email, tournamentId, tournamentName, userId) => {
+  try {
+    console.log('1');
     if (!tournamentId || !tournamentName || !amount) {
-      return res.status(400).json({
-        success: false,
-        message: "Tournament ID, name, and amount are required"
-      });
+      throw new AppError(400, false, "Tournament ID, name, and amount are required");
     }
+    console.log('2');
 
     const tournamentData = {
       tournamentId,
@@ -21,6 +16,7 @@ export const createCheckoutSession = async (amount, email, tournamentId, tournam
       amount,
       email
     };
+    console.log('3')
     const result = await paymentService.createCheckoutSession(
       tournamentData,
       userId
@@ -28,18 +24,10 @@ export const createCheckoutSession = async (amount, email, tournamentId, tournam
 
     return result;
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    throw new AppError(500, false, error.message);
   }
 };
 
-/**
- * @desc    Verify Stripe Checkout Session
- * @route   GET /api/payments/verify-session/:sessionId
- * @access  Private
- */
 export const verifyCheckoutSession = async (req, res) => {
   try {
     const { sessionId } = req.params;
@@ -60,11 +48,6 @@ export const verifyCheckoutSession = async (req, res) => {
   }
 };
 
-/**
- * @desc    Get payment by transaction ID
- * @route   GET /api/payments/:transactionId
- * @access  Private
- */
 export const getPaymentBystripeSessionId = async (req, res) => {
   try {
     console.log("Fetching payment for Stripe Session ID:", req.params.stripeSessionId);
@@ -85,11 +68,6 @@ export const getPaymentBystripeSessionId = async (req, res) => {
   }
 };
 
-/**
- * @desc    Get payments by tournament
- * @route   GET /api/payments/tournament/:tournamentId
- * @access  Private
- */
 export const getPaymentsByTournament = async (req, res) => {
   try {
     const payments = await paymentService.getPaymentsByTournament(
@@ -108,16 +86,10 @@ export const getPaymentsByTournament = async (req, res) => {
   }
 };
 
-/**
- * @desc    Refund payment
- * @route   POST /api/payments/:transactionId/refund
- * @access  Private (Admin only)
- */
 export const refundPayment = async (req, res) => {
   try {
     const { amount } = req.body;
 
-    // Check if user is admin
     if (req.user.role !== "Admin") {
       return res.status(403).json({
         success: false,
