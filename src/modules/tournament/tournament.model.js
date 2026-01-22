@@ -51,12 +51,10 @@ const TournamentSchema = new mongoose.Schema(
       default: "pending"
     },
     startDate:{
-      type:Date,
-      default:Date.now
+      type:Date
     },
     endDate:{
-      type: Date,
-      default: Date.now
+      type: Date
     },
     location:{
       type:String

@@ -340,40 +340,46 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
     tournamentUpdateData.totalRounds = Math.log2(drawSize);
   }
   
-  tournamentUpdateData.status= "scheduled";
-  
-  if (rules !== undefined) {
-    tournamentUpdateData.rules = rules;
-  }
+  updateData.status= "scheduled";
+  const updateTournament = await Tournament.findByIdAndUpdate(
+    tournamentId,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  );
 
-  if (location !== undefined) {
-    tournamentUpdateData.location = location;
-  }
   
-  if (rememberEmail !== undefined) {
-    tournamentUpdateData.rememberEmail = rememberEmail;
-  }
-  if(numberOfSeeds !== undefined){
-    tournamentUpdateData.numberOfSeeds = numberOfSeeds;
-  }
-  if(tournamentName !== undefined){
-    tournamentUpdateData.tournamentName = tournamentName;
-  }
-  if(sportName !== undefined){
-    tournamentUpdateData.sportName = sportName;
-  }
-  if(drawFormat !== undefined){
-    tournamentUpdateData.drawFormat = drawFormat;
-  }
-  if(description !== undefined){
-    tournamentUpdateData.description = description;
-  }
-  if(entryConditions !== undefined){
-    tournamentUpdateData.entryConditions = entryConditions;
-  }
-  if(range !== undefined){
-    tournamentUpdateData.range = range;
-  }
+  // if (rules !== undefined) {
+  //   tournamentUpdateData.rules = rules;
+  // }
+
+  // if (location !== undefined) {
+  //   tournamentUpdateData.location = location;
+  // }
+  
+  // if (rememberEmail !== undefined) {
+  //   tournamentUpdateData.rememberEmail = rememberEmail;
+  // }
+  // if(numberOfSeeds !== undefined){
+  //   tournamentUpdateData.numberOfSeeds = numberOfSeeds;
+  // }
+  // if(tournamentName !== undefined){
+  //   tournamentUpdateData.tournamentName = tournamentName;
+  // }
+  // if(sportName !== undefined){
+  //   tournamentUpdateData.sportName = sportName;
+  // }
+  // if(drawFormat !== undefined){
+  //   tournamentUpdateData.drawFormat = drawFormat;
+  // }
+  // if(description !== undefined){
+  //   tournamentUpdateData.description = description;
+  // }
+  // if(entryConditions !== undefined){
+  //   tournamentUpdateData.entryConditions = entryConditions;
+  // }
+  // if(range !== undefined){
+  //   tournamentUpdateData.range = range;
+  // }
 
 
   if (players && players.length > 0) {
@@ -389,10 +395,10 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
       allUserIds.push(...userIds);
       allRegistrations.push(...registrations);
       
-      tournamentUpdateData.$addToSet = { players: { $each: userIds } };
+      updateTournament.$addToSet = { players: { $each: userIds } };
       
       if (count > 0) {
-        tournamentUpdateData.$inc = { totalParticipants: count };
+        updateTournament.$inc = { totalParticipants: count };
       }
       
       registrationResult = {
@@ -422,13 +428,13 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
       }
       
       if (allPairs.length > 0) {
-        tournamentUpdateData.$addToSet = { 
+        updateTournament.$addToSet = { 
           pairs: { $each: allPairs.map(p => p._id) } 
         };
       }
       
       if (totalNewPairs > 0) {
-        tournamentUpdateData.$inc = { totalParticipants: totalNewPairs };
+        updateTournament.$inc = { totalParticipants: totalNewPairs };
       }
       
       registrationResult = {
@@ -446,10 +452,10 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
   }
   
   let updatedTournament = tournament;
-  if (Object.keys(tournamentUpdateData).length > 0) {
+  if (Object.keys(updateTournament).length > 0) {
     updatedTournament = await Tournament.findByIdAndUpdate(
       tournamentId,
-      tournamentUpdateData,
+      updateTournament,
       { new: true }
     );
   }

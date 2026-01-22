@@ -115,7 +115,7 @@ export const generateNextRound = async (tournamentId, userId) => {
       if (match.status === "completed" && !match.winner) {
         let winnerId = null;
 
-        if (match.matchType === "Pairs") {
+        if (match.matchType === "Pair") {
           if (match.pair1Score > match.pair2Score) {
             winnerId = match.pair1Id?._id;
           } else if (match.pair2Score > match.pair1Score) {
