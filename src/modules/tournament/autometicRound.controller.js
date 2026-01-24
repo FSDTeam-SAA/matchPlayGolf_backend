@@ -274,34 +274,60 @@ export const updateMatchResult = async (req, res) => {
   }
 };
 
-// Hold/Resume Tournament
 export const toggleTournamentHold = async (req, res) => {
   try {
     const { tournamentId } = req.params;
-    const { holdReason } = req.body;
+    const { onHold, holdReason } = req.body;
 
-    const knockoutStage = await KnockoutStage.findOne({ tournamentId });
-
-    if (!knockoutStage) {
-      return res.status(404).json({ message: "Knockout stage not found" });
+    // Validate boolean
+    if (typeof onHold !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: "`onHold` must be a boolean value"
+      });
     }
 
-    knockoutStage.onHold = !knockoutStage.onHold;
-    knockoutStage.holdReason = knockoutStage.onHold ? holdReason : null;
+    const knockoutStage = await KnockoutStage.findOne({ tournamentId });
+    if (!knockoutStage) {
+      return res.status(404).json({
+        success: false,
+        message: "Knockout stage not found"
+      });
+    }
+
+    const tournament = await Tournament.findById(tournamentId);
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: "Tournament not found"
+      });
+    }
+
+    // Update BOTH documents (keep in sync)
+    knockoutStage.onHold = onHold;
+    knockoutStage.holdReason = onHold ? holdReason : null;
+
+    tournament.onHold = onHold;
 
     await knockoutStage.save();
+    await tournament.save();
 
-    res.status(200).json({
-      success: knockoutStage.onHold ? true : false,
-      message: knockoutStage.onHold
-        ? "Tournament on hold"
-        : "Tournament running",
-      knockoutStage,
+    return res.status(200).json({
+      success: true,
+      message: onHold
+        ? "Tournament successfully put on hold"
+        : "Tournament successfully resumed",
+      onHold,
+      holdReason: knockoutStage.holdReason
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error"
+    });
   }
 };
+
 
 // Reschedule Match
 export const rescheduleMatch = async (req, res) => {
