@@ -67,6 +67,10 @@ const TournamentSchema = new mongoose.Schema(
     description:{
       type:String
     },
+    onHold:{
+      type:Boolean,
+      default: false
+    },
    status: {
       type: String,
       enum: ["upcoming", "in progress", "completed", "cancelled", "scheduled"],

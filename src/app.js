@@ -2,7 +2,6 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import { applyMiddleware } from './middleware/security.js';
-// import { errorHandler } from './middleware/errorHandler.js';
 import { notFound } from './middleware/notFound.js';
 import routes from './routes/index.js';
 import { handleStripeWebhook } from './modules/payment/webhook.controller.js';
@@ -30,7 +29,7 @@ applyMiddleware(app);
 app.use('/api', routes);
 
 app.use(notFound);
-// app.use(errorHandler);
+// app.use(AppError);
 
 app.use((err, req, res, next) => {
   res.status(err.statusCode || 500).json({
