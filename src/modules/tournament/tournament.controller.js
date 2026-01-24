@@ -35,6 +35,12 @@ export const progressTournament = async (req, res,next) => {
 
     const knockoutStage = await KnockoutStage.findOne({ tournamentId });
 
+    if (tournament.onHold == true) {
+        return res.status(500).json({
+          success: false,
+          message: "This tournament currently on hold so you not allowed for tournament initializeKnockout"
+        });
+      }
     if (!knockoutStage) {
 
       const initializeKnockoutResult = await initializeKnockout(tournamentId, userId);

@@ -12,12 +12,12 @@ export const initializeKnockout = async (tournamentId, userId) => {
 
     if (!tournament) {
     
-      throw new Error("Tournament not found");
+      throw new AppError(404, false,"Tournament not found");
     }
 
     const existingStage = await KnockoutStage.findOne({ tournamentId });
     if (existingStage) {
-      throw new Error("Knockout stage already initialized");
+      throw new AppError(500, false, "Knockout stage already initialized");
     }
 
     const registeredPlayers = await TournamentPlayer.find({
@@ -27,7 +27,7 @@ export const initializeKnockout = async (tournamentId, userId) => {
     }).select("playerId pairId");
 
     if (registeredPlayers.length === 0) {
-      throw new Error("No registered players found");
+      throw new AppError(500, false, "No registered players found");
     }
 
     const qualifiedEntries = registeredPlayers.map((p) => {
@@ -40,7 +40,7 @@ export const initializeKnockout = async (tournamentId, userId) => {
 
     const entryCount = qualifiedEntries.length;
     if (!isPowerOfTwo(entryCount)) {
-      throw new Error(
+      throw new AppError(500, false,
         "Number of qualified entries must be a power of 2 (8, 16, 32, etc.)"
       );
     }
@@ -91,8 +91,8 @@ export const initializeKnockout = async (tournamentId, userId) => {
       matches,
     };
   } catch (error) {
-    console.error("Initialize Knockout Error:", error);
-    throw new Error(error.message);
+    console.log("Initialize Knockout AppError:", error);
+    throw new AppError(500, false, error.message);
   }
 };
 
@@ -101,7 +101,7 @@ export const generateNextRound = async (tournamentId, userId) => {
     const knockoutStage = await KnockoutStage.findOne({ tournamentId });
 
     if (!knockoutStage || !knockoutStage.isActive) {
-      throw new Error("Knockout stage not found or inactive");
+      throw new AppError(404, false, "Knockout stage not found or inactive");
     }
 
     const { currentRound, totalRounds } = knockoutStage;
@@ -146,10 +146,7 @@ export const generateNextRound = async (tournamentId, userId) => {
     console.log("All Matches Complete:", allMatchesComplete);
 
     if (!allMatchesComplete) {
-      throw new AppError(
-        "Current round not complete. All matches must have winners.",
-        400
-      );
+      throw new AppError(500, false, "Current round not complete. All matches must have winners.");
     }
 
     // Check if tournament is complete
@@ -203,8 +200,8 @@ export const generateNextRound = async (tournamentId, userId) => {
       nextRoundMatches,
     };
   } catch (error) {
-    console.error("Generate Next Round Error:", error);
-    throw new Error(error.message);
+    console.log("Generate Next Round AppError:", error);
+    throw new AppError(500, false, error.message || "Failed to generate next round");
   }
 };
 // Update match result and auto-advance winner
@@ -272,7 +269,7 @@ export const updateMatchResult = async (req, res) => {
       autoAdvanced,
     });
   } catch (error) {
-    console.error("Update Match Result Error:", error);
+    console.log("Update Match Result AppError:", error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -295,9 +292,10 @@ export const toggleTournamentHold = async (req, res) => {
     await knockoutStage.save();
 
     res.status(200).json({
+      success: knockoutStage.onHold ? true : false,
       message: knockoutStage.onHold
         ? "Tournament on hold"
-        : "Tournament resumed",
+        : "Tournament running",
       knockoutStage,
     });
   } catch (error) {
@@ -501,7 +499,7 @@ async function generateNextRoundMatches(
   const tournament = await Tournament.findById(tournamentId);
 
   if (!tournament) {
-    throw new Error("Tournament not found");
+    throw new AppError(404, false, "Tournament not found");
   }
 
   for (let i = 0; i < completedMatches.length; i += 2) {
@@ -509,12 +507,12 @@ async function generateNextRoundMatches(
     const match2 = completedMatches[i + 1];
 
     if (!match1 || !match1.winner) {
-      throw new Error(`Match ${i} does not have a winner`);
+      throw new AppError(500, false, `Match ${i} does not have a winner`);
     }
 
     const round = await Round.findOne({ tournamentId, roundNumber: nextRound });
     if (!round) {
-      throw new Error(`Round ${nextRound} not found`);
+      throw new AppError(500, false, `Round ${nextRound} not found`);
     }
     const matchDate = round?.date || null;
 
