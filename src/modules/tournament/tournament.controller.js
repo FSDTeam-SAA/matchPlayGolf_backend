@@ -34,8 +34,9 @@ export const progressTournament = async (req, res,next) => {
   }
 
     const knockoutStage = await KnockoutStage.findOne({ tournamentId });
-
+    console.log(tournament);
     if (tournament.onHold == true) {
+      console.log(tournament, "2347890==-=908087767");
         return res.status(500).json({
           success: false,
           message: "This tournament currently on hold so you not allowed for tournament initializeKnockout"
@@ -580,6 +581,15 @@ export const eventStartInvitationRegisteredUsers = async (req, res) => {
       });
     }
     const tournament = await Tournament.findById(tournamentId);
+
+    if (tournament.onHold == true) {
+      console.log(tournament, "2347890==-=908087767");
+        return res.status(500).json({
+          success: false,
+          message: "This tournament currently on hold so you not allowed for tournament start"
+        });
+      }
+
     if (!tournament) {
       return res.status(404).json({
         success: false,
