@@ -20,12 +20,16 @@ export const progressTournament = async (req, res,next) => {
   try {
     const { tournamentId } = req.params;
     const userId = req.user._id;
+    const role = req.user.role;
 
     const tournament = await Tournament.findById(tournamentId);
     if (!tournament) {
       return res.status(404).json({ message: 'Tournament not found' });
     }
-
+    if(role == "Admin"){
+      tournament.tournamentStatus = "approved";
+      await tournament.save();
+    }
    if (tournament.tournamentStatus !== "approved") {
     return res.status(403).json({
       success: false,
