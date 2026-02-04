@@ -36,6 +36,9 @@ const UserSchema = new mongoose.Schema(
       enum: ["User", "Admin", "Organizer"],
       default: "User",
     },
+    captainName:{
+      type: String,
+    },
 
     clubName:  { type: String, default: "" },
     country:   { type: String, default: "" },
