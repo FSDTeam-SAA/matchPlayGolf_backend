@@ -180,9 +180,15 @@ class TournamentPlayerService {
   async getPlayerById(playerId, userId, userRole) {
     try {
       const player = await TournamentPlayer.findById(playerId)
-        .populate('tournamentId')
-        .populate('playerId', 'firstName lastName email phone')
-        .populate('pairId');
+        // .populate('tournamentId')
+        .populate('playerId', 'fullName email phone seeder')
+        .populate({
+          path: 'pairId',
+          populate: [
+            { path: 'player1', select: 'fullName email phone seeder' },
+            { path: 'player2', select: 'fullName email phone seeder' },
+          ],
+        });
 
       if (!player) {
         throw new Error('Player not found');
@@ -255,27 +261,14 @@ async updatePlayer(playerId, updateData, userId, userRole) {
       .populate({
         path: 'pairId',
         populate: [
-          { path: 'player1Id' },
-          { path: 'player2Id' },
+          { path: 'player1' },
+          { path: 'player2' },
         ],
       });
 
     if (!player) {
       throw new Error('Player not found');
     }
-
-    // ✅ Authorization via Tournament
-    if (userRole === 'Organizer' || userRole === 'Admin') {
-      const tournament = await Tournament.findOne({
-        _id: player.tournamentId,
-        createdBy: userId,
-      });
-
-      if (!tournament) {
-        throw new Error('Unauthorized access');
-      }
-    }
-
 
     // ✅ Update main user (optional)
     if (updateData.userInfo && player.playerId) {
@@ -285,22 +278,22 @@ async updatePlayer(playerId, updateData, userId, userRole) {
         { new: true }
       );
     }
-    console.log("Main user updated with:", updateData.pairInfo);
+    // console.log("Main user updated with:", updateData.pairInfo);
     // ✅ Update pair users (optional)
     if (updateData.pairInfo && player.pairId) {
       const { player1Info, player2Info } = updateData.pairInfo;
 
-      if (player1Info && player.pairId.player1Id) {
+      if (player1Info && player.pairId.player1) {
         await User.findByIdAndUpdate(
-          player.pairId.player1Id._id,
+          player.pairId.player1._id,
           player1Info,
           { new: true }
         );
       }
 
-      if (player2Info && player.pairId.player2Id) {
+      if (player2Info && player.pairId.player2) {
         await User.findByIdAndUpdate(
-          player.pairId.player2Id._id,
+          player.pairId.player2._id,
           player2Info,
           { new: true }
         );
@@ -309,13 +302,13 @@ async updatePlayer(playerId, updateData, userId, userRole) {
 
     // ✅ Return updated player
     const updatedPlayer = await TournamentPlayer.findById(playerId)
-      .populate('tournamentId')
-      .populate('playerId', 'fullName email phone')
+      // .populate('tournamentId')
+      .populate('playerId', 'fullName email phone seeder')
       .populate({
         path: 'pairId',
         populate: [
-          { path: 'player1Id', select: 'fullName email phone' },
-          { path: 'player2Id', select: 'fullName email phone' },
+          { path: 'player1', select: 'fullName email phone seeder' },
+          { path: 'player2', select: 'fullName email phone seeder' },
         ],
       });
 
