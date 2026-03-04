@@ -316,7 +316,7 @@ async createOrUpdateRounds(tournamentId, rounds, createdBy) {
 }
 
 async updateTournamentService(tournamentId, updateData, userId, role) {
-  const { status,startDate, endDate, rules, rounds, players, location, rememberEmail, numberOfSeeds, tournamentName, sportName, drawFormat, description, entryConditions, range } = updateData;
+  const { status,startDate, endDate, rules, rounds, players, location, rememberEmail, numberOfSeeds, tournamentName, sportName, drawFormat, description, entryConditions, range, drawSize} = updateData;
   
   const tournament = await Tournament.findById(tournamentId);
   if (!tournament) {
@@ -330,16 +330,21 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
   if (!isAdmin && !isOwner) {
     throw new Error("Not authorized to update this tournament");
   }
+
+  if(drawSize !== undefined){
+    tournament.drawSize = drawSize;
+    await tournament.save();
+  }
   
   const format = tournament.format;
   const tournamentUpdateData = {};
   let registrationResult = null;
   let createdRounds = null;
   
-  const drawSize = Number(tournament.drawSize);
-  if (drawSize && drawSize > 0 && (drawSize & (drawSize - 1)) === 0) {
+  const updateDrawSize = Number(tournament.drawSize);
+  if (updateDrawSize && updateDrawSize > 0 && (updateDrawSize & (updateDrawSize - 1)) === 0) {
 
-    tournamentUpdateData.totalRounds = Math.log2(drawSize);
+    tournamentUpdateData.totalRounds = Math.log2(updateDrawSize);
   }
   
   tournamentUpdateData.status= "scheduled";
