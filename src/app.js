@@ -27,6 +27,9 @@ app.use(express.urlencoded({ extended: true}));
 applyMiddleware(app);
 
 app.use('/api', routes);
+app.use('/hello-checker', (req, res) => {
+  res.json({ message: 'Hello, Checker! i am mahabur' });
+});
 
 app.use(notFound);
 // app.use(AppError);
