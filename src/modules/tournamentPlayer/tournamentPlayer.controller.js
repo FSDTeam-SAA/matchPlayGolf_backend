@@ -100,29 +100,59 @@ async getAllPlayers (req, res){
       });
     }
   }
-  async updatePlayer (req, res){
+  // async updatePlayer (req, res){
 
-    try{
-      const updateData = req.body;
-      const { playerId } = req.params;
-      const userId = req.user._id;
-      const userRole = req.user.role;
+  //   try{
+  //     const updateData = req.body;
+  //     const { playerId } = req.params;
+  //     const userId = req.user._id;
+  //     const userRole = req.user.role;
+  //     // console.log("Received update data:", updateData);
 
-      const updatePlayer = await TournamentPlayerService.updatePlayer(playerId, updateData, userId, userRole);
+  //     const updatePlayer = await TournamentPlayerService.updatePlayer(playerId, updateData, userId, userRole);
       
-      return res.status(201).json({
-        success:true,
-        message: "Player data updated successfully",
-        updateData: updatePlayer,
-      })
-    }
-    catch(err){
-      res.status(500).json({
-        success:false,
-        message:"Provide correct information"
-      })
-    }
+  //     return res.status(201).json({
+  //       success:true,
+  //       message: "Player data updated successfully",
+  //       updateData: updatePlayer,
+  //     })
+  //   }
+  //   catch(err){
+  //     res.status(500).json({
+  //       success:false,
+  //       message:"Provide correct information"
+  //     })
+  //   }
+  // }
+  async updatePlayer(req, res) {
+  try {
+    const updateData = req.body;
+    const { playerId } = req.params;
+    const userId = req.user._id;
+    const userRole = req.user.role;
+
+    const updatedPlayer =
+      await TournamentPlayerService.updatePlayer(
+        playerId,
+        updateData,
+        userId,
+        userRole
+      );
+
+    return res.status(200).json({
+      success: true,
+      message: "Player data updated successfully",
+      data: updatedPlayer,
+    });
+  } catch (err) {
+    console.error("Update player error:", err.message);
+
+    return res.status(400).json({
+      success: false,
+      message: err.message || "Failed to update player",
+    });
   }
+}
   async togglePlayerStatus(req, res) {
     try {
       const { playerId } = req.params;
