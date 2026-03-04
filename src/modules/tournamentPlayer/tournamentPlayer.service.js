@@ -215,7 +215,7 @@ class TournamentPlayerService {
         throw new Error('Player not found');
       }
 
-      if (userRole === 'Organizer') {
+      if (userRole === 'Organizer' || userRole === 'Admin') {
         const tournament = await Tournament.findOne({ 
           _id: player.tournamentId, 
           createdBy: userId 
@@ -247,7 +247,83 @@ class TournamentPlayerService {
       throw new Error(`Error fetching player: ${error.message}`);
     }
   }
+async updatePlayer(playerId, updateData, userId, userRole) {
+  try {
+    const player = await TournamentPlayer.findById(playerId)
+      .populate('tournamentId')
+      .populate('playerId')
+      .populate({
+        path: 'pairId',
+        populate: [
+          { path: 'player1Id' },
+          { path: 'player2Id' },
+        ],
+      });
 
+    if (!player) {
+      throw new Error('Player not found');
+    }
+
+    // ✅ Authorization via Tournament
+    if (userRole === 'Organizer' || userRole === 'Admin') {
+      const tournament = await Tournament.findOne({
+        _id: player.tournamentId,
+        createdBy: userId,
+      });
+
+      if (!tournament) {
+        throw new Error('Unauthorized access');
+      }
+    }
+
+
+    // ✅ Update main user (optional)
+    if (updateData.userInfo && player.playerId) {
+      await User.findByIdAndUpdate(
+        player.playerId._id,
+        updateData.userInfo,
+        { new: true }
+      );
+    }
+    console.log("Main user updated with:", updateData.pairInfo);
+    // ✅ Update pair users (optional)
+    if (updateData.pairInfo && player.pairId) {
+      const { player1Info, player2Info } = updateData.pairInfo;
+
+      if (player1Info && player.pairId.player1Id) {
+        await User.findByIdAndUpdate(
+          player.pairId.player1Id._id,
+          player1Info,
+          { new: true }
+        );
+      }
+
+      if (player2Info && player.pairId.player2Id) {
+        await User.findByIdAndUpdate(
+          player.pairId.player2Id._id,
+          player2Info,
+          { new: true }
+        );
+      }
+    }
+
+    // ✅ Return updated player
+    const updatedPlayer = await TournamentPlayer.findById(playerId)
+      .populate('tournamentId')
+      .populate('playerId', 'fullName email phone')
+      .populate({
+        path: 'pairId',
+        populate: [
+          { path: 'player1Id', select: 'fullName email phone' },
+          { path: 'player2Id', select: 'fullName email phone' },
+        ],
+      });
+
+    return updatedPlayer;
+  } catch (error) {
+    throw new Error(`Error updating player: ${error.message}`);
+  }
+}
 
   async togglePlayerStatus(playerId, userId, userRole) {
     try {
@@ -256,7 +332,7 @@ class TournamentPlayerService {
         throw new Error('Player not found');
       }
 
-      if (userRole === 'organizer') {
+      if (userRole === 'organizer' || userRole === 'admin') {
         const tournament = await Tournament.findOne({ 
           _id: player.tournamentId, 
           createdBy: userId 
