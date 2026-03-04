@@ -180,9 +180,15 @@ class TournamentPlayerService {
   async getPlayerById(playerId, userId, userRole) {
     try {
       const player = await TournamentPlayer.findById(playerId)
-        .populate('tournamentId')
-        .populate('playerId', 'firstName lastName email phone')
-        .populate('pairId');
+        // .populate('tournamentId')
+        .populate('playerId', 'fullName email phone seeder')
+        .populate({
+          path: 'pairId',
+          populate: [
+            { path: 'player1', select: 'fullName email phone seeder' },
+            { path: 'player2', select: 'fullName email phone seeder' },
+          ],
+        });
 
       if (!player) {
         throw new Error('Player not found');
@@ -296,13 +302,13 @@ async updatePlayer(playerId, updateData, userId, userRole) {
 
     // ✅ Return updated player
     const updatedPlayer = await TournamentPlayer.findById(playerId)
-      .populate('tournamentId')
-      .populate('playerId', 'fullName email phone')
+      // .populate('tournamentId')
+      .populate('playerId', 'fullName email phone seeder')
       .populate({
         path: 'pairId',
         populate: [
-          { path: 'player1', select: 'fullName email phone' },
-          { path: 'player2', select: 'fullName email phone' },
+          { path: 'player1', select: 'fullName email phone seeder' },
+          { path: 'player2', select: 'fullName email phone seeder' },
         ],
       });
 
