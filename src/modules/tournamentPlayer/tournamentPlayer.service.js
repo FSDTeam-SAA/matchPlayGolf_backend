@@ -231,17 +231,17 @@ class TournamentPlayerService {
         }
       }
 
-      if(player.playerId){
-        await User.findByIdAndDelete(player.playerId._id);
-      }
-      if(player.pairId){
-        if(player.pairId.player1Id){
-          await User.findByIdAndDelete(player.pairId.player1Id);
-        }
-        if(player.pairId.player2Id){
-          await User.findByIdAndDelete(player.pair.player2Id);
-        }
-      }
+      // if(player.playerId){
+      //   await User.findByIdAndDelete(player.playerId._id);
+      // }
+      // if(player.pairId){
+      //   if(player.pairId.player1Id){
+      //     await User.findByIdAndDelete(player.pairId.player1Id);
+      //   }
+      //   if(player.pairId.player2Id){
+      //     await User.findByIdAndDelete(player.pair.player2Id);
+      //   }
+      // }
 
       await TournamentPlayer.findByIdAndDelete(player._id);
 

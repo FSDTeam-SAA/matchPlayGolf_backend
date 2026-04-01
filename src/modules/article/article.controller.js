@@ -22,7 +22,7 @@ export const createArticle = async (req, res) => {
       return res.status(400).json({ success: false, message: error.message });
     }
     console.error('Create article error:', error);
-    return res.status(500).json({ success: false, message: 'Internal server error' });
+    return res.status(500).json({ success: false, message: error.message});
   }
 };
 
