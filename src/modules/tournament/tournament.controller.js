@@ -500,7 +500,7 @@ export const sendInvitationRegisteredUsers = async (req, res) => {
     console.error("❌ Send Invitation Error:", error);
     return res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: error.message
     });
   }
 };
@@ -541,8 +541,7 @@ export const findTournamentPlayer = async (req, res) => {
     console.error("Find tournament player error:", error);
     return res.status(500).json({
       success: false,
-      message: "Internal server error",
-      error: error.message,
+      message: error.message || "Failed to fetch tournament players",
     });
   }
 };
@@ -683,7 +682,7 @@ export const eventStartInvitationRegisteredUsers = async (req, res) => {
     console.error("❌ Send Invitation Error:", error);
     return res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: error.message,
     });
   }
 };
