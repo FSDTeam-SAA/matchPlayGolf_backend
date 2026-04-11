@@ -221,27 +221,25 @@ class TournamentPlayerService {
         throw new Error('Player not found');
       }
 
-      if (userRole === 'Organizer' || userRole === 'Admin') {
-        const tournament = await Tournament.findOne({ 
+       const tournament = await Tournament.findOne({ 
           _id: player.tournamentId, 
           createdBy: userId 
         });
+
+      if (userRole === 'Organizer' || userRole === 'Admin') {
         if (!tournament) {
           throw new Error('Unauthorized access');
         }
       }
 
-      // if(player.playerId){
-      //   await User.findByIdAndDelete(player.playerId._id);
-      // }
-      // if(player.pairId){
-      //   if(player.pairId.player1Id){
-      //     await User.findByIdAndDelete(player.pairId.player1Id);
-      //   }
-      //   if(player.pairId.player2Id){
-      //     await User.findByIdAndDelete(player.pair.player2Id);
-      //   }
-      // }
+      if(player.playerId){
+        tournament.totalParticipants = Math.max(0, tournament.totalParticipants - 1);
+        await tournament.save();
+      }
+      if(player.pairId){
+        tournament.totalParticipants = Math.max(0, tournament.totalParticipants - 2);
+        await tournament.save();
+      }
 
       await TournamentPlayer.findByIdAndDelete(player._id);
 
