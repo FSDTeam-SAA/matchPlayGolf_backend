@@ -22,9 +22,52 @@ class OrganizerDashboardService {
       (t) => t.status !== "Cancelled" && t.status !== "Completed"
     ).length;
 
-    const totalPlayers = tournamentIds.length
-      ? await RegisterUser.countDocuments({ tournamentId: { $in: tournamentIds } })
-      : 0;
+    let totalPlayers = 0;
+
+  if (tournamentIds.length) {
+    // 🔥 Aggregate for correct counting
+    const result = await RegisterUser.aggregate([
+      {
+        $match: {
+          tournamentId: { $in: tournamentIds }
+        }
+      },
+      {
+        $facet: {
+          // Single players (no pairId)
+          singles: [
+            {
+              $match: { pairId: null }
+            },
+            {
+              $count: "count"
+            }
+          ],
+
+          // Unique pairs
+          pairs: [
+            {
+              $match: { pairId: { $ne: null } }
+            },
+            {
+              $group: {
+                _id: "$pairId"
+              }
+            },
+            {
+              $count: "count"
+            }
+          ]
+        }
+      }
+    ]);
+
+    const singlesCount = result[0].singles[0]?.count || 0;
+    const pairCount = result[0].pairs[0]?.count || 0;
+
+    // ✅ Final total
+    totalPlayers = singlesCount + pairCount * 2;
+  }
 
     // Match counts scoped to organizer's tournaments
     const [ongoingMatches, upcomingMatches] = tournamentIds.length
