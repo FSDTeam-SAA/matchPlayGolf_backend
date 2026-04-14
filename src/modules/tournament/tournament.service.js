@@ -258,7 +258,7 @@ async registerPairPlayers(tournamentId, players, userIds) {
     pairId: pair._id,
   });
 
-  return { pair, count: 1 };
+  return { pair, count: 2 };
 }
 
 async createOrUpdateRounds(tournamentId, rounds, createdBy) {
