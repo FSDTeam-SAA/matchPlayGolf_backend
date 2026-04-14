@@ -5,78 +5,70 @@ import User from "../user/user.model.js";
 import Payment from "../payment/payment.model.js";
 
 class AdminDashboardService {
-  /**
-   * Overview cards + recent lists for admin.
-   */
-  // async getOverview() {
-  //   const activeTournaments = await Tournament.countDocuments({
-  //     status: { $nin: ["Cancelled", "Completed"] }
-  //   });
 
-  //   // Unique players across all tournament registrations
-  //   const totalPlayers = await TournamentPlayer.distinct("userId").then((ids) => ids.length);
-
-  //   const ongoingMatches = await Match.countDocuments({ status: "In Progress" });
-
-  //   // Use createdAt for "recent" to avoid shuffling when start dates vary
-  //   const recentTournaments = await Tournament.find({})
-  //     .sort({ createdAt: -1 })
-  //     .limit(3)
-  //     .select("tournamentName location startDate endDate createdAt status")
-  //     .lean();
-
-  //   const recentRegistrations = await TournamentPlayer.find({})
-  //     .sort({ createdAt: -1 })
-  //     .limit(3)
-  //     .populate("userId", "fullName email profileImage")
-  //     .populate("tournamentId", "tournamentName");
-
-  //   return {
-  //     cards: {
-  //       activeTournaments,
-  //       totalPlayers,
-  //       ongoingMatches
-  //     },
-  //     recentTournaments,
-  //     recentRegistrations: recentRegistrations.map((reg) => ({
-  //       id: reg._id,
-  //       user: reg.userId
-  //         ? {
-  //             id: reg.userId._id,
-  //             name: reg.userId.fullName,
-  //             email: reg.userId.email,
-  //             profileImage: reg.userId.profileImage
-  //           }
-  //         : null,
-  //       tournament: reg.tournamentId
-  //         ? {
-  //             id: reg.tournamentId._id,
-  //             name: reg.tournamentId.tournamentName
-  //           }
-  //         : null,
-  //       createdAt: reg.createdAt
-  //     }))
-  //   };
-  // }
-
-  async getOverview() {
+async getOverview() {
   const activeTournaments = await Tournament.countDocuments({
     status: { $nin: ["Cancelled", "Completed"] }
   });
 
-  // Count of active tournament registrations (not just unique players)
-  const totalPlayers = await TournamentPlayer.countDocuments({ isActive: true });
+  // ✅ FIX: Correct total player count (single + pairs)
+  let totalPlayers = 0;
 
-  const ongoingMatches = await Match.countDocuments({ status: { $in: ["Upcoming", "In Progress"] }});
-  console.log(ongoingMatches);
+  const result = await TournamentPlayer.aggregate([
+    {
+      $match: {
+        isActive: true
+      }
+    },
+    {
+      $facet: {
+        // ✅ Single players
+        singles: [
+          {
+            $match: { pairId: null }
+          },
+          {
+            $count: "count"
+          }
+        ],
 
-  // Use createdAt for "recent" to avoid shuffling when start dates vary
+        // ✅ Unique pairs
+        pairs: [
+          {
+            $match: { pairId: { $ne: null } }
+          },
+          {
+            $group: {
+              _id: "$pairId"
+            }
+          },
+          {
+            $count: "count"
+          }
+        ]
+      }
+    }
+  ]);
+
+  const singlesCount = result[0]?.singles[0]?.count || 0;
+  const pairCount = result[0]?.pairs[0]?.count || 0;
+
+  // 🎯 Final total
+  totalPlayers = singlesCount + pairCount * 2;
+
+  // ✅ Matches
+  const ongoingMatches = await Match.countDocuments({
+    status: { $in: ["Upcoming", "In Progress"] }
+  });
+
+  // ✅ Recent tournaments
   const recentTournaments = await Tournament.find({})
     .sort({ createdAt: -1 })
     .limit(3)
     .select("tournamentName location startDate endDate createdAt status")
     .lean();
 
+  // ✅ Recent registrations
   const recentRegistrations = await TournamentPlayer.find({})
     .sort({ createdAt: -1 })
     .limit(3)
@@ -108,9 +100,8 @@ class AdminDashboardService {
         : null,
       createdAt: reg.createdAt
     }))
-  };  
+  };
 }
-
 
   /**
    * Monthly revenue activity for a given year (defaults to current year).
