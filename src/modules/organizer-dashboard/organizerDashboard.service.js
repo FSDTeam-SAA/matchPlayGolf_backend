@@ -22,7 +22,7 @@ class OrganizerDashboardService {
       (t) => t.status !== "Cancelled" && t.status !== "Completed"
     ).length;
 
-    let totalPlayers = 0;
+  let totalPlayers = 0;
 
   if (tournamentIds.length) {
     // 🔥 Aggregate for correct counting
