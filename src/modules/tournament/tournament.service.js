@@ -248,7 +248,7 @@ async registerPairPlayers(tournamentId, players, userIds) {
   const totalAfterAdd =
     Number(tournament.totalParticipants) + 2;
 
-  if (totalAfterAdd > Number(tournament.drawSize)) {
+  if (totalAfterAdd > Number(tournament.drawSize * 2)) {
     throw new Error("Participant size exceeds tournament draw size");
   }
 
