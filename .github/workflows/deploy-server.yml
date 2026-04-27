@@ -18,12 +18,5 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            export PATH=$PATH:/usr/local/bin:/usr/bin
-            cd /var/www/server
-            git pull origin main
-            npm install
-            npm run build
-            pm2 restart server || pm2 start dist/app.js --name server
+            bash ~/deploy-server.sh # Run deploy script on VPS
 
