@@ -28,7 +28,7 @@ applyMiddleware(app);
 
 app.use('/api', routes);
 app.use('/hello-checker', (req, res) => {
-  res.json({ message: 'Hello, Checker! i am mahabur . Write now i am added CI/CD pipeline' });
+  res.json({ message: 'Hello, Checker! i am mahabur . CI/CD Pipeline' });
 });
 
 app.use(notFound);
