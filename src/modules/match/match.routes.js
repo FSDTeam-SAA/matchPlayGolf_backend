@@ -9,7 +9,8 @@ import {
   deleteTournamentMatch,
   getUserMatchesWithFilters,
   getUserTournamentMatches,
-  getUserActiveTournaments
+  getUserActiveTournaments,
+  swapMatchPlayers
 } from "./match.controller.js";
 import { verifyToken } from "../../middleware/authMiddleware.js";
 import { multerUpload } from "../../config/multer.js";
@@ -21,6 +22,11 @@ const router = express.Router();
 router.get("/userall", verifyToken, getUserMatchesWithFilters);
 router.get("/specific-tournament", verifyToken, getUserTournamentMatches);
 router.get("/active-tournaments", verifyToken, getUserActiveTournaments);
+router.patch(
+  "/swap-players",
+  verifyToken,
+  swapMatchPlayers
+);
 router.get("/", getAllTournamentMatches);
 router.get("/:id", getTournamentMatchById);
 router.get("/round/:roundId", getTournamentMatchesByRound);

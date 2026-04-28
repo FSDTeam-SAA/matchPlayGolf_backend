@@ -193,11 +193,11 @@ export const updateTournamentMatch = async (req, res) => {
     // Validate matchType if provided
     if (
       updateData.matchType &&
-      !["Single", "Pair"].includes(updateData.matchType)
+      !["Single", "Pair", "Team"].includes(updateData.matchType)
     ) {
       return res.status(400).json({
         success: false,
-        message: "Invalid match type. Must be 'Single' or 'Pair'"
+        message: "Invalid match type. Must be 'Single', 'Pair', or 'Team'"
       });
     }
     
@@ -1019,3 +1019,40 @@ export const getUserActiveTournaments = async (req, res) => {
     });
   }
 };
+
+// swapMatchPlayers.controller.js
+
+export const swapMatchPlayers = async (req, res) => {
+  try {
+    const { match1Id, match2Id } = req.body;
+    const userId = req.user._id;
+    const role = req.user.role;
+    const updatedData = req.body; // Contains player1Id, player2Id, pair1Id, pair2Id
+
+    if (!match1Id || !match2Id) {
+      return res.status(400).json({
+        success: false,
+        message: "match1Id and match2Id are required",
+      });
+    }
+
+    const result = await matchService.swapMatchPlayers(
+      match1Id,
+      match2Id,
+      updatedData,
+      userId,
+      role
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Players swapped successfully between matches",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+}
