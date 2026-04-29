@@ -3,6 +3,7 @@ import TournamentPlayer from "../others/tournamentPlayer.model.js";
 import Tournament from "../tournament/tournament.model.js";
 import Match from "../match/match.model.js";
 import TournamentPair from "../others/tournamentPair.model.js";
+import mongoose from "mongoose";
 
 export const getDashboardSummary = async (req, res) => {
   try {
