@@ -529,7 +529,7 @@ export const findTournamentPlayer = async (req, res) => {
 
       const rounds = await Round.find({ tournamentId });
 
-      console.log("ROUNDS DATA:", rounds);
+      // console.log("ROUNDS DATA:", rounds);
 
     return res.status(200).json({
       success: true,
@@ -586,7 +586,7 @@ export const eventStartInvitationRegisteredUsers = async (req, res) => {
     const tournament = await Tournament.findById(tournamentId);
 
     if (tournament.onHold == true) {
-      console.log(tournament, "2347890==-=908087767");
+      // console.log(tournament, "2347890==-=908087767");
         return res.status(500).json({
           success: false,
           message: "This tournament currently on hold so you not allowed for tournament start"

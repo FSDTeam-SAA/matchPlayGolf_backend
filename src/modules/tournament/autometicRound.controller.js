@@ -137,13 +137,13 @@ export const generateNextRound = async (tournamentId, userId) => {
         }
       }
     }
-    console.log(currentRoundMatches);
+    // console.log(currentRoundMatches);
     // Check if current round is complete
     const allMatchesComplete = currentRoundMatches.every(
       (m) => m.status === "completed" && m.winner
     );
 
-    console.log("All Matches Complete:", allMatchesComplete);
+    // console.log("All Matches Complete:", allMatchesComplete);
 
     if (!allMatchesComplete) {
       throw new AppError(500, false, "Current round not complete. All matches must have winners.");
