@@ -15,7 +15,7 @@ class TournamentService {
 
   async createTournament(tournamentData) {
     try {
-      console.log(tournamentData);
+      // console.log(tournamentData);
       const tournament = await Tournament.create(tournamentData);
       let payment = {};
 
@@ -134,7 +134,7 @@ async findOrCreateUsers(players) {
     }
     
     let user = await User.findOne({ email: player.email });
-    console.log("Found user:", user);
+    // console.log("Found user:", user);
     if (!user) {
 
       const verifyToken = generateToken();
@@ -145,14 +145,14 @@ async findOrCreateUsers(players) {
         captainName:player.captainName || null,
         verifyToken
       });
-      console.log("Created new user:", user);
+      // console.log("Created new user:", user);
       try {
         await sendEmail({
           to: user.email,
           subject: "Welcome to GolfKO",
           html: welcomeEmailTemplate({ user, verifyToken })
         });
-        console.log(`Welcome email sent to ${user.email}`);
+        // console.log(`Welcome email sent to ${user.email}`);
       } catch (emailError) {
         console.error(`Failed to send welcome email to ${user.email}:`, emailError);
       }
@@ -166,7 +166,7 @@ async findOrCreateUsers(players) {
 
 async registerSinglePlayers(tournamentId, userIds) {
   const registrations = [];
-  console.log("Registering single players:", userIds);
+  // console.log("Registering single players:", userIds);
   
   const existingRegistrations = await TournamentPlayer.find({
     tournamentId,
@@ -194,7 +194,7 @@ async registerSinglePlayers(tournamentId, userIds) {
   const totalAfterAdd =
     Number(tournament.totalParticipants) + newUserIds.length;
 
-  console.log(newUserIds.length, "dfastgdtyuhre5rt erfs");
+  // console.log(newUserIds.length, "dfastgdtyuhre5rt erfs");
   if (totalAfterAdd > Number(tournament.drawSize)) {
     throw new Error("Participant size exceeds tournament draw size");
   }
@@ -325,7 +325,7 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
   
   const isOwner = tournament.createdBy.toString() === userId.toString();
   const isAdmin = role === "Admin";
-  console.log(userId, role, tournament.createdBy);
+  // console.log(userId, role, tournament.createdBy);
 
   if (!isAdmin && !isOwner) {
     throw new Error("Not authorized to update this tournament");

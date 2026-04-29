@@ -19,7 +19,7 @@ const knockoutMatchSchema = new mongoose.Schema({
   roundName: { type: String }, 
   matchType: { 
     type: String, 
-    enum: ["Single", "Pair", "Team"],
+    enum: ["Single", "Pairs", "Team"],
     required: true 
   },
   

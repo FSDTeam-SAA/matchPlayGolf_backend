@@ -378,7 +378,7 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
         subject: `Match Result Updated: ${savedMatch.tournamentId.tournamentName}`,
         html: matchResultUpdateTemplate({ matchDetails })
       });
-      console.log(`📧 Emails sent to: ${uniqueEmails.join(", ")}`);
+      // console.log(`📧 Emails sent to: ${uniqueEmails.join(", ")}`);
     }
 
     return await savedMatch.populate([
@@ -841,7 +841,7 @@ async swapMatchPlayers(match1Id, match2Id, updateData, userId, role) {
         throw new Error("match2Slot must be 'player1Id' or 'player2Id'");
       }
 
-      console.log(`🔁 Swapping match1.${match1Slot} (${match1[match1Slot]}) with match2.${match2Slot} (${match2[match2Slot]})`);
+      // console.log(`🔁 Swapping match1.${match1Slot} (${match1[match1Slot]}) with match2.${match2Slot} (${match2[match2Slot]})`);
 
       // Direct slot swap
       const temp = match1[match1Slot];
@@ -861,7 +861,7 @@ async swapMatchPlayers(match1Id, match2Id, updateData, userId, role) {
         throw new Error("match2Slot must be 'pair2Id' or 'pair2Id'");
       }
 
-      console.log(`🔁 Swapping match1.${match1Slot} (${match1[match1Slot]}) with match2.${match2Slot} (${match2[match2Slot]})`);
+      // console.log(`🔁 Swapping match1.${match1Slot} (${match1[match1Slot]}) with match2.${match2Slot} (${match2[match2Slot]})`);
 
       // Direct slot swap
       const temp = match1[match1Slot];
