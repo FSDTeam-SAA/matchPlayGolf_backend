@@ -40,22 +40,107 @@ export const getUserCurrentTournaments = async (req, res) => {
   }
 };
 
+// export const getUserTournaments = async (req, res) => {
+//   try {
+//     const userId = req.user._id;
+//     const { status, page = 1, limit = 10 } = req.query;
+    
+//     const skip = (page - 1) * limit;
+
+//     // Find all tournament registrations for this user
+//     const tournamentPlayers = await TournamentPlayer.find({
+//       playerId: userId,
+//       isActive: true
+//     }).select('tournamentId');
+    
+//     const tournamentIds = tournamentPlayers.map(tp => tp.tournamentId);
+    
+//     if (tournamentIds.length === 0) {
+//       return res.status(200).json({
+//         success: true,
+//         data: {
+//           tournaments: [],
+//           pagination: {
+//             page: Number(page),
+//             limit: Number(limit),
+//             total: 0,
+//             totalPages: 0,
+//           }
+//         },
+//         message: "No tournaments found for this user"
+//       });
+//     }
+    
+//     // Build query with tournament IDs
+//     const query = {
+//       _id: { $in: tournamentIds }
+//     };
+    
+//     // Add status filter if provided
+//     if (status) {
+//       query.status = status.toLowerCase(); // "upcoming", "in progress", "completed", "cancelled", "scheduled"
+//     }
+    
+//     const total = await Tournament.countDocuments(query);
+    
+//     const tournaments = await Tournament.find(query)
+//       .populate('createdBy', 'fullName email')
+//       .populate('knockoutStage')
+//       .sort({ startDate: -1 })
+//       .skip(skip)
+//       .limit(limit);
+
+//     res.status(200).json({
+//       success: true,
+//       data: { 
+//         tournaments,
+//         pagination: {
+//           page: Number(page), 
+//           limit: Number(limit),
+//           total: total,
+//           totalPages: Math.ceil(total / limit),
+//         }
+//       },
+//       message: "User tournaments fetched successfully"
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: `Failed to fetch user tournaments: ${error.message}`
+//     });
+//   }
+// };
+
+
 export const getUserTournaments = async (req, res) => {
   try {
     const userId = req.user._id;
     const { status, page = 1, limit = 10 } = req.query;
-    
+
     const skip = (page - 1) * limit;
 
-    // Find all tournament registrations for this user
+    // 1. Find all tournament registrations for this user (Singles / Team)
     const tournamentPlayers = await TournamentPlayer.find({
       playerId: userId,
       isActive: true
-    }).select('tournamentId');
-    
-    const tournamentIds = tournamentPlayers.map(tp => tp.tournamentId);
-    
-    if (tournamentIds.length === 0) {
+    }).select('tournamentId pairId');
+
+    // 2. Find all pairs this user belongs to (Pairs match support)
+    const userPairs = await TournamentPair.find({
+      $or: [{ player1: userId }, { player2: userId }],
+      isActive: true
+    }).select('_id tournamentId');
+
+    // 3. Collect tournamentIds from direct registrations
+    const directTournamentIds = tournamentPlayers.map(tp => tp.tournamentId.toString());
+
+    // 4. Collect tournamentIds from pair registrations
+    const pairTournamentIds = userPairs.map(p => p.tournamentId.toString());
+
+    // 5. Merge and deduplicate all tournament IDs
+    const allTournamentIdStrings = [...new Set([...directTournamentIds, ...pairTournamentIds])];
+
+    if (allTournamentIdStrings.length === 0) {
       return res.status(200).json({
         success: true,
         data: {
@@ -64,41 +149,64 @@ export const getUserTournaments = async (req, res) => {
             page: Number(page),
             limit: Number(limit),
             total: 0,
-            totalPages: 0,
+            totalPages: 0
           }
         },
         message: "No tournaments found for this user"
       });
     }
-    
-    // Build query with tournament IDs
-    const query = {
-      _id: { $in: tournamentIds }
-    };
-    
-    // Add status filter if provided
+
+    const allTournamentIds = allTournamentIdStrings.map(
+      id => new mongoose.Types.ObjectId(id)
+    );
+
+    // 6. Build query
+    const query = { _id: { $in: allTournamentIds } };
+
     if (status) {
-      query.status = status.toLowerCase(); // "upcoming", "in progress", "completed", "cancelled", "scheduled"
+      query.status = status.toLowerCase();
     }
-    
+
     const total = await Tournament.countDocuments(query);
-    
+
     const tournaments = await Tournament.find(query)
       .populate('createdBy', 'fullName email')
       .populate('knockoutStage')
       .sort({ startDate: -1 })
       .skip(skip)
-      .limit(limit);
+      .limit(Number(limit));
+
+    // 7. Attach participation context per tournament (optional but useful for frontend)
+    const pairIdsByTournament = {};
+    userPairs.forEach(p => {
+      pairIdsByTournament[p.tournamentId.toString()] = p._id;
+    });
+
+    const tournamentsWithContext = tournaments.map(t => {
+      const tObj = t.toObject();
+      const tournamentIdStr = t._id.toString();
+
+      const playerEntry = tournamentPlayers.find(
+        tp => tp.tournamentId.toString() === tournamentIdStr
+      );
+
+      tObj.participationContext = {
+        matchType: pairIdsByTournament[tournamentIdStr] ? 'Pairs' : 'Single',
+        pairId: pairIdsByTournament[tournamentIdStr] || playerEntry?.pairId || null
+      };
+
+      return tObj;
+    });
 
     res.status(200).json({
       success: true,
-      data: { 
-        tournaments,
+      data: {
+        tournaments: tournamentsWithContext,
         pagination: {
-          page: Number(page), 
+          page: Number(page),
           limit: Number(limit),
-          total: total,
-          totalPages: Math.ceil(total / limit),
+          total,
+          totalPages: Math.ceil(total / limit)
         }
       },
       message: "User tournaments fetched successfully"
