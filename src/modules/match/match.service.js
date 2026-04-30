@@ -830,7 +830,7 @@ async swapMatchPlayers(match1Id, match2Id, updateData, userId, role) {
     // match1Slot: which slot in match1 to swap  e.g. "player1Id" or "player2Id"
     // match2Slot: which slot in match2 to swap  e.g. "player1Id" or "player2Id"
 
-    if (matchType === "Single") {
+    if (matchType === "Single" || matchType === "Team") {
       if (!match1Slot || !match2Slot) {
         throw new Error("match1Slot and match2Slot are required");
       }
@@ -860,7 +860,7 @@ async swapMatchPlayers(match1Id, match2Id, updateData, userId, role) {
       }
 
       if (!["pair1Id", "pair2Id"].includes(match2Slot)) {
-        throw new Error("match2Slot must be 'pair2Id' or 'pair2Id'");
+        throw new Error("match2Slot must be 'pair1Id' or 'pair2Id'");
       }
 
       // console.log(`🔁 Swapping match1.${match1Slot} (${match1[match1Slot]}) with match2.${match2Slot} (${match2[match2Slot]})`);
@@ -871,7 +871,7 @@ async swapMatchPlayers(match1Id, match2Id, updateData, userId, role) {
       match2[match2Slot] = temp;
 
     } else {
-      throw new Error("Swap is only supported for Single and Pair match types");
+      throw new Error("Swap is only supported for Single, Pairs, and Team match types");
     }
 
     match1.updatedBy = userId;
