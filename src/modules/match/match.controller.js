@@ -179,14 +179,14 @@ export const updateTournamentMatch = async (req, res) => {
     const role = req.user?.role || "token-access";
     if (
       updateData.status &&
-      !["scheduled", "in Progress", "completed", "cancelled", "pending"].includes(
+      !['pending', 'scheduled', 'in-progress', 'completed', 'rescheduled'].includes(
         updateData.status
       )
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "Invalid status. Must be 'scheduled', 'in Progress', 'completed', 'cancelled', or 'pending'"
+          "Invalid status. Must be 'scheduled', 'in-progress', 'completed', 'rescheduled', or 'pending'"
       });
     }
 
