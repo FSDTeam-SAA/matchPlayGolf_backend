@@ -34,8 +34,8 @@ class MatchService {
      }
 
       // Validate matchType (case-sensitive)
-      if (!["Single", "Pair", "Team"].includes(matchData.matchType)) {
-        throw new Error("Invalid match type. Must be 'Single', 'Pair', or 'Team'");
+      if (!["Single", "Pairs", "Team"].includes(matchData.matchType)) {
+        throw new Error("Invalid match type. Must be 'Single', 'Pairs', or 'Team'");
       }
 
       // Validate required fields based on matchType
@@ -50,7 +50,7 @@ class MatchService {
         ) {
           throw new Error("Invalid player ID");
         }
-      } else if (matchData.matchType === "Pair") {
+      } else if (matchData.matchType === "Pairs") {
         if (!matchData.pair1Id || !matchData.pair2Id) {
           throw new Error("Pair match requires both pair1Id and pair2Id");
         }
@@ -77,7 +77,7 @@ class MatchService {
           { path: "player1Id", select: "fullName email" },
           { path: "player2Id", select: "fullName email" }
         );
-      } else if (matchData.matchType === "Pair") {
+      } else if (matchData.matchType === "Pairs") {
         populateFields.push(
           { path: "pair1Id", select: "pairName" },
           { path: "pair2Id", select: "pairName" }
@@ -189,6 +189,8 @@ class MatchService {
       if (!mongoose.Types.ObjectId.isValid(id)) {
         throw new Error("Invalid match ID");
       }
+
+      console.log(`🔍 Fetching match by ID: ${id}`);
 
       const match = await Match.findById(id)
         .populate("tournamentId", "tournamentName sportName format")
@@ -309,7 +311,7 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
     ) throw new Error("Invalid status");
 
     // Validate matchType
-    if (updateData.matchType && !["Single", "Pair", "Team"].includes(updateData.matchType)) {
+    if (updateData.matchType && !["Single", "Pairs", "Team"].includes(updateData.matchType)) {
       throw new Error("Invalid match type");
     }
 
@@ -359,7 +361,7 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
         matchDetails.player2Score = savedMatch.player2Score || 0;
       }
 
-      if (savedMatch.matchType === "Pair") {
+      if (savedMatch.matchType === "Pairs") {
         matchDetails.player1 = savedMatch.pair1Id
           ? `${savedMatch.pair1Id.player1?.fullName || "N/A"} & ${savedMatch.pair1Id.player2?.fullName || "N/A"}`
           : "N/A";
@@ -372,14 +374,14 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
         matchDetails.player2Score = savedMatch.pair2Score || 0;
       }
 
-    if (uniqueEmails.length > 0) {
-      await sendEmail({
-        to: uniqueEmails,
-        subject: `Match Result Updated: ${savedMatch.tournamentId.tournamentName}`,
-        html: matchResultUpdateTemplate({ matchDetails })
-      });
-      // console.log(`📧 Emails sent to: ${uniqueEmails.join(", ")}`);
-    }
+    // if (uniqueEmails.length > 0) {
+    //   await sendEmail({
+    //     to: uniqueEmails,
+    //     subject: `Match Result Updated: ${savedMatch.tournamentId.tournamentName}`,
+    //     html: matchResultUpdateTemplate({ matchDetails })
+    //   });
+    //   // console.log(`📧 Emails sent to: ${uniqueEmails.join(", ")}`);
+    // }
 
     return await savedMatch.populate([
       { path: "tournamentId", select: "tournamentName sportName format" },
@@ -848,7 +850,7 @@ async swapMatchPlayers(match1Id, match2Id, updateData, userId, role) {
       match1[match1Slot] = match2[match2Slot];
       match2[match2Slot] = temp;
 
-    } else if (matchType === "Pair") {
+    } else if (matchType === "Pairs") {
       if (!match1Slot || !match2Slot) {
         throw new Error("match1Slot and match2Slot are required");
       }
