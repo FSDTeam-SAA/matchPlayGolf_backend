@@ -199,6 +199,10 @@ class MatchService {
         .populate("player2Id", "fullName email")
         .populate("pair1Id", "teamName")
         .populate("pair2Id", "teamName")
+
+       
+       console.log(match.tournamentId._id.toString());
+       const rounds = await Round.find({ tournamentId: match.tournamentId._id.toString() }).select("_id roundName roundNumber date");
   
 
       if (!match) {
@@ -210,7 +214,7 @@ class MatchService {
         console.warn(`Match ${id} has no valid tournament reference`);
       }
 
-      return match;
+      return {match, rounds};
     } catch (error) {
       throw new Error(`Failed to fetch match: ${error.message}`);
     }
