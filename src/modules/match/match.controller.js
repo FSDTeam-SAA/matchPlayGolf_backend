@@ -363,7 +363,8 @@ export const getTournamentMatchById = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: match
+      data: match.match,
+      rounds: match.rounds
     });
   } catch (error) {
     const statusCode = error.message === "Match not found" ? 404 : 500;
