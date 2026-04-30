@@ -193,11 +193,11 @@ export const updateTournamentMatch = async (req, res) => {
     // Validate matchType if provided
     if (
       updateData.matchType &&
-      !["Single", "Pair", "Team"].includes(updateData.matchType)
+      !["Single", "Pairs", "Team"].includes(updateData.matchType)
     ) {
       return res.status(400).json({
         success: false,
-        message: "Invalid match type. Must be 'Single', 'Pair', or 'Team'"
+        message: "Invalid match type. Must be 'Single', 'Pairs', or 'Team'"
       });
     }
     
