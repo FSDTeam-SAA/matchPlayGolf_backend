@@ -177,9 +177,11 @@ export const updateTournamentMatch = async (req, res) => {
     const updateData = req.body;
     const userId = req.user?.id || req.user?._id || null;
     const role = req.user?.role || "token-access";
+
+    // ── Validate status ──────────────────────────────────────────────────────
     if (
       updateData.status &&
-      !['pending', 'scheduled', 'in-progress', 'completed', 'rescheduled'].includes(
+      !["pending", "scheduled", "in-progress", "completed", "rescheduled"].includes(
         updateData.status
       )
     ) {
@@ -190,7 +192,7 @@ export const updateTournamentMatch = async (req, res) => {
       });
     }
 
-    // Validate matchType if provided
+    // ── Validate matchType ───────────────────────────────────────────────────
     if (
       updateData.matchType &&
       !["Single", "Pairs", "Team"].includes(updateData.matchType)
@@ -200,23 +202,114 @@ export const updateTournamentMatch = async (req, res) => {
         message: "Invalid match type. Must be 'Single', 'Pairs', or 'Team'"
       });
     }
-    
+
+    // ── Detect player / pair swap conflicts ──────────────────────────────────
+    // If the caller is reassigning player1Id, player2Id, pair1Id, or pair2Id,
+    // we check whether the incoming ID is already assigned to a DIFFERENT match
+    // in the same round. When a conflict exists we pass the swap payload so the
+    // service layer can resolve it atomically (no match is left empty-handed).
+    let swapPayload = null;
+
+    const hasPlayerChange =
+      updateData.player1Id || updateData.player2Id ||
+      updateData.pair1Id   || updateData.pair2Id;
+
+    if (hasPlayerChange) {
+      // Fetch the current match so we know its roundId / tournamentId
+      const currentMatch = await Match.findById(req.params.matchId).lean();
+
+      if (currentMatch) {
+        // Collect every incoming participant ID that differs from what is
+        // already stored — these are the ones that might cause a conflict
+        const incomingChanges = [];
+
+        const fields = [
+          { field: "player1Id", slot: "player1Id" },
+          { field: "player2Id", slot: "player2Id" },
+          { field: "pair1Id",   slot: "pair1Id"   },
+          { field: "pair2Id",   slot: "pair2Id"   }
+        ];
+
+        for (const { field, slot } of fields) {
+          if (
+            updateData[field] &&
+            updateData[field].toString() !== currentMatch[slot]?.toString()
+          ) {
+            incomingChanges.push({ field, newId: updateData[field] });
+          }
+        }
+
+        if (incomingChanges.length > 0) {
+          // Build a list of all participant IDs we need to check
+          const incomingIds = incomingChanges.map((c) => c.newId);
+
+          // Find any sibling match (same round, same tournament) that already
+          // holds one of the incoming IDs in any participant slot
+          const conflictingMatches = await Match.find({
+            _id:          { $ne: currentMatch._id },
+            tournamentId: currentMatch.tournamentId,
+            roundId:      currentMatch.roundId,
+            $or: [
+              { player1Id: { $in: incomingIds } },
+              { player2Id: { $in: incomingIds } },
+              { pair1Id:   { $in: incomingIds } },
+              { pair2Id:   { $in: incomingIds } }
+            ]
+          }).lean();
+
+          if (conflictingMatches.length > 0) {
+            // Build swap instructions:
+            // For each conflict: the participant that is being "stolen" from
+            // the other match gets replaced by the participant we are evicting
+            // from the current match (its old occupant).
+            const swapInstructions = [];
+
+            for (const { field, newId } of incomingChanges) {
+              for (const conflict of conflictingMatches) {
+                // Which slot in the conflicting match holds our incoming ID?
+                const conflictSlot = ["player1Id", "player2Id", "pair1Id", "pair2Id"].find(
+                  (s) => conflict[s]?.toString() === newId.toString()
+                );
+
+                if (conflictSlot) {
+                  // The displaced ID = what currently sits in the same slot
+                  // of the match being edited (the participant being replaced)
+                  const displacedId = currentMatch[field];
+
+                  swapInstructions.push({
+                    conflictMatchId: conflict._id,   // the other match
+                    conflictSlot,                    // slot in that match to update
+                    displacedId                      // value to write into that slot
+                  });
+                }
+              }
+            }
+
+            if (swapInstructions.length > 0) {
+              swapPayload = swapInstructions;
+            }
+          }
+        }
+      }
+    }
+
+    // ── Delegate to service ──────────────────────────────────────────────────
     const match = await matchService.updateTournamentMatch(
       req.params.matchId,
       updateData,
       userId,
       role,
-      req.files || null,      
+      req.files || null,
+      swapPayload          // NEW — null when no conflict detected
     );
 
-    // 🔥 EMIT SOCKET NOTIFICATION - ONLY TO MATCH PARTICIPANTS
+    // ── Emit socket notification ─────────────────────────────────────────────
     const io = req.app.get("io");
     if (io) {
       emitMatchNotification(io, "MATCH_UPDATED", match);
     }
 
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       data: match,
       message: "Match updated successfully"
@@ -228,13 +321,12 @@ export const updateTournamentMatch = async (req, res) => {
       ? 403
       : 500;
 
-    res.status(statusCode).json({
+    return res.status(statusCode).json({
       success: false,
       message: error.message
     });
   }
 };
-
 /**
  * @desc    Update match scores
  * @route   PATCH /api/matches/:matchId/scores
@@ -364,7 +456,8 @@ export const getTournamentMatchById = async (req, res) => {
     res.status(200).json({
       success: true,
       data: match.match,
-      rounds: match.rounds
+      rounds: match.rounds,
+      players: match.players        // NEW — all registered players of the tournament
     });
   } catch (error) {
     const statusCode = error.message === "Match not found" ? 404 : 500;
@@ -374,7 +467,6 @@ export const getTournamentMatchById = async (req, res) => {
     });
   }
 };
-
 /**
  * @desc    Get matches by round
  * @route   GET /api/matches/round/:roundId
