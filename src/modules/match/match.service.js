@@ -184,41 +184,125 @@ class MatchService {
   /**
    * Get match by ID
    */
-  async getTournamentMatchById(id) {
-    try {
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        throw new Error("Invalid match ID");
-      }
 
-      console.log(`🔍 Fetching match by ID: ${id}`);
-
-      const match = await Match.findById(id)
-        .populate("tournamentId", "tournamentName sportName format")
-        .populate("roundId", "roundName roundNumber date")
-        .populate("player1Id", "fullName email")
-        .populate("player2Id", "fullName email")
-        .populate("pair1Id", "teamName")
-        .populate("pair2Id", "teamName")
-
-       
-       console.log(match.tournamentId._id.toString());
-       const rounds = await Round.find({ tournamentId: match.tournamentId._id.toString() }).select("_id roundName roundNumber date");
-  
-
-      if (!match) {
-        throw new Error("Match not found");
-      }
-
-      // Check if tournament exists
-      if (!match.tournamentId) {
-        console.warn(`Match ${id} has no valid tournament reference`);
-      }
-
-      return {match, rounds};
-    } catch (error) {
-      throw new Error(`Failed to fetch match: ${error.message}`);
+async getTournamentMatchById(id) {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new Error("Invalid match ID");
     }
+
+    console.log(`🔍 Fetching match by ID: ${id}`);
+
+    const match = await Match.findById(id)
+      .populate("tournamentId", "tournamentName sportName format")
+      .populate("roundId", "roundName roundNumber date")
+      .populate("player1Id", "fullName email")
+      .populate("player2Id", "fullName email")
+      .populate("pair1Id", "teamName")
+      .populate("pair2Id", "teamName");
+
+    if (!match) {
+      throw new Error("Match not found");
+    }
+
+    if (!match.tournamentId) {
+      throw new Error("Tournament not found for this match");
+    }
+
+    console.log(match.tournamentId._id.toString());
+
+    // ── Fetch all rounds for this tournament ─────────────────────────────────
+    const rounds = await Round.find({
+      tournamentId: match.tournamentId._id.toString()
+    }).select("_id roundName roundNumber date");
+
+    // ── Safely resolve the roundId ────────────────────────────────────────────
+    // roundId may be: a populated object { _id, ... }, a raw ObjectId, or null.
+    // We normalise it to a plain value so the sibling-match query never crashes.
+    const roundId = match.roundId?._id   // populated object  → use ._id
+                 ?? match.roundId         // raw ObjectId / string → use as-is
+                 ?? null;                 // truly absent → null
+
+    // ── Fetch all matches in the same round ──────────────────────────────────
+    // If the match has no roundId we fall back to matching by the `round`
+    // number field so we still return useful players data.
+    const roundQuery = {
+      tournamentId: match.tournamentId._id,
+      ...(roundId
+        ? { roundId }                          // preferred — filter by roundId
+        : { round: match.round ?? 1 })         // fallback  — filter by round number
+    };
+
+    const roundMatches = await Match.find(roundQuery)
+      .select("player1Id player2Id pair1Id pair2Id")
+      .populate("player1Id", "fullName")
+      .populate("player2Id", "fullName")
+      .populate({
+        path: "pair1Id",
+        populate: [
+          { path: "player1", select: "fullName" },
+          { path: "player2", select: "fullName" }
+        ]
+      })
+      .populate({
+        path: "pair2Id",
+        populate: [
+          { path: "player1", select: "fullName" },
+          { path: "player2", select: "fullName" }
+        ]
+      });
+
+    // ── Build players list based on matchType ────────────────────────────────
+    // Single → [{ _id, name }]
+    // Pairs  → [{ _id: pairId, player1, player2, team }]
+    // Map ensures no duplicates in both cases
+    const playerMap = new Map();
+
+    if (match.matchType === "Single") {
+      roundMatches.forEach((m) => {
+        if (m.player1Id?._id) {
+          playerMap.set(m.player1Id._id.toString(), {
+            _id:  m.player1Id._id,
+            name: m.player1Id.fullName
+          });
+        }
+        if (m.player2Id?._id) {
+          playerMap.set(m.player2Id._id.toString(), {
+            _id:  m.player2Id._id,
+            name: m.player2Id.fullName
+          });
+        }
+      });
+
+    } else if (match.matchType === "Pairs") {
+      roundMatches.forEach((m) => {
+        if (m.pair1Id?._id) {
+          playerMap.set(m.pair1Id._id.toString(), {
+            _id:     m.pair1Id._id,
+            player1: m.pair1Id.player1?.fullName || "N/A",
+            player2: m.pair1Id.player2?.fullName || "N/A",
+            team:    m.pair1Id.teamName           || "N/A"
+          });
+        }
+        if (m.pair2Id?._id) {
+          playerMap.set(m.pair2Id._id.toString(), {
+            _id:     m.pair2Id._id,
+            player1: m.pair2Id.player1?.fullName || "N/A",
+            player2: m.pair2Id.player2?.fullName || "N/A",
+            team:    m.pair2Id.teamName           || "N/A"
+          });
+        }
+      });
+    }
+
+    const players = Array.from(playerMap.values());
+
+    return { match, rounds, players };
+
+  } catch (error) {
+    throw new Error(`Failed to fetch match: ${error.message}`);
   }
+}
   /**
    * Get matches by round
    */
@@ -259,14 +343,14 @@ class MatchService {
     }
   }
 
-async updateTournamentMatch(id, updateData, userId, role, files) {
+async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = null) {
   try {
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new Error("Invalid match ID");
     }
 
-    // Populate match with tournament, players, and pairs
+    // ── Populate match with tournament, players, and pairs ───────────────────
     const match = await Match.findById(id)
       .populate("tournamentId")
       .populate("roundId", "roundName roundNumber date")
@@ -284,61 +368,102 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
         populate: [
           { path: "player1", select: "fullName email" },
           { path: "player2", select: "fullName email" }
-        ],
+        ]
       })
       .populate("winner", "fullName email");
 
-      // console.log("🔍 Fetched match for update:", match);
     if (!match) throw new Error("Match not found");
-    if(match.tournamentId == null){
+
+    if (match.tournamentId == null) {
       throw new Error("Tournament not found");
     }
-    if(match.tournamentId.status != "in progress"){
-      throw new Error("The tournament has not started yet. You can update the match only after the tournament begins.");
+
+    if (match.tournamentId.status !== "in progress") {
+      throw new Error(
+        "The tournament has not started yet. You can update the match only after the tournament begins."
+      );
     }
 
-     const isAdmin = role === "Admin";
-     const isOwner =
+    const isAdmin       = role === "Admin";
+    const isOwner       =
       role !== "token-access" &&
       match.tournamentId.createdBy.toString() === userId.toString();
-
     const isTokenAccess = role === "token-access";
 
     if (!isAdmin && !isOwner && !isTokenAccess) {
       throw new Error("Not authorized to update this match");
     }
 
-    // Validate status
+    // ── Validate status ──────────────────────────────────────────────────────
     if (
       updateData.status &&
-      !["pending", "scheduled", "in-progress", "completed", "rescheduled"].includes(updateData.status)
+      !["pending", "scheduled", "in-progress", "completed", "rescheduled"].includes(
+        updateData.status
+      )
     ) throw new Error("Invalid status");
 
-    // Validate matchType
-    if (updateData.matchType && !["Single", "Pairs", "Team"].includes(updateData.matchType)) {
+    // ── Validate matchType ───────────────────────────────────────────────────
+    if (
+      updateData.matchType &&
+      !["Single", "Pairs", "Team"].includes(updateData.matchType)
+    ) {
       throw new Error("Invalid match type");
     }
 
+    // ── Comments ─────────────────────────────────────────────────────────────
     if (updateData.comments !== undefined) match.comments = updateData.comments;
 
+    // ── Photo upload ─────────────────────────────────────────────────────────
     if (files && Array.isArray(files) && files.length > 0) {
       const uploadedPhotos = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         if (file?.buffer) {
-          const uploadResult = await uploadToCloudinary(file.buffer, file.originalname || `match_photo_${i}`, "match_photos");
+          const uploadResult = await uploadToCloudinary(
+            file.buffer,
+            file.originalname || `match_photo_${i}`,
+            "match_photos"
+          );
           if (uploadResult?.secure_url) uploadedPhotos.push(uploadResult.secure_url);
         }
       }
       if (uploadedPhotos.length > 0) match.matchPhoto = uploadedPhotos;
     }
 
+    // ── Apply all update fields ──────────────────────────────────────────────
     Object.assign(match, updateData);
     match.updatedBy = userId;
-    const savedMatch = await match.save(); 
+
+    // ── AUTO-SWAP: resolve player / pair conflicts before saving ─────────────
+    // When the controller detected that an incoming participant is already
+    // assigned to another match, it passes swap instructions here.
+    // We apply those updates atomically alongside the primary save so that
+    // no round ends up with a participant sitting in two matches at once.
+    if (swapPayload && swapPayload.length > 0) {
+      const swapOps = swapPayload.map(({ conflictMatchId, conflictSlot, displacedId }) =>
+        Match.findByIdAndUpdate(
+          conflictMatchId,
+          {
+            $set: {
+              [conflictSlot]: displacedId ?? null,  // null-safe: if evicted slot had no prior occupant
+              updatedBy: userId
+            }
+          },
+          { new: true }
+        )
+      );
+
+      // Run all swap updates in parallel — if any fail the whole operation
+      // should surface the error so the primary match is not saved in isolation
+      await Promise.all(swapOps);
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
+    const savedMatch = await match.save();
 
     const matchDetailsWinner = await User.findById(savedMatch.winner);
-    
+
+    // ── Collect participant emails for notification ───────────────────────────
     const playerEmails = [];
 
     if (savedMatch.player1Id?.email) playerEmails.push(savedMatch.player1Id.email);
@@ -349,34 +474,33 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
     if (savedMatch.pair2Id?.player2?.email) playerEmails.push(savedMatch.pair2Id.player2.email);
 
     const uniqueEmails = [...new Set(playerEmails)];
+
     const matchDetails = {
-        eventName: savedMatch.tournamentId.tournamentName,
-        matchType: savedMatch.matchType,
-        matchRound: savedMatch.round || "N/A",
-        location: savedMatch.location,
-        date: savedMatch.date,
-        winner: matchDetailsWinner?.fullName || "N/A",
-      };
+      eventName:  savedMatch.tournamentId.tournamentName,
+      matchType:  savedMatch.matchType,
+      matchRound: savedMatch.round || "N/A",
+      location:   savedMatch.location,
+      date:       savedMatch.date,
+      winner:     matchDetailsWinner?.fullName || "N/A"
+    };
 
-      if (savedMatch.matchType === "Single") {
-        matchDetails.player1 = savedMatch.player1Id?.fullName || "N/A";
-        matchDetails.player2 = savedMatch.player2Id?.fullName || "N/A";
-        matchDetails.player1Score = savedMatch.player1Score || 0;
-        matchDetails.player2Score = savedMatch.player2Score || 0;
-      }
+    if (savedMatch.matchType === "Single") {
+      matchDetails.player1      = savedMatch.player1Id?.fullName || "N/A";
+      matchDetails.player2      = savedMatch.player2Id?.fullName || "N/A";
+      matchDetails.player1Score = savedMatch.player1Score || 0;
+      matchDetails.player2Score = savedMatch.player2Score || 0;
+    }
 
-      if (savedMatch.matchType === "Pairs") {
-        matchDetails.player1 = savedMatch.pair1Id
-          ? `${savedMatch.pair1Id.player1?.fullName || "N/A"} & ${savedMatch.pair1Id.player2?.fullName || "N/A"}`
-          : "N/A";
-
-        matchDetails.player2 = savedMatch.pair2Id
-          ? `${savedMatch.pair2Id.player1?.fullName || "N/A"} & ${savedMatch.pair2Id.player2?.fullName || "N/A"}`
-          : "N/A";
-
-        matchDetails.player1Score = savedMatch.pair1Score || 0;
-        matchDetails.player2Score = savedMatch.pair2Score || 0;
-      }
+    if (savedMatch.matchType === "Pairs") {
+      matchDetails.player1 = savedMatch.pair1Id
+        ? `${savedMatch.pair1Id.player1?.fullName || "N/A"} & ${savedMatch.pair1Id.player2?.fullName || "N/A"}`
+        : "N/A";
+      matchDetails.player2 = savedMatch.pair2Id
+        ? `${savedMatch.pair2Id.player1?.fullName || "N/A"} & ${savedMatch.pair2Id.player2?.fullName || "N/A"}`
+        : "N/A";
+      matchDetails.player1Score = savedMatch.pair1Score || 0;
+      matchDetails.player2Score = savedMatch.pair2Score || 0;
+    }
 
     // if (uniqueEmails.length > 0) {
     //   await sendEmail({
@@ -384,19 +508,19 @@ async updateTournamentMatch(id, updateData, userId, role, files) {
     //     subject: `Match Result Updated: ${savedMatch.tournamentId.tournamentName}`,
     //     html: matchResultUpdateTemplate({ matchDetails })
     //   });
-    //   // console.log(`📧 Emails sent to: ${uniqueEmails.join(", ")}`);
     // }
 
     return await savedMatch.populate([
       { path: "tournamentId", select: "tournamentName sportName format" },
-      { path: "roundId", select: "roundName roundNumber date" },
-      { path: "player1Id", select: "fullName email" },
-      { path: "player2Id", select: "fullName email" },
-      { path: "pair1Id", select: "pairName player1 player2" },
-      { path: "pair2Id", select: "pairName player1 player2" },
-      { path: "createdBy", select: "fullName email" },
-      { path: "updatedBy", select: "fullName email" }
+      { path: "roundId",      select: "roundName roundNumber date" },
+      { path: "player1Id",    select: "fullName email" },
+      { path: "player2Id",    select: "fullName email" },
+      { path: "pair1Id",      select: "pairName player1 player2" },
+      { path: "pair2Id",      select: "pairName player1 player2" },
+      { path: "createdBy",    select: "fullName email" },
+      { path: "updatedBy",    select: "fullName email" }
     ]);
+
   } catch (error) {
     console.error("❌ Service error:", error);
     throw new Error(`Failed to update match: ${error.message}`);
