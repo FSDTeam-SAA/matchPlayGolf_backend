@@ -172,6 +172,456 @@ export const createTournamentMatch = async (req, res) => {
   }
 };
 
+// export const updateTournamentMatch = async (req, res) => {
+//   try {
+//     const updateData = req.body;
+//     const userId = req.user?.id || req.user?._id || null;
+//     const role = req.user?.role || "token-access";
+
+//     // ── Validate status ──────────────────────────────────────────────────────
+//     if (
+//       updateData.status &&
+//       !["pending", "scheduled", "in-progress", "completed", "rescheduled"].includes(
+//         updateData.status
+//       )
+//     ) {
+//       return res.status(400).json({
+//         success: false,
+//         message:
+//           "Invalid status. Must be 'scheduled', 'in-progress', 'completed', 'rescheduled', or 'pending'"
+//       });
+//     }
+
+//     // ── Validate matchType ───────────────────────────────────────────────────
+//     if (
+//       updateData.matchType &&
+//       !["Single", "Pairs", "Team"].includes(updateData.matchType)
+//     ) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid match type. Must be 'Single', 'Pairs', or 'Team'"
+//       });
+//     }
+
+//     // ── Detect player / pair swap conflicts ──────────────────────────────────
+//     // If the caller is reassigning player1Id, player2Id, pair1Id, or pair2Id,
+//     // we check whether the incoming ID is already assigned to a DIFFERENT match
+//     // in the same round. When a conflict exists we pass the swap payload so the
+//     // service layer can resolve it atomically (no match is left empty-handed).
+//     let swapPayload = null;
+
+//     const hasPlayerChange =
+//       updateData.player1Id || updateData.player2Id ||
+//       updateData.pair1Id   || updateData.pair2Id;
+
+//     if (hasPlayerChange) {
+//       // Fetch the current match so we know its roundId / tournamentId
+//       const currentMatch = await Match.findById(req.params.matchId).lean();
+
+//       if (currentMatch) {
+//         // Collect every incoming participant ID that differs from what is
+//         // already stored — these are the ones that might cause a conflict
+//         const incomingChanges = [];
+
+//         const fields = [
+//           { field: "player1Id", slot: "player1Id" },
+//           { field: "player2Id", slot: "player2Id" },
+//           { field: "pair1Id",   slot: "pair1Id"   },
+//           { field: "pair2Id",   slot: "pair2Id"   }
+//         ];
+
+//         for (const { field, slot } of fields) {
+//           if (
+//             updateData[field] &&
+//             updateData[field].toString() !== currentMatch[slot]?.toString()
+//           ) {
+//             incomingChanges.push({ field, newId: updateData[field] });
+//           }
+//         }
+
+//         if (incomingChanges.length > 0) {
+//           // Build a list of all participant IDs we need to check
+//           const incomingIds = incomingChanges.map((c) => c.newId);
+
+//           // Find any sibling match (same round, same tournament) that already
+//           // holds one of the incoming IDs in any participant slot
+//           const conflictingMatches = await Match.find({
+//             _id:          { $ne: currentMatch._id },
+//             tournamentId: currentMatch.tournamentId,
+//             roundId:      currentMatch.roundId,
+//             $or: [
+//               { player1Id: { $in: incomingIds } },
+//               { player2Id: { $in: incomingIds } },
+//               { pair1Id:   { $in: incomingIds } },
+//               { pair2Id:   { $in: incomingIds } }
+//             ]
+//           }).lean();
+
+//           if (conflictingMatches.length > 0) {
+//             // Build swap instructions:
+//             // For each conflict: the participant that is being "stolen" from
+//             // the other match gets replaced by the participant we are evicting
+//             // from the current match (its old occupant).
+//             const swapInstructions = [];
+
+//             for (const { field, newId } of incomingChanges) {
+//               for (const conflict of conflictingMatches) {
+//                 // Which slot in the conflicting match holds our incoming ID?
+//                 const conflictSlot = ["player1Id", "player2Id", "pair1Id", "pair2Id"].find(
+//                   (s) => conflict[s]?.toString() === newId.toString()
+//                 );
+
+//                 if (conflictSlot) {
+//                   // The displaced ID = what currently sits in the same slot
+//                   // of the match being edited (the participant being replaced)
+//                   const displacedId = currentMatch[field];
+
+//                   swapInstructions.push({
+//                     conflictMatchId: conflict._id,   // the other match
+//                     conflictSlot,                    // slot in that match to update
+//                     displacedId                      // value to write into that slot
+//                   });
+//                 }
+//               }
+//             }
+
+//             if (swapInstructions.length > 0) {
+//               swapPayload = swapInstructions;
+//             }
+//           }
+//         }
+//       }
+//     }
+
+//     // ── Delegate to service ──────────────────────────────────────────────────
+//     const match = await matchService.updateTournamentMatch(
+//       req.params.matchId,
+//       updateData,
+//       userId,
+//       role,
+//       req.files || null,
+//       swapPayload          // NEW — null when no conflict detected
+//     );
+
+//     // ── Emit socket notification ─────────────────────────────────────────────
+//     const io = req.app.get("io");
+//     if (io) {
+//       emitMatchNotification(io, "MATCH_UPDATED", match);
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       data: match,
+//       message: "Match updated successfully"
+//     });
+//   } catch (error) {
+//     const statusCode = error.message.includes("not found")
+//       ? 404
+//       : error.message.includes("Not authorized")
+//       ? 403
+//       : 500;
+
+//     return res.status(statusCode).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };
+// export const updateTournamentMatch = async (req, res) => {
+//   try {
+//     const updateData = req.body;
+//     const userId = req.user?.id || req.user?._id || null;
+//     const role = req.user?.role || "token-access";
+
+//     // ── Validate status ──────────────────────────────────────────────────────
+//     if (
+//       updateData.status &&
+//       !["pending", "scheduled", "in-progress", "completed", "rescheduled"].includes(
+//         updateData.status
+//       )
+//     ) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid status. Must be 'scheduled', 'in-progress', 'completed', 'rescheduled', or 'pending'"
+//       });
+//     }
+
+//     // ── Validate matchType ───────────────────────────────────────────────────
+//     if (
+//       updateData.matchType &&
+//       !["Single", "Pairs", "Team"].includes(updateData.matchType)
+//     ) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid match type. Must be 'Single', 'Pairs', or 'Team'"
+//       });
+//     }
+
+//     // ── Detect player / pair swap conflicts ──────────────────────────────────
+//     // Covers all 4 scenarios:
+//     // [1] Single player change         → { player1Id: "X" }
+//     // [2] Both players from same match → { player1Id: "X", player2Id: "Y" } (X,Y in same sibling)
+//     // [3] Both players from diff match → { player1Id: "X", player2Id: "Y" } (X in Match2, Y in Match3)
+//     // [4] No conflict                  → player is free (not assigned anywhere)
+//     let swapPayload = null;
+
+//     const hasPlayerChange =
+//       updateData.player1Id || updateData.player2Id ||
+//       updateData.pair1Id   || updateData.pair2Id;
+
+//     if (hasPlayerChange) {
+//       // Fetch current match as plain object (lean = fast, no mongoose overhead)
+//       const currentMatch = await Match.findById(req.params.matchId).lean();
+
+//       if (currentMatch) {
+//         // ── Step 1: Collect only the fields that actually changed ────────────
+//         const participantFields = ["player1Id", "player2Id", "pair1Id", "pair2Id"];
+
+//         const incomingChanges = participantFields
+//           .filter(
+//             (field) =>
+//               updateData[field] &&
+//               updateData[field].toString() !== currentMatch[field]?.toString()
+//           )
+//           .map((field) => ({ field, newId: updateData[field] }));
+
+//         if (incomingChanges.length > 0) {
+//           const incomingIds = incomingChanges.map((c) => c.newId);
+
+//           // ── Step 2: Find all sibling matches that hold any incoming ID ─────
+//           // A sibling match = same tournament, same round, not the match being edited
+//           const conflictingMatches = await Match.find({
+//             _id:          { $ne: currentMatch._id },
+//             tournamentId: currentMatch.tournamentId,
+//             roundId:      currentMatch.roundId,
+//             $or: participantFields.map((field) => ({
+//               [field]: { $in: incomingIds }
+//             }))
+//           }).lean();
+
+//           // ── Step 3: Build swap map — grouped by conflicting match ID ────────
+//           // Grouping is CRITICAL for Scenario [2]:
+//           // If both incoming players live in the SAME sibling match, we must
+//           // merge both slot updates into ONE findByIdAndUpdate call.
+//           // Two separate calls via Promise.all would race and one would be lost.
+//           //
+//           // For Scenario [3] (players from different matches), each conflict
+//           // goes into its own map entry — no race since different match IDs.
+//           //
+//           // For Scenario [4] (no conflict found), nothing is added to the map.
+//           const swapMap = new Map();
+//           // key   → conflicting match _id string
+//           // value → { matchId, fields: { slotName: displacedId } }
+
+//           for (const { field, newId } of incomingChanges) {
+//             for (const conflict of conflictingMatches) {
+//               // Find which slot in the conflicting match holds our incoming ID
+//               const conflictSlot = participantFields.find(
+//                 (s) => conflict[s]?.toString() === newId.toString()
+//               );
+
+//               if (conflictSlot) {
+//                 // The player being evicted from the current match's `field` slot
+//                 // will take the place of the incoming player in the conflict match
+//                 const displacedId = currentMatch[field] ?? null;
+//                 const matchKey    = conflict._id.toString();
+
+//                 if (!swapMap.has(matchKey)) {
+//                   swapMap.set(matchKey, { matchId: conflict._id, fields: {} });
+//                 }
+
+//                 // Merge into existing entry — handles same-match conflicts safely
+//                 swapMap.get(matchKey).fields[conflictSlot] = displacedId;
+//               }
+//             }
+//           }
+
+//           if (swapMap.size > 0) {
+//             // Convert map to array for the service
+//             swapPayload = Array.from(swapMap.values());
+//             // Shape: [{ matchId, fields: { player1Id: "...", player2Id: "..." } }]
+//           }
+//         }
+//       }
+//     }
+
+//     // ── Delegate to service ──────────────────────────────────────────────────
+//     const match = await matchService.updateTournamentMatch(
+//       req.params.matchId,
+//       updateData,
+//       userId,
+//       role,
+//       req.files || null,
+//       swapPayload
+//     );
+
+//     // ── Emit socket notification ─────────────────────────────────────────────
+//     const io = req.app.get("io");
+//     if (io) {
+//       emitMatchNotification(io, "MATCH_UPDATED", match);
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       data: match,
+//       message: "Match updated successfully"
+//     });
+
+//   } catch (error) {
+//     const statusCode = error.message.includes("not found")
+//       ? 404
+//       : error.message.includes("Not authorized")
+//       ? 403
+//       : 500;
+
+//     return res.status(statusCode).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };
+// export const updateTournamentMatch = async (req, res) => {
+//   try {
+//     const updateData = req.body;
+//     const userId = req.user?.id || req.user?._id || null;
+//     const role = req.user?.role || "token-access";
+
+//     // ── Validate status ──────────────────────────────────────────────────────
+//     if (
+//       updateData.status &&
+//       !["pending", "scheduled", "in-progress", "completed", "rescheduled"].includes(
+//         updateData.status
+//       )
+//     ) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid status. Must be 'scheduled', 'in-progress', 'completed', 'rescheduled', or 'pending'"
+//       });
+//     }
+
+//     // ── Validate matchType ───────────────────────────────────────────────────
+//     if (
+//       updateData.matchType &&
+//       !["Single", "Pairs", "Team"].includes(updateData.matchType)
+//     ) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid match type. Must be 'Single', 'Pairs', or 'Team'"
+//       });
+//     }
+
+//     // ── Detect player / pair swap conflicts ──────────────────────────────────
+//     let swapPayload = null;
+
+//     const hasPlayerChange =
+//       updateData.player1Id || updateData.player2Id ||
+//       updateData.pair1Id   || updateData.pair2Id;
+
+//     if (hasPlayerChange) {
+//       const currentMatch = await Match.findById(req.params.matchId).lean();
+
+//       if (currentMatch) {
+//         // ── Step 1: Collect only the fields that actually changed ────────────
+//         const participantFields = ["player1Id", "player2Id", "pair1Id", "pair2Id"];
+
+//         const incomingChanges = participantFields
+//           .filter(
+//             (field) =>
+//               updateData[field] &&
+//               updateData[field].toString() !== currentMatch[field]?.toString()
+//           )
+//           .map((field) => ({ field, newId: updateData[field] }));
+
+//         if (incomingChanges.length > 0) {
+//           const incomingIds = incomingChanges.map((c) => c.newId);
+
+//           // ── Step 2: Build round filter — handle null roundId safely ─────────
+//           // Root cause of the duplicate bug:
+//           // If roundId is null on matches, { roundId: null } either matches ALL
+//           // null-roundId matches or misses them depending on index — unreliable.
+//           // Fix: when roundId exists use it (precise), otherwise fall back to
+//           // the `round` number field so sibling matches are always found.
+//           const roundFilter = currentMatch.roundId
+//             ? { roundId: currentMatch.roundId }   // preferred — roundId present
+//             : { round: currentMatch.round ?? 1 }; // fallback  — use round number
+
+//           // ── Step 3: Find all sibling matches holding any incoming ID ────────
+//           const conflictingMatches = await Match.find({
+//             _id:          { $ne: currentMatch._id },
+//             tournamentId: currentMatch.tournamentId,
+//             ...roundFilter,                         // safe round filter applied here
+//             $or: participantFields.map((field) => ({
+//               [field]: { $in: incomingIds }
+//             }))
+//           }).lean();
+
+//           // ── Step 4: Build swap map grouped by conflicting match ID ──────────
+//           // Grouping prevents race condition when both incoming players/pairs
+//           // live in the SAME sibling match — merges into ONE atomic $set call.
+//           const swapMap = new Map();
+
+//           for (const { field, newId } of incomingChanges) {
+//             for (const conflict of conflictingMatches) {
+//               const conflictSlot = participantFields.find(
+//                 (s) => conflict[s]?.toString() === newId.toString()
+//               );
+
+//               if (conflictSlot) {
+//                 const displacedId = currentMatch[field] ?? null;
+//                 const matchKey    = conflict._id.toString();
+
+//                 if (!swapMap.has(matchKey)) {
+//                   swapMap.set(matchKey, { matchId: conflict._id, fields: {} });
+//                 }
+
+//                 swapMap.get(matchKey).fields[conflictSlot] = displacedId;
+//               }
+//             }
+//           }
+
+//           if (swapMap.size > 0) {
+//             swapPayload = Array.from(swapMap.values());
+//           }
+//         }
+//       }
+//     }
+
+//     // ── Delegate to service ──────────────────────────────────────────────────
+//     const match = await matchService.updateTournamentMatch(
+//       req.params.matchId,
+//       updateData,
+//       userId,
+//       role,
+//       req.files || null,
+//       swapPayload
+//     );
+
+//     // ── Emit socket notification ─────────────────────────────────────────────
+//     const io = req.app.get("io");
+//     if (io) {
+//       emitMatchNotification(io, "MATCH_UPDATED", match);
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       data: match,
+//       message: "Match updated successfully"
+//     });
+
+//   } catch (error) {
+//     const statusCode = error.message.includes("not found")
+//       ? 404
+//       : error.message.includes("Not authorized")
+//       ? 403
+//       : 500;
+
+//     return res.status(statusCode).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };
+
 export const updateTournamentMatch = async (req, res) => {
   try {
     const updateData = req.body;
@@ -187,8 +637,7 @@ export const updateTournamentMatch = async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        message:
-          "Invalid status. Must be 'scheduled', 'in-progress', 'completed', 'rescheduled', or 'pending'"
+        message: "Invalid status. Must be 'scheduled', 'in-progress', 'completed', 'rescheduled', or 'pending'"
       });
     }
 
@@ -204,10 +653,6 @@ export const updateTournamentMatch = async (req, res) => {
     }
 
     // ── Detect player / pair swap conflicts ──────────────────────────────────
-    // If the caller is reassigning player1Id, player2Id, pair1Id, or pair2Id,
-    // we check whether the incoming ID is already assigned to a DIFFERENT match
-    // in the same round. When a conflict exists we pass the swap payload so the
-    // service layer can resolve it atomically (no match is left empty-handed).
     let swapPayload = null;
 
     const hasPlayerChange =
@@ -215,79 +660,127 @@ export const updateTournamentMatch = async (req, res) => {
       updateData.pair1Id   || updateData.pair2Id;
 
     if (hasPlayerChange) {
-      // Fetch the current match so we know its roundId / tournamentId
+      // Fetch current match as lean plain object (fast, no mongoose overhead)
       const currentMatch = await Match.findById(req.params.matchId).lean();
 
       if (currentMatch) {
-        // Collect every incoming participant ID that differs from what is
-        // already stored — these are the ones that might cause a conflict
-        const incomingChanges = [];
+        // Resolve the final matchType — use incoming value if being changed,
+        // otherwise use what is already stored in the DB
+        const resolvedMatchType = updateData.matchType || currentMatch.matchType;
 
-        const fields = [
-          { field: "player1Id", slot: "player1Id" },
-          { field: "player2Id", slot: "player2Id" },
-          { field: "pair1Id",   slot: "pair1Id"   },
-          { field: "pair2Id",   slot: "pair2Id"   }
-        ];
-
-        for (const { field, slot } of fields) {
-          if (
-            updateData[field] &&
-            updateData[field].toString() !== currentMatch[slot]?.toString()
-          ) {
-            incomingChanges.push({ field, newId: updateData[field] });
-          }
+        // ── Guard: block wrong field types per matchType ─────────────────────
+        // Single match must only use player1Id / player2Id (ref: User)
+        // Pairs  match must only use pair1Id   / pair2Id   (ref: TournamentPair)
+        // Sending the wrong type is the root cause of the null-wipe bug —
+        // a User _id accidentally matches a sibling match's playerXId slot
+        // and the displaced value (null) wipes a real player.
+        if (resolvedMatchType === "Single" && (updateData.pair1Id || updateData.pair2Id)) {
+          return res.status(400).json({
+            success: false,
+            message: "Single match only accepts player1Id and player2Id. Do not send pair1Id or pair2Id."
+          });
         }
 
+        if (resolvedMatchType === "Pairs" && (updateData.player1Id || updateData.player2Id)) {
+          return res.status(400).json({
+            success: false,
+            message: "Pairs match only accepts pair1Id and pair2Id. Do not send player1Id or player2Id."
+          });
+        }
+
+        // ── Participant fields scoped strictly to matchType ──────────────────
+        // This is the second layer of protection — even if the guard above is
+        // somehow bypassed, the conflict search only looks at the correct slots.
+        //
+        // Single → player1Id, player2Id (User ObjectIds)
+        // Pairs  → pair1Id, pair2Id     (TournamentPair ObjectIds)
+        //
+        // The two sets NEVER overlap — a TournamentPair _id is never stored in
+        // player1Id/player2Id and a User _id is never stored in pair1Id/pair2Id.
+        // So cross-type false conflicts are structurally impossible.
+        const participantFields = resolvedMatchType === "Pairs"
+          ? ["pair1Id", "pair2Id"]
+          : ["player1Id", "player2Id"];
+
+        // ── Step 1: Collect only the IDs that actually changed ───────────────
+        const incomingChanges = participantFields
+          .filter(
+            (field) =>
+              updateData[field] &&
+              updateData[field].toString() !== currentMatch[field]?.toString()
+          )
+          .map((field) => ({ field, newId: updateData[field] }));
+
         if (incomingChanges.length > 0) {
-          // Build a list of all participant IDs we need to check
           const incomingIds = incomingChanges.map((c) => c.newId);
 
-          // Find any sibling match (same round, same tournament) that already
-          // holds one of the incoming IDs in any participant slot
+          // ── Step 2: Build round filter — safe null roundId handling ─────────
+          // If roundId is null, fall back to round number so sibling matches
+          // are always found regardless of how the draw was created.
+          const roundFilter = currentMatch.roundId
+            ? { roundId: currentMatch.roundId }
+            : { round: currentMatch.round ?? 1 };
+
+          // ── Step 3: Find sibling matches with conflicting IDs ────────────────
+          // Scoped to same tournamentId + same round + same matchType.
+          // matchType scope ensures Single conflicts only search player slots
+          // and Pairs conflicts only search pair slots — never cross-pollinate.
           const conflictingMatches = await Match.find({
-            _id:          { $ne: currentMatch._id },
+            _id:          { $ne: currentMatch._id },  // exclude current match
             tournamentId: currentMatch.tournamentId,
-            roundId:      currentMatch.roundId,
-            $or: [
-              { player1Id: { $in: incomingIds } },
-              { player2Id: { $in: incomingIds } },
-              { pair1Id:   { $in: incomingIds } },
-              { pair2Id:   { $in: incomingIds } }
-            ]
+            matchType:    resolvedMatchType,           // same type only
+            ...roundFilter,                            // same round
+            $or: participantFields.map((field) => ({
+              [field]: { $in: incomingIds }            // holds one of incoming IDs
+            }))
           }).lean();
 
-          if (conflictingMatches.length > 0) {
-            // Build swap instructions:
-            // For each conflict: the participant that is being "stolen" from
-            // the other match gets replaced by the participant we are evicting
-            // from the current match (its old occupant).
-            const swapInstructions = [];
+          // ── Step 4: Build swap map — grouped by conflicting match _id ────────
+          //
+          // WHY a Map and not an array?
+          // Scenario: both incoming IDs (e.g. pair1Id + pair2Id) live in the
+          // SAME sibling match. Without grouping, two separate Promise.all calls
+          // race against each other and one write is lost.
+          // With a Map keyed by match _id, both slot updates are merged into ONE
+          // atomic $set call — no race, no lost write.
+          //
+          // Scenario: incoming IDs live in DIFFERENT sibling matches.
+          // Each gets its own Map entry → two separate safe updates via Promise.all.
+          //
+          // Scenario: incoming ID is free (not in any sibling match).
+          // No conflict found → nothing added to Map → swapPayload stays null.
+          const swapMap = new Map();
+          // key   → conflict match _id string
+          // value → { matchId, fields: { slotName: displacedId, ... } }
 
-            for (const { field, newId } of incomingChanges) {
-              for (const conflict of conflictingMatches) {
-                // Which slot in the conflicting match holds our incoming ID?
-                const conflictSlot = ["player1Id", "player2Id", "pair1Id", "pair2Id"].find(
-                  (s) => conflict[s]?.toString() === newId.toString()
-                );
+          for (const { field, newId } of incomingChanges) {
+            for (const conflict of conflictingMatches) {
+              // Which slot in the conflict match holds our incoming ID?
+              const conflictSlot = participantFields.find(
+                (s) => conflict[s]?.toString() === newId.toString()
+              );
 
-                if (conflictSlot) {
-                  // The displaced ID = what currently sits in the same slot
-                  // of the match being edited (the participant being replaced)
-                  const displacedId = currentMatch[field];
+              if (conflictSlot) {
+                // displacedId = the participant currently sitting in the same
+                // slot of the match being edited — this value goes back to the
+                // conflict match so no slot is ever left empty without reason.
+                const displacedId = currentMatch[field] ?? null;
+                const matchKey    = conflict._id.toString();
 
-                  swapInstructions.push({
-                    conflictMatchId: conflict._id,   // the other match
-                    conflictSlot,                    // slot in that match to update
-                    displacedId                      // value to write into that slot
-                  });
+                if (!swapMap.has(matchKey)) {
+                  swapMap.set(matchKey, { matchId: conflict._id, fields: {} });
                 }
+
+                // Merge — handles same-match multi-slot swap correctly
+                swapMap.get(matchKey).fields[conflictSlot] = displacedId;
               }
             }
+          }
 
-            if (swapInstructions.length > 0) {
-              swapPayload = swapInstructions;
-            }
+          if (swapMap.size > 0) {
+            swapPayload = Array.from(swapMap.values());
+            // Final shape passed to service:
+            // [{ matchId: ObjectId, fields: { pair1Id: "...", pair2Id: "..." } }]
           }
         }
       }
@@ -300,7 +793,7 @@ export const updateTournamentMatch = async (req, res) => {
       userId,
       role,
       req.files || null,
-      swapPayload          // NEW — null when no conflict detected
+      swapPayload
     );
 
     // ── Emit socket notification ─────────────────────────────────────────────
@@ -314,6 +807,7 @@ export const updateTournamentMatch = async (req, res) => {
       data: match,
       message: "Match updated successfully"
     });
+
   } catch (error) {
     const statusCode = error.message.includes("not found")
       ? 404
