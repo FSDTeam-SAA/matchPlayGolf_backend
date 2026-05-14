@@ -674,10 +674,10 @@ export const updateTournamentMatch = async (req, res) => {
         // Sending the wrong type is the root cause of the null-wipe bug —
         // a User _id accidentally matches a sibling match's playerXId slot
         // and the displaced value (null) wipes a real player.
-        if (resolvedMatchType === "Single" && (updateData.pair1Id || updateData.pair2Id)) {
+        if (resolvedMatchType === "Single" && (updateData.pair1Id || updateData.pair2Id) || resolvedMatchType === "Team" && (updateData.pair1Id || updateData.pair2Id)) {
           return res.status(400).json({
             success: false,
-            message: "Single match only accepts player1Id and player2Id. Do not send pair1Id or pair2Id."
+            message: "Single or Team match only accepts player1Id and player2Id. Do not send pair1Id or pair2Id."
           });
         }
 
