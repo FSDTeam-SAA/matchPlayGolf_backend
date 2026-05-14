@@ -915,7 +915,7 @@ async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = n
       winner:     matchDetailsWinner?.fullName || "N/A"
     };
 
-    if (savedMatch.matchType === "Single") {
+    if (savedMatch.matchType === "Single"|| savedMatch.matchType === "Team") {
       matchDetails.player1      = savedMatch.player1Id?.fullName || "N/A";
       matchDetails.player2      = savedMatch.player2Id?.fullName || "N/A";
       matchDetails.player1Score = savedMatch.player1Score || 0;
