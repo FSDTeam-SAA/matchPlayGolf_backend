@@ -17,7 +17,7 @@ import { getPaymentBystripeSessionId } from "../payment/payment.controller.js";
 import {
   initializeKnockout,
   generateNextRound,
-  updateMatchResult,
+  // updateMatchResult,
   toggleTournamentHold,
   rescheduleMatch,
   getKnockoutStage,
@@ -46,7 +46,7 @@ router.post('/:tournamentId/tournament-progress', verifyToken, progressTournamen
 router.post('/:tournamentId/event-started', verifyToken, eventStartInvitationRegisteredUsers)
 router.post('/:tournamentId/next-round', verifyToken, generateNextRound);
 router.post('/:tournamentId/initialize', verifyToken, initializeKnockout);
-router.put('/:tournamentId/match/:matchId', verifyToken, updateMatchResult);
+// router.put('/:tournamentId/match/:matchId', verifyToken, updateMatchResult);
 router.put('/:tournamentId/hold', verifyToken, toggleTournamentHold);
 router.put('/:tournamentId/match/:matchId/reschedule', verifyToken, rescheduleMatch);
 router.get('/:tournamentId/:round', getMatchesByRound)
