@@ -1,45 +1,45 @@
 import express from "express";
 import {
+  conditionalAuth,
   createTournamentMatch,
-  getAllTournamentMatches,
-  getTournamentMatchById,
-  getTournamentMatchesByRound,
-  updateTournamentMatch,
-  updateTournamentMatchScores,
   deleteTournamentMatch,
+  getAllTournamentMatches,
+  getUserActiveTournaments,
   getUserMatchesWithFilters,
   getUserTournamentMatches,
-  getUserActiveTournaments,
-  swapMatchPlayers
+  getTournamentMatchById,
+  getTournamentMatchesByRound,
+  swapMatchPlayers,
+  updateTournamentMatch,
+  updateTournamentMatchScores,
 } from "./match.controller.js";
 import { verifyToken } from "../../middleware/authMiddleware.js";
 import { multerUpload } from "../../config/multer.js";
-import { conditionalAuth}  from "./match.controller.js";
 
 const router = express.Router();
 
-// Public routes
+// Create
+router.post("/", verifyToken, createTournamentMatch);
+
+// List / filters
+router.get("/", getAllTournamentMatches);
 router.get("/userall", verifyToken, getUserMatchesWithFilters);
 router.get("/specific-tournament", verifyToken, getUserTournamentMatches);
 router.get("/active-tournaments", verifyToken, getUserActiveTournaments);
-router.patch(
-  "/swap-players",
-  verifyToken,
-  swapMatchPlayers
-);
-router.get("/", getAllTournamentMatches);
-router.get("/:id", getTournamentMatchById);
 router.get("/round/:roundId", getTournamentMatchesByRound);
 
-
-router.post("/", verifyToken, createTournamentMatch);
+// Actions
+router.patch("/swap-players", verifyToken, swapMatchPlayers);
 router.put(
   "/:matchId",
   conditionalAuth,
-  multerUpload.array("matchPhotos", 10), 
+  multerUpload.array("matchPhotos", 10),
   updateTournamentMatch
 );
 router.put("/:matchId/scores", verifyToken, updateTournamentMatchScores);
 router.delete("/:matchId", verifyToken, deleteTournamentMatch);
+
+// Detail
+router.get("/:id", getTournamentMatchById);
 
 export default router;

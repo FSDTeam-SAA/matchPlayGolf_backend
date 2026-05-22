@@ -143,6 +143,7 @@ async findOrCreateUsers(players) {
         email: player.email,
         phone: player.phone,
         captainName:player.captainName || null,
+        seeder: player.seeder,
         verifyToken
       });
       // console.log("Created new user:", user);
@@ -164,7 +165,7 @@ async findOrCreateUsers(players) {
   return userIds;
 }
 
-async registerSinglePlayers(tournamentId, userIds) {
+async registerSinglePlayers(tournamentId, userIds, players = []) {
   const registrations = [];
   // console.log("Registering single players:", userIds);
   
@@ -200,10 +201,15 @@ async registerSinglePlayers(tournamentId, userIds) {
   }
 
   if (newUserIds.length > 0) {
+    const playersByUserId = new Map(
+      userIds.map((userId, index) => [userId.toString(), players[index]])
+    );
+
     const newRegistrations = newUserIds.map(userId => ({
       tournamentId,
       playerId: userId,
       pairId: null,
+      seeder: playersByUserId.get(userId.toString())?.seeder,
     }));
     
     const inserted = await TournamentPlayer.insertMany(newRegistrations);
@@ -238,6 +244,7 @@ async registerPairPlayers(tournamentId, players, userIds) {
     teamName: `${players[0].fullName} & ${players[1].fullName}`,
     player1: userIds[0],
     player2: userIds[1],
+    seeder: players[0].seeder ?? players[1].seeder,
   });
   const tournament = await Tournament.findById(tournamentId);
 
@@ -256,6 +263,7 @@ async registerPairPlayers(tournamentId, players, userIds) {
     tournamentId,
     playerId: null,
     pairId: pair._id,
+    seeder: pair.seeder,
   });
 
   return { pair, count: 2 };
@@ -399,7 +407,7 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
     if (format === "Single" || format === "Team") {
 
       const userIds = await this.findOrCreateUsers(players);
-      const { registrations, count } = await this.registerSinglePlayers(tournamentId, userIds);
+      const { registrations, count } = await this.registerSinglePlayers(tournamentId, userIds, players);
       
       allUserIds.push(...userIds);
       allRegistrations.push(...registrations);
@@ -476,63 +484,30 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
   };
 }
 
-  // async deleteTournament(id, userId, role) {
-  //   try {
-  //     // Validate ID format
-  //     if (!mongoose.Types.ObjectId.isValid(id)) {
-  //       throw new Error("Invalid tournament ID");
-  //     }
-
-  //     const tournament = await Tournament.findById(id);
-
-  //     if (!tournament) {
-  //       throw new Error("Tournament not found");
-  //     }
-
-  //     // Authorization: Creator OR Admin can delete
-  //     const isOwner = tournament.createdBy.toString() === userId.toString();
-  //     const isAdmin = role === "Admin";
-
-  //     if (!isOwner && !isAdmin) {
-  //       throw new Error("Not authorized to delete this tournament");
-  //     }
-
-
-  //     await tournament.deleteOne();
-
-  //     return { message: "Tournament deleted successfully" };
-  //   } catch (error) {
-  //     throw new Error(`Failed to delete tournament: ${error.message}`);
-  //   }
-  // }
-
   async deleteTournament(id, userId, role) {
-    try {
-      // Validate ID format
-      if (!mongoose.Types.ObjectId.isValid(id)) {
-        throw new Error("Invalid tournament ID");
-      }
-      const tournament = await Tournament.findById(id);
-      if (!tournament) {
-        throw new Error("Tournament not found");
-      }
-      // Authorization: Creator OR Admin can delete
-      const isOwner = tournament.createdBy.toString() === userId.toString();
-      const isAdmin = role === "Admin";
-      if (!isOwner && !isAdmin) {
-        throw new Error("Not authorized to delete this tournament");
-      }
-
-      // Delete all tournament players associated with this tournament
-      await TournamentPlayer.deleteMany({ tournamentId: id });
-      
-      await tournament.deleteOne();
-      return { message: "Tournament deleted successfully" };
-    } catch (error) {
-      throw new Error(`Failed to delete tournament: ${error.message}`);
+  try {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new Error("Invalid tournament ID");
     }
-  }
 
+    const tournament = await Tournament.findById(id);
+    if (!tournament) {
+      throw new Error("Tournament not found");
+    }
+
+    const isOwner = tournament.createdBy.toString() === userId.toString();
+    const isAdmin = role === "Admin";
+    if (!isOwner && !isAdmin) {
+      throw new Error("Not authorized to delete this tournament");
+    }
+
+    await Tournament.findByIdAndDelete(id); // ✅ cascade hook fires here
+
+    return { message: "Tournament deleted successfully" };
+  } catch (error) {
+    throw new Error(`Failed to delete tournament: ${error.message}`);
+  }
+}
 
 async getTournamentsByCreator(creatorId, filters = {}, page = 1, limit = 10) {
   try {
