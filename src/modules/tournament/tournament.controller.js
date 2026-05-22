@@ -235,6 +235,7 @@ export const updateTournament = async (req, res) => {
           fullName: record.fullName || record.name || '',
           email: record.email || '',
           phone: record.phone || '',
+          seeder: record.seeder ? Number(record.seeder) : undefined,
         }));
         
         for (let i = 0; i < csvPlayers.length; i++) {
@@ -242,6 +243,13 @@ export const updateTournament = async (req, res) => {
             return res.status(400).json({
               success: false,
               message: `CSV Row ${i + 1}: fullName and email are required`,
+            });
+          }
+
+          if (!Number.isFinite(csvPlayers[i].seeder) || csvPlayers[i].seeder <= 0) {
+            return res.status(400).json({
+              success: false,
+              message: `CSV Row ${i + 1}: seeder is required and must be a positive number`,
             });
           }
         }

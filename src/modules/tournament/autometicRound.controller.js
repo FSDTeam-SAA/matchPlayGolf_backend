@@ -21,20 +21,30 @@ export const initializeKnockout = async (tournamentId, userId) => {
       tournamentId,
       isActive: true,
       assignMatch: false,
-    }).select("playerId pairId handicap");
+    })
+      .select("playerId pairId seeder handicap createdAt")
+      .populate("playerId", "seeder handicap")
+      .populate({
+        path: "pairId",
+        select: "seeder player1 player2",
+        populate: [
+          { path: "player1", select: "seeder handicap" },
+          { path: "player2", select: "seeder handicap" },
+        ],
+      });
 
     if (registeredPlayers.length === 0)
       throw new AppError(500, false, "No registered players found");
 
-    // Sort by handicap ascending so index 0 = seed 1 (best player)
+    // Sort so index 0 = seed 1.
     const sorted = [...registeredPlayers].sort(
-      (a, b) => (a.handicap ?? 999) - (b.handicap ?? 999)
+      (a, b) => getSeedValue(a, tournament.format) - getSeedValue(b, tournament.format)
     );
 
     const qualifiedEntries = sorted.map((p) =>
       tournament.format === "Pairs"
-        ? { pairId: p.pairId }
-        : { playerId: p.playerId }
+        ? { pairId: p.pairId, seeder: p.seeder }
+        : { playerId: p.playerId, seeder: p.seeder }
     );
 
     const entryCount = qualifiedEntries.length;
@@ -428,9 +438,48 @@ function isPowerOfTwo(n) {
  */
 function bracketPositions(size) {
   if (size === 1) return [1];
+  if (size === 2) return [1, 2];
+  if (size === 4) return [1, 4, 3, 2];
+
   const half = size / 2;
   const top = bracketPositions(half);
   return top.flatMap((pos) => [pos, size + 1 - pos]);
+}
+
+function getSeedValue(entry, format) {
+  if (format === "Pairs") {
+    const pairSeed = Number(entry.pairId?.seeder ?? entry.seeder);
+    if (Number.isFinite(pairSeed) && pairSeed > 0) return pairSeed;
+
+    const players = [entry.pairId?.player1, entry.pairId?.player2].filter(Boolean);
+    const explicitSeeds = players
+      .map((player) => Number(player.seeder))
+      .filter((seed) => Number.isFinite(seed) && seed > 0);
+
+    if (explicitSeeds.length > 0) return Math.min(...explicitSeeds);
+
+    const handicaps = players
+      .map((player) => Number(player.handicap))
+      .filter(Number.isFinite);
+
+    if (handicaps.length > 0) {
+      return handicaps.reduce((total, handicap) => total + handicap, 0) / handicaps.length;
+    }
+
+    return 999;
+  }
+
+  const tournamentSeed = Number(entry.seeder);
+  if (Number.isFinite(tournamentSeed) && tournamentSeed > 0) return tournamentSeed;
+
+  const explicitSeed = Number(entry.playerId?.seeder);
+  if (Number.isFinite(explicitSeed) && explicitSeed > 0) return explicitSeed;
+
+  const userHandicap = Number(entry.playerId?.handicap);
+  if (Number.isFinite(userHandicap)) return userHandicap;
+
+  const registrationHandicap = Number(entry.handicap);
+  return Number.isFinite(registrationHandicap) ? registrationHandicap : 999;
 }
 
 /**
