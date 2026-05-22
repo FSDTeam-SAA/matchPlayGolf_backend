@@ -177,6 +177,27 @@ export const updateTournamentMatch = async (req, res) => {
     const updateData = req.body;
     const userId = req.user?.id || req.user?._id || null;
     const role = req.user?.role || "token-access";
+    const matchId = req.params.matchId;
+
+    console.log("Received update data:", updateData);
+
+    const matchExists = await Match.findById(matchId)
+                        .populate('tournamentId', 'status').lean();
+
+    if (!matchExists) {
+      return res.status(404).json({
+        success: false,
+        message: "Match not found"
+      });
+    }
+
+    if(matchExists.tournamentId.status === "completed" || matchExists.tournamentId.status === "cancelled" ||
+       matchExists.status === "completed" || matchExists.status === "cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot update a completed or cancelled match"
+      });
+    }
 
     // ── Validate status ──────────────────────────────────────────────────────
     if (
@@ -211,12 +232,12 @@ export const updateTournamentMatch = async (req, res) => {
 
     if (hasPlayerChange) {
       // Fetch current match as lean plain object (fast, no mongoose overhead)
-      const currentMatch = await Match.findById(req.params.matchId).lean();
+      // const currentMatch = await Match.findById(req.params.matchId).lean();
 
-      if (currentMatch) {
+      if (matchExists) {
         // Resolve the final matchType — use incoming value if being changed,
         // otherwise use what is already stored in the DB
-        const resolvedMatchType = updateData.matchType || currentMatch.matchType;
+        const resolvedMatchType = updateData.matchType || matchExists.matchType;
 
         // ── Guard: block wrong field types per matchType ─────────────────────
         // Single match must only use player1Id / player2Id (ref: User)
@@ -257,7 +278,7 @@ export const updateTournamentMatch = async (req, res) => {
           .filter(
             (field) =>
               updateData[field] &&
-              updateData[field].toString() !== currentMatch[field]?.toString()
+              updateData[field].toString() !== matchExists[field]?.toString()
           )
           .map((field) => ({ field, newId: updateData[field] }));
 
@@ -267,17 +288,17 @@ export const updateTournamentMatch = async (req, res) => {
           // ── Step 2: Build round filter — safe null roundId handling ─────────
           // If roundId is null, fall back to round number so sibling matches
           // are always found regardless of how the draw was created.
-          const roundFilter = currentMatch.roundId
-            ? { roundId: currentMatch.roundId }
-            : { round: currentMatch.round ?? 1 };
+          const roundFilter = matchExists.roundId
+            ? { roundId: matchExists.roundId }
+            : { round: matchExists.round ?? 1 };
 
           // ── Step 3: Find sibling matches with conflicting IDs ────────────────
           // Scoped to same tournamentId + same round + same matchType.
           // matchType scope ensures Single conflicts only search player slots
           // and Pairs conflicts only search pair slots — never cross-pollinate.
           const conflictingMatches = await Match.find({
-            _id:          { $ne: currentMatch._id },  // exclude current match
-            tournamentId: currentMatch.tournamentId,
+            _id:          { $ne: matchExists._id },  // exclude current match
+            tournamentId: matchExists.tournamentId,
             matchType:    resolvedMatchType,           // same type only
             ...roundFilter,                            // same round
             $or: participantFields.map((field) => ({
@@ -314,7 +335,7 @@ export const updateTournamentMatch = async (req, res) => {
                 // displacedId = the participant currently sitting in the same
                 // slot of the match being edited — this value goes back to the
                 // conflict match so no slot is ever left empty without reason.
-                const displacedId = currentMatch[field] ?? null;
+                const displacedId = matchExists[field] ?? null;
                 const matchKey    = conflict._id.toString();
 
                 if (!swapMap.has(matchKey)) {
@@ -338,7 +359,7 @@ export const updateTournamentMatch = async (req, res) => {
 
     // ── Delegate to service ──────────────────────────────────────────────────
     const match = await matchService.updateTournamentMatch(
-      req.params.matchId,
+      matchId,
       updateData,
       userId,
       role,

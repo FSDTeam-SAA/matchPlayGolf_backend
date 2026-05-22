@@ -165,7 +165,7 @@ class MatchService {
         }
       })
       .populate("createdBy", "fullName email")
-      .sort({ teeTime: 1 })
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
@@ -965,6 +965,7 @@ async getTournamentMatchById(id) {
 
 async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = null) {
   try {
+    console.log('updatedate', updateData);
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new Error("Invalid match ID");
@@ -1017,6 +1018,15 @@ async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = n
       updateData.matchType &&
       !["Single", "Pairs", "Team"].includes(updateData.matchType)
     ) throw new Error("Invalid match type");
+
+    if(updateData.winner && match.tournamentId.status !== "in progress"||
+      updateData.player1Score != null && match.tournamentId.status !== "in progress"||
+      updateData.player2Score != null && match.tournamentId.status !== "in progress"||
+      updateData.pair1Score != null && match.tournamentId.status !== "in progress"||
+      updateData.pair2Score != null && match.tournamentId.status !== "in progress"
+    ) {
+      throw new Error("Cannot update winner for a tournament that is not in progress");
+    }
 
     // ── Comments ──────────────────────────────────────────────────────────────
     if (updateData.comments !== undefined) match.comments = updateData.comments;
@@ -1210,320 +1220,6 @@ async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = n
       throw new Error(`Failed to delete match: ${error.message}`);
     }
   }
-  // swapMatchPlayers.service.js
-
-  // async swapMatchPlayers(match1Id, match2Id, updateData, userId, role) {
-  //   try {
-  //     // Validate IDs
-  //     if (!mongoose.Types.ObjectId.isValid(match1Id) || !mongoose.Types.ObjectId.isValid(match2Id)) {
-  //       throw new Error("Invalid match ID(s)");
-  //     }
-
-  //     if (match1Id === match2Id) {
-  //       throw new Error("Cannot swap players within the same match");
-  //     }
-
-  //     console.log(updateData);
-
-  //     // Fetch both matches
-  //     const [match1, match2] = await Promise.all([
-  //       Match.findById(match1Id).populate("tournamentId"),
-  //       Match.findById(match2Id).populate("tournamentId"),
-  //     ]);
-
-  //     if (!match1) throw new Error("Match 1 not found");
-  //     if (!match2) throw new Error("Match 2 not found");
-
-  //     // Both matches must belong to same tournament
-  //     if (match1.tournamentId._id.toString() !== match2.tournamentId._id.toString()) {
-  //       throw new Error("Matches must belong to the same tournament");
-  //     }
-
-  //     // Authorization
-  //     const isAdmin = role === "Admin";
-  //     const isOwner =
-  //       role !== "token-access" &&
-  //       match1.tournamentId.createdBy.toString() === userId.toString();
-  //     const isTokenAccess = role === "token-access";
-
-  //     if (!isAdmin && !isOwner && !isTokenAccess) {
-  //       throw new Error("Not authorized to update these matches");
-  //     }
-
-  //     // Completed matches cannot be swapped
-  //     if (match1.status === "completed" || match2.status === "completed") {
-  //       throw new Error("Cannot swap players in completed matches");
-  //     }
-
-  //     const matchType = match1.matchType;
-  //     if (match1.matchType !== match2.matchType) {
-  //       throw new Error("Both matches must have the same match type");
-  //     }
-
-  //     // ─────────────────────────────────────────
-  //     // SINGLE match type swap
-  //     // ─────────────────────────────────────────
-  //     if (matchType === "Single") {
-  //       const { match1Slot, newPlayerId } = updateData;
-  //       // match1Slot: "player1Id" or "player2Id"
-  //       // newPlayerId: the player from match2 you want to move to match1
-
-  //       if (!match1Slot || !newPlayerId) {
-  //         throw new Error("match1Slot and newPlayerId are required for Single type");
-  //       }
-
-  //       if (!["player1Id", "player2Id"].includes(match1Slot)) {
-  //         throw new Error("match1Slot must be 'player1Id' or 'player2Id'");
-  //       }
-
-  //       // Find which slot newPlayerId occupies in match2
-  //       const match2Slot = match2.player1Id?.toString() === newPlayerId
-  //         ? "player1Id"
-  //         : match2.player2Id?.toString() === newPlayerId
-  //         ? "player2Id"
-  //         : null;
-
-  //       if (!match2Slot) {
-  //         throw new Error("newPlayerId not found in match2");
-  //       }
-
-  //       // The displaced player from match1 goes to match2
-  //       const displacedPlayerId = match1[match1Slot];
-
-  //       // Perform swap
-  //       match1[match1Slot] = new mongoose.Types.ObjectId(newPlayerId);
-  //       match2[match2Slot] = displacedPlayerId;
-  //     }
-
-  //     // ─────────────────────────────────────────
-  //     // PAIR match type swap
-  //     // ─────────────────────────────────────────
-  //     else if (matchType === "Pair") {
-  //       const { match1Slot, newPairId } = updateData;
-  //       // match1Slot: "pair1Id" or "pair2Id"
-  //       // newPairId: the pair from match2 you want to move to match1
-
-  //       if (!match1Slot || !newPairId) {
-  //         throw new Error("match1Slot and newPairId are required for Pair type");
-  //       }
-
-  //       if (!["pair1Id", "pair2Id"].includes(match1Slot)) {
-  //         throw new Error("match1Slot must be 'pair1Id' or 'pair2Id'");
-  //       }
-
-  //       // Find which slot newPairId occupies in match2
-  //       const match2Slot = match2.pair1Id?.toString() === newPairId
-  //         ? "pair1Id"
-  //         : match2.pair2Id?.toString() === newPairId
-  //         ? "pair2Id"
-  //         : null;
-
-  //       if (!match2Slot) {
-  //         throw new Error("newPairId not found in match2");
-  //       }
-
-  //       // The displaced pair from match1 goes to match2
-  //       const displacedPairId = match1[match1Slot];
-
-  //       // Perform swap
-  //       match1[match1Slot] = new mongoose.Types.ObjectId(newPairId);
-  //       match2[match2Slot] = displacedPairId;
-  //     }
-
-  //     else {
-  //       throw new Error("Swap is only supported for Single and Pair match types");
-  //     }
-
-  //     // Update metadata
-  //     match1.updatedBy = userId;
-  //     match2.updatedBy = userId;
-
-  //     // Save both atomically
-  //     await Promise.all([match1.save(), match2.save()]);
-
-  //     // Return both updated matches populated
-  //     const populate = [
-  //       { path: "tournamentId", select: "tournamentName sportName format" },
-  //       { path: "roundId", select: "roundName roundNumber date" },
-  //       { path: "player1Id", select: "fullName email" },
-  //       { path: "player2Id", select: "fullName email" },
-  //       { path: "pair1Id", populate: [{ path: "player1", select: "fullName email" }, { path: "player2", select: "fullName email" }] },
-  //       { path: "pair2Id", populate: [{ path: "player1", select: "fullName email" }, { path: "player2", select: "fullName email" }] },
-  //       { path: "updatedBy", select: "fullName email" },
-  //     ];
-
-  //     const [updatedMatch1, updatedMatch2] = await Promise.all([
-  //       match1.populate(populate),
-  //       match2.populate(populate),
-  //     ]);
-
-  //     return { match1: updatedMatch1, match2: updatedMatch2 };
-
-  //   } catch (error) {
-  //     console.error("❌ Swap service error:", error);
-  //     throw new Error(`Failed to swap match players: ${error.message}`);
-  //   }
-  //   }
-
-//   async swapMatchPlayers(match1Id, match2Id, updateData, userId, role) {
-//   try {
-//     if (!mongoose.Types.ObjectId.isValid(match1Id) || !mongoose.Types.ObjectId.isValid(match2Id)) {
-//       throw new Error("Invalid match ID(s)");
-//     }
-
-//     if (match1Id === match2Id) {
-//       throw new Error("Cannot swap players within the same match");
-//     }
-
-//     const [match1, match2] = await Promise.all([
-//       await Match.findById(match1Id).populate("tournamentId"),
-//       await Match.findById(match2Id).populate("tournamentId"),
-//     ]);
-
-//     if (!match1) throw new Error("Match 1 not found");
-//     if (!match2) throw new Error("Match 2 not found");
-
-//     if (match1.tournamentId._id.toString() !== match2.tournamentId._id.toString()) {
-//       throw new Error("Matches must belong to the same tournament");
-//     }
-
-//     const isAdmin = role === "Admin";
-//     const isOwner =
-//       role !== "token-access" &&
-//       match1.tournamentId.createdBy.toString() === userId.toString();
-//     const isTokenAccess = role === "token-access";
-
-//     if (!isAdmin && !isOwner && !isTokenAccess) {
-//       throw new Error("Not authorized to update these matches");
-//     }
-
-//     if (match1.status === "completed" || match2.status === "completed") {
-//       throw new Error("Cannot swap players in completed matches");
-//     }
-
-//     if (match1.matchType !== match2.matchType) {
-//       throw new Error("Both matches must have the same match type");
-//     }
-
-//     const matchType = match1.matchType;
-//     const { player1Id, player2Id, pair1Id, pair2Id } = updateData;
-
-//     // ─────────────────────────────────────────
-//     // SINGLE: player1Id = new player for match1 slot1
-//     //         player2Id = new player for match1 slot2
-//     // ─────────────────────────────────────────
-//     if (matchType === "Single") {
-//       if (!player1Id && !player2Id) {
-//         throw new Error("At least player1Id or player2Id is required for Single type");
-//       }
-
-//       // Swap player1 slot
-//       if (player1Id) {
-//         // Find where player1Id sits in match2
-//         console.log("🔍 Swapping player1Id:", player1Id, match2);
-//         const match2Slot =
-//           match2.player1Id?.toString() === player1Id ? "player1Id" :
-//           match2.player2Id?.toString() === player1Id ? "player2Id" : null;
-
-//         if (!match2Slot) throw new Error("player1Id not found in match2");
-
-//         const displaced = match1.player1Id;
-//         match1.player1Id = new mongoose.Types.ObjectId(player1Id);
-//         match2[match2Slot] = displaced;
-//       }
-
-//       // Swap player2 slot
-//       if (player2Id) {
-//         console.log("🔍 Swapping player2Id:", player2Id);
-//         const match2Slot =
-//           match2.player1Id?.toString() === player2Id ? "player1Id" :
-//           match2.player2Id?.toString() === player2Id ? "player2Id" : null;
-
-//         if (!match2Slot) throw new Error("player2Id not found in match2");
-
-//         const displaced = match1.player2Id;
-//         match1.player2Id = new mongoose.Types.ObjectId(player2Id);
-//         match2[match2Slot] = displaced;
-//       }
-//     }
-
-//     // ─────────────────────────────────────────
-//     // PAIR: pair1Id = new pair for match1 slot1
-//     //       pair2Id = new pair for match1 slot2
-//     // ─────────────────────────────────────────
-//     else if (matchType === "Pair") {
-//       if (!pair1Id && !pair2Id) {
-//         throw new Error("At least pair1Id or pair2Id is required for Pair type");
-//       }
-
-//       if (pair1Id) {
-//         const match2Slot =
-//           match2.pair1Id?.toString() === pair1Id ? "pair1Id" :
-//           match2.pair2Id?.toString() === pair1Id ? "pair2Id" : null;
-
-//         if (!match2Slot) throw new Error("pair1Id not found in match2");
-
-//         const displaced = match1.pair1Id;
-//         match1.pair1Id = new mongoose.Types.ObjectId(pair1Id);
-//         match2[match2Slot] = displaced;
-//       }
-
-//       if (pair2Id) {
-//         const match2Slot =
-//           match2.pair1Id?.toString() === pair2Id ? "pair1Id" :
-//           match2.pair2Id?.toString() === pair2Id ? "pair2Id" : null;
-
-//         if (!match2Slot) throw new Error("pair2Id not found in match2");
-
-//         const displaced = match1.pair2Id;
-//         match1.pair2Id = new mongoose.Types.ObjectId(pair2Id);
-//         match2[match2Slot] = displaced;
-//       }
-//     }
-
-//     else {
-//       throw new Error("Swap is only supported for Single and Pair match types");
-//     }
-
-//     match1.updatedBy = userId;
-//     match2.updatedBy = userId;
-
-//     await Promise.all([match1.save(), match2.save()]);
-
-//     const populate = [
-//       { path: "tournamentId", select: "tournamentName sportName format" },
-//       { path: "roundId", select: "roundName roundNumber date" },
-//       { path: "player1Id", select: "fullName email" },
-//       { path: "player2Id", select: "fullName email" },
-//       {
-//         path: "pair1Id",
-//         populate: [
-//           { path: "player1", select: "fullName email" },
-//           { path: "player2", select: "fullName email" },
-//         ],
-//       },
-//       {
-//         path: "pair2Id",
-//         populate: [
-//           { path: "player1", select: "fullName email" },
-//           { path: "player2", select: "fullName email" },
-//         ],
-//       },
-//       { path: "updatedBy", select: "fullName email" },
-//     ];
-
-//     const [updatedMatch1, updatedMatch2] = await Promise.all([
-//       match1.populate(populate),
-//       match2.populate(populate),
-//     ]);
-
-//     return { match1: updatedMatch1, match2: updatedMatch2 };
-
-//   } catch (error) {
-//     console.error("❌ Swap service error:", error);
-//     throw new Error(`Failed to swap match players: ${error.message}`);
-//   }
-// }
 async swapMatchPlayers(match1Id, match2Id, updateData, userId, role) {
   try {
     if (!mongoose.Types.ObjectId.isValid(match1Id) || !mongoose.Types.ObjectId.isValid(match2Id)) {
