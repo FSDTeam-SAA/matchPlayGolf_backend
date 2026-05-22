@@ -1,122 +1,235 @@
+// import mongoose from "mongoose";
+// import knockoutStageSchema from "../others/knockoutSchema.model.js";
+
+// const TournamentSchema = new mongoose.Schema(
+//   {
+//     orderId:{
+//       type:String
+//     },
+//     tournamentName: {
+//       type: String,
+//       required: true,
+//       trim: true
+//     },
+//     sportName: {
+//       type: String,
+//       default: "golf"
+//     },
+//     drawFormat: {
+//       type: String,
+//       enum: ["Knockout", "Teams"],
+//       default: "Knockout"
+//     },
+//     format: {
+//       type: String,
+//       enum: ["Single", "Pairs", "Team"],
+//       default: "Single"
+//     },
+//     drawSize: {
+//       type: Number,
+//       default: 16
+//     },
+//     billingAddress: {
+//       fullName: { type: String },
+//       email: { type: String },
+//       phone: { type: String },
+//       country: { type: String },
+//       streetAddress: { type: String },   // fixed spelling
+//       city: { type: String },
+//       state: { type: String },
+//       zipcode: { type: String } ,
+//       companyName: { type: String }          // fixed "types"
+//     },
+//     price: {
+//       type: String
+//     },
+//     paymentMethod: {
+//       type: String
+//     },
+//     paymentStatus: {
+//       type: String,
+//       default: "pending"
+//     },
+//     startDate:{
+//       type:Date,
+//       default:Date.now
+//     },
+//     endDate:{
+//       type: Date,
+//       default: Date.now
+//     },
+//     location:{
+//       type:String
+//     },
+//     numberOfSeeds:{
+//       type: Number
+//     },
+//     description:{
+//       type:String
+//     },
+//     onHold:{
+//       type:Boolean,
+//       default: false
+//     },
+//    status: {
+//       type: String,
+//       enum: ["upcoming", "in progress", "completed", "cancelled", "scheduled"],
+//       default: "upcoming"
+//     },
+//     tournamentStatus:{
+//       type: String,
+//       enum:["pending", "approved", "rejected"],
+//       default:"pending"
+//     },
+//     rules: [{
+//         type:String
+//       }],
+//     totalParticipants: { type: Number, default: 0 },
+//     registeredPlayers: [{
+//       type: mongoose.Schema.Types.ObjectId,
+//       ref: 'User'
+//     }],
+//     totalRounds:{
+//       type:Number,
+//       default:0
+//     },
+//     rememberEmail: {
+//       type: Number,
+//       default: 0
+//     },
+//     // knockoutStage: knockoutSchema,
+//    knockoutStage: {
+//     type: mongoose.Schema.Types.ObjectId,
+//     ref: "KnockoutStage",
+//     default: null
+//   },
+//   createdBy: {
+//     type: mongoose.Schema.Types.ObjectId,
+//     ref: "User",
+//     required: true
+//   },
+//   entryConditions: [{
+//     type: String
+//   }],
+//   range:[{ type: String }],
+// },
+//   { timestamps: true }
+// );
+
+// const Tournament =
+//   mongoose.models.Tournament || mongoose.model("Tournament", TournamentSchema);
+
+// export default Tournament;
+// Tournament.model.js
 import mongoose from "mongoose";
-import knockoutStageSchema from "../others/knockoutSchema.model.js";
+import Match from "../match/match.model.js";
+import Round from "../round/round.model.js";
+import TournamentPlayer from "../others/tournamentPlayer.model.js";
+import TournamentPair from "../others/tournamentPair.model.js";
+import KnockoutStage from "../others/knockoutSchema.model.js";
 
 const TournamentSchema = new mongoose.Schema(
   {
-    orderId:{
-      type:String
-    },
-    tournamentName: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    sportName: {
-      type: String,
-      default: "golf"
-    },
-    drawFormat: {
-      type: String,
-      enum: ["Knockout", "Teams"],
-      default: "Knockout"
-    },
-    format: {
-      type: String,
-      enum: ["Single", "Pairs", "Team"],
-      default: "Single"
-    },
-    drawSize: {
-      type: Number,
-      default: 16
-    },
+    orderId: { type: String },
+    tournamentName: { type: String, required: true, trim: true },
+    sportName: { type: String, default: "golf" },
+    drawFormat: { type: String, enum: ["Knockout", "Teams"], default: "Knockout" },
+    format: { type: String, enum: ["Single", "Pairs", "Team"], default: "Single" },
+    drawSize: { type: Number, default: 16 },
     billingAddress: {
       fullName: { type: String },
       email: { type: String },
       phone: { type: String },
       country: { type: String },
-      streetAddress: { type: String },   // fixed spelling
+      streetAddress: { type: String },
       city: { type: String },
       state: { type: String },
-      zipcode: { type: String } ,
-      companyName: { type: String }          // fixed "types"
+      zipcode: { type: String },
+      companyName: { type: String }
     },
-    price: {
-      type: String
-    },
-    paymentMethod: {
-      type: String
-    },
-    paymentStatus: {
-      type: String,
-      default: "pending"
-    },
-    startDate:{
-      type:Date,
-      default:Date.now
-    },
-    endDate:{
-      type: Date,
-      default: Date.now
-    },
-    location:{
-      type:String
-    },
-    numberOfSeeds:{
-      type: Number
-    },
-    description:{
-      type:String
-    },
-    onHold:{
-      type:Boolean,
-      default: false
-    },
-   status: {
+    price: { type: String },
+    paymentMethod: { type: String },
+    paymentStatus: { type: String, default: "pending" },
+    startDate: { type: Date, default: Date.now },
+    endDate: { type: Date, default: Date.now },
+    location: { type: String },
+    numberOfSeeds: { type: Number },
+    description: { type: String },
+    onHold: { type: Boolean, default: false },
+    status: {
       type: String,
       enum: ["upcoming", "in progress", "completed", "cancelled", "scheduled"],
       default: "upcoming"
     },
-    tournamentStatus:{
+    tournamentStatus: {
       type: String,
-      enum:["pending", "approved", "rejected"],
-      default:"pending"
+      enum: ["pending", "approved", "rejected"],
+      default: "pending"
     },
-    rules: [{
-        type:String
-      }],
+    rules: [{ type: String }],
     totalParticipants: { type: Number, default: 0 },
-    registeredPlayers: [{
+    registeredPlayers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    totalRounds: { type: Number, default: 0 },
+    rememberEmail: { type: Number, default: 0 },
+    knockoutStage: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    }],
-    totalRounds:{
-      type:Number,
-      default:0
+      ref: "KnockoutStage",
+      default: null
     },
-    rememberEmail: {
-      type: Number,
-      default: 0
-    },
-    // knockoutStage: knockoutSchema,
-   knockoutStage: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "KnockoutStage",
-    default: null
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    entryConditions: [{ type: String }],
+    range: [{ type: String }],
   },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true
-  },
-  entryConditions: [{
-    type: String
-  }],
-  range:[{ type: String }],
-},
   { timestamps: true }
 );
 
-const Tournament =
-  mongoose.models.Tournament || mongoose.model("Tournament", TournamentSchema);
+// ✅ CASCADE DELETE — runs before findOneAndDelete()
+TournamentSchema.pre("findOneAndDelete", async function (next) {
+  try {
+    const tournament = await this.model.findOne(this.getQuery());
+    if (!tournament) return next();
 
+    const tournamentId = tournament._id;
+    const knockoutStageId = tournament.knockoutStage;
+
+    // Delete all related documents in parallel
+    await Promise.all([
+      Match.deleteMany({ tournamentId }),
+      Round.deleteMany({ tournamentId }),
+      TournamentPlayer.deleteMany({ tournamentId }),
+      TournamentPair.deleteMany({ tournamentId }),
+      knockoutStageId
+        ? KnockoutStage.findByIdAndDelete(knockoutStageId)
+        : Promise.resolve(),
+    ]);
+
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ✅ Also handle deleteOne({ _id }) called on a document instance
+TournamentSchema.pre("deleteOne", { document: true, query: false }, async function (next) {
+  try {
+    const tournamentId   = this._id;
+    const knockoutStageId = this.knockoutStage;
+
+    await Promise.all([
+      Match.deleteMany({ tournamentId }),
+      Round.deleteMany({ tournamentId }),
+      TournamentPlayer.deleteMany({ tournamentId }),
+      TournamentPair.deleteMany({ tournamentId }),
+      knockoutStageId
+        ? KnockoutStage.findByIdAndDelete(knockoutStageId)
+        : Promise.resolve(),
+    ]);
+
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
+const Tournament = mongoose.models.Tournament || mongoose.model("Tournament", TournamentSchema);
 export default Tournament;
