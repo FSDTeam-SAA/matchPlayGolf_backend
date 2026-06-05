@@ -23,23 +23,23 @@ export const initializeKnockout = async (tournamentId, userId) => {
       assignMatch: false,
     })
       .select("playerId pairId seeder handicap createdAt")
-      .populate("playerId", "seeder handicap")
+      .populate("playerId", "seeder handicap seedStats")
       .populate({
         path: "pairId",
         select: "seeder player1 player2",
         populate: [
-          { path: "player1", select: "seeder handicap" },
-          { path: "player2", select: "seeder handicap" },
+          { path: "player1", select: "seeder handicap seedStats" },
+          { path: "player2", select: "seeder handicap seedStats" },
         ],
       });
 
     if (registeredPlayers.length === 0)
       throw new AppError(500, false, "No registered players found");
 
-    // Sort so index 0 = seed 1.
-    const sorted = [...registeredPlayers].sort(
-      (a, b) => getSeedValue(a, tournament.format) - getSeedValue(b, tournament.format)
-    );
+    // Sort so index 0 = seed 1. Manual seed is optional; missing seed falls
+    // back to cached win-rate stats updated when match results are saved.
+    const sorted = sortEntriesBySeed(registeredPlayers, tournament);
+    await persistMissingSeedValues(sorted, tournament.format);
 
     const qualifiedEntries = sorted.map((p) =>
       tournament.format === "Pairs"
@@ -446,17 +446,26 @@ function bracketPositions(size) {
   return top.flatMap((pos) => [pos, size + 1 - pos]);
 }
 
-function getSeedValue(entry, format) {
+function getManualSeedValue(entry, format) {
   if (format === "Pairs") {
-    const pairSeed = Number(entry.pairId?.seeder ?? entry.seeder);
-    if (Number.isFinite(pairSeed) && pairSeed > 0) return pairSeed;
-
     const players = [entry.pairId?.player1, entry.pairId?.player2].filter(Boolean);
-    const explicitSeeds = players
-      .map((player) => Number(player.seeder))
-      .filter((seed) => Number.isFinite(seed) && seed > 0);
+    const pairSeedFromPlayers = getPairSeedValue(players);
+    if (pairSeedFromPlayers) return pairSeedFromPlayers;
 
-    if (explicitSeeds.length > 0) return Math.min(...explicitSeeds);
+    const pairSeed = Number(entry.pairId?.seeder ?? entry.seeder);
+    return Number.isFinite(pairSeed) && pairSeed > 0 ? pairSeed : null;
+  }
+
+  const tournamentSeed = Number(entry.seeder);
+  if (Number.isFinite(tournamentSeed) && tournamentSeed > 0) return tournamentSeed;
+
+  const explicitSeed = Number(entry.playerId?.seeder);
+  return Number.isFinite(explicitSeed) && explicitSeed > 0 ? explicitSeed : null;
+}
+
+function getHandicapValue(entry, format) {
+  if (format === "Pairs") {
+    const players = [entry.pairId?.player1, entry.pairId?.player2].filter(Boolean);
 
     const handicaps = players
       .map((player) => Number(player.handicap))
@@ -469,17 +478,116 @@ function getSeedValue(entry, format) {
     return 999;
   }
 
-  const tournamentSeed = Number(entry.seeder);
-  if (Number.isFinite(tournamentSeed) && tournamentSeed > 0) return tournamentSeed;
-
-  const explicitSeed = Number(entry.playerId?.seeder);
-  if (Number.isFinite(explicitSeed) && explicitSeed > 0) return explicitSeed;
-
   const userHandicap = Number(entry.playerId?.handicap);
   if (Number.isFinite(userHandicap)) return userHandicap;
 
   const registrationHandicap = Number(entry.handicap);
   return Number.isFinite(registrationHandicap) ? registrationHandicap : 999;
+}
+
+function sortEntriesBySeed(entries, tournament) {
+  const rankedEntries = entries.map((entry) => ({
+    entry,
+    manualSeed: getManualSeedValue(entry, tournament.format),
+    history: getCachedHistoryRank(entry, tournament.format),
+    handicap: getHandicapValue(entry, tournament.format),
+    createdAt: new Date(entry.createdAt || 0).getTime(),
+  }));
+
+  rankedEntries.sort((a, b) => {
+    const aHasManualSeed = Number.isFinite(a.manualSeed);
+    const bHasManualSeed = Number.isFinite(b.manualSeed);
+
+    if (aHasManualSeed && bHasManualSeed) return a.manualSeed - b.manualSeed;
+    if (aHasManualSeed) return -1;
+    if (bHasManualSeed) return 1;
+
+    if (b.history.winRate !== a.history.winRate) {
+      return b.history.winRate - a.history.winRate;
+    }
+
+    if (b.history.wins !== a.history.wins) return b.history.wins - a.history.wins;
+    if (b.history.matchesPlayed !== a.history.matchesPlayed) {
+      return b.history.matchesPlayed - a.history.matchesPlayed;
+    }
+
+    if (a.handicap !== b.handicap) return a.handicap - b.handicap;
+    return a.createdAt - b.createdAt;
+  });
+
+  return rankedEntries.map(({ entry }) => entry);
+}
+
+async function persistMissingSeedValues(sortedEntries, format) {
+  for (let i = 0; i < sortedEntries.length; i++) {
+    const entry = sortedEntries[i];
+    const computedSeed = i + 1;
+
+    if (format === "Pairs" && entry.pairId) {
+      const players = [entry.pairId.player1, entry.pairId.player2].filter(Boolean);
+      const pairSeed = getPairSeedValue(players) ?? computedSeed;
+
+      entry.seeder = pairSeed;
+      await entry.save();
+
+      entry.pairId.seeder = pairSeed;
+      await entry.pairId.save();
+      continue;
+    }
+
+    if (!Number.isFinite(Number(entry.seeder)) || Number(entry.seeder) <= 0) {
+      entry.seeder = computedSeed;
+      await entry.save();
+    }
+  }
+}
+
+function getCachedHistoryRank(entry, format) {
+  if (format === "Pairs") {
+    const players = [entry.pairId?.player1, entry.pairId?.player2].filter(Boolean);
+    const playerRanks = players.map((player) => normalizeSeedStats(player.seedStats));
+
+    if (playerRanks.length === 0) return emptyHistoryRank();
+
+    return {
+      matchesPlayed: playerRanks.reduce((total, rank) => total + rank.matchesPlayed, 0),
+      wins: playerRanks.reduce((total, rank) => total + rank.wins, 0),
+      winRate:
+        playerRanks.reduce((total, rank) => total + rank.winRate, 0) / playerRanks.length,
+    };
+  }
+
+  return normalizeSeedStats(entry.playerId?.seedStats);
+}
+
+function getPairSeedValue(players) {
+  const seedValues = players
+    .map((player) => Number(player?.seeder))
+    .filter((seed) => Number.isFinite(seed) && seed > 0);
+
+  return seedValues.length === players.length && seedValues.length > 0
+    ? seedValues.reduce((total, seed) => total + seed, 0)
+    : null;
+}
+
+function normalizeSeedStats(seedStats) {
+  const matchesPlayed = Number(seedStats?.matchesPlayed) || 0;
+  const wins = Number(seedStats?.wins) || 0;
+  const winRate = Number(seedStats?.winRate);
+
+  return {
+    matchesPlayed,
+    wins,
+    winRate: Number.isFinite(winRate) ? winRate : matchesPlayed > 0 ? wins / matchesPlayed : 0,
+  };
+}
+
+function emptyHistoryRank() {
+  return {
+    matchesPlayed: 0,
+    wins: 0,
+    winRate: 0,
+  };
 }
 
 /**

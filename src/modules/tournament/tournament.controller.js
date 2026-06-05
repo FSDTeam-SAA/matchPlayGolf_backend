@@ -246,10 +246,13 @@ export const updateTournament = async (req, res) => {
             });
           }
 
-          if (!Number.isFinite(csvPlayers[i].seeder) || csvPlayers[i].seeder <= 0) {
+          if (
+            csvPlayers[i].seeder !== undefined &&
+            (!Number.isFinite(csvPlayers[i].seeder) || csvPlayers[i].seeder <= 0)
+          ) {
             return res.status(400).json({
               success: false,
-              message: `CSV Row ${i + 1}: seeder is required and must be a positive number`,
+              message: `CSV Row ${i + 1}: seeder must be a positive number when provided`,
             });
           }
         }
