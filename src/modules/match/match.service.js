@@ -816,7 +816,7 @@ function incrementSeedStats(seedStats, isWinner) {
   return {
     matchesPlayed,
     wins,
-    winRate: wins / matchesPlayed,
+    winRate: Number(((wins / matchesPlayed) * 100).toFixed(2)),
     updatedAt: new Date(),
   };
 }
