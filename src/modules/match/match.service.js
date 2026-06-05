@@ -6,6 +6,7 @@ import { uploadToCloudinary } from "../../lib/uploadToCloudinary.js";
 import { matchResultUpdateTemplate } from "../../lib/emailTemplates.js";
 import sendEmail from '../../lib/sendEmail.js';
 import User from "../user/user.model.js";
+import TournamentPair from "../others/tournamentPair.model.js";
 import { checkAndAutoAdvanceRound } from "../tournament/autometicRound.controller.js";
 // import { checkAndAutoAdvanceRound } from "../knockout/knockout.service.js"; // adjust path
 
@@ -345,621 +346,6 @@ async getTournamentMatchById(id) {
     }
   }
 
-// async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = null) {
-//   try {
-
-//     if (!mongoose.Types.ObjectId.isValid(id)) {
-//       throw new Error("Invalid match ID");
-//     }
-
-//     // ── Populate match with tournament, players, and pairs ───────────────────
-//     const match = await Match.findById(id)
-//       .populate("tournamentId")
-//       .populate("roundId", "roundName roundNumber date")
-//       .populate("player1Id", "fullName email")
-//       .populate("player2Id", "fullName email")
-//       .populate({
-//         path: "pair1Id",
-//         populate: [
-//           { path: "player1", select: "fullName email" },
-//           { path: "player2", select: "fullName email" }
-//         ]
-//       })
-//       .populate({
-//         path: "pair2Id",
-//         populate: [
-//           { path: "player1", select: "fullName email" },
-//           { path: "player2", select: "fullName email" }
-//         ]
-//       })
-//       .populate("winner", "fullName email");
-
-//     if (!match) throw new Error("Match not found");
-
-//     if (match.tournamentId == null) {
-//       throw new Error("Tournament not found");
-//     }
-
-//     if (match.tournamentId.status !== "in progress") {
-//       throw new Error(
-//         "The tournament has not started yet. You can update the match only after the tournament begins."
-//       );
-//     }
-
-//     const isAdmin       = role === "Admin";
-//     const isOwner       =
-//       role !== "token-access" &&
-//       match.tournamentId.createdBy.toString() === userId.toString();
-//     const isTokenAccess = role === "token-access";
-
-//     if (!isAdmin && !isOwner && !isTokenAccess) {
-//       throw new Error("Not authorized to update this match");
-//     }
-
-//     // ── Validate status ──────────────────────────────────────────────────────
-//     if (
-//       updateData.status &&
-//       !["pending", "scheduled", "in-progress", "completed", "rescheduled"].includes(
-//         updateData.status
-//       )
-//     ) throw new Error("Invalid status");
-
-//     // ── Validate matchType ───────────────────────────────────────────────────
-//     if (
-//       updateData.matchType &&
-//       !["Single", "Pairs", "Team"].includes(updateData.matchType)
-//     ) {
-//       throw new Error("Invalid match type");
-//     }
-
-//     // ── Comments ─────────────────────────────────────────────────────────────
-//     if (updateData.comments !== undefined) match.comments = updateData.comments;
-
-//     // ── Photo upload ─────────────────────────────────────────────────────────
-//     if (files && Array.isArray(files) && files.length > 0) {
-//       const uploadedPhotos = [];
-//       for (let i = 0; i < files.length; i++) {
-//         const file = files[i];
-//         if (file?.buffer) {
-//           const uploadResult = await uploadToCloudinary(
-//             file.buffer,
-//             file.originalname || `match_photo_${i}`,
-//             "match_photos"
-//           );
-//           if (uploadResult?.secure_url) uploadedPhotos.push(uploadResult.secure_url);
-//         }
-//       }
-//       if (uploadedPhotos.length > 0) match.matchPhoto = uploadedPhotos;
-//     }
-
-//     // ── Apply all update fields ──────────────────────────────────────────────
-//     Object.assign(match, updateData);
-//     match.updatedBy = userId;
-
-//     // ── AUTO-SWAP: resolve player / pair conflicts before saving ─────────────
-//     // When the controller detected that an incoming participant is already
-//     // assigned to another match, it passes swap instructions here.
-//     // We apply those updates atomically alongside the primary save so that
-//     // no round ends up with a participant sitting in two matches at once.
-//     if (swapPayload && swapPayload.length > 0) {
-//       const swapOps = swapPayload.map(({ conflictMatchId, conflictSlot, displacedId }) =>
-//         Match.findByIdAndUpdate(
-//           conflictMatchId,
-//           {
-//             $set: {
-//               [conflictSlot]: displacedId ?? null,  // null-safe: if evicted slot had no prior occupant
-//               updatedBy: userId
-//             }
-//           },
-//           { new: true }
-//         )
-//       );
-
-//       // Run all swap updates in parallel — if any fail the whole operation
-//       // should surface the error so the primary match is not saved in isolation
-//       await Promise.all(swapOps);
-//     }
-//     // ────────────────────────────────────────────────────────────────────────
-
-//     const savedMatch = await match.save();
-
-//     const matchDetailsWinner = await User.findById(savedMatch.winner);
-
-//     // ── Collect participant emails for notification ───────────────────────────
-//     const playerEmails = [];
-
-//     if (savedMatch.player1Id?.email) playerEmails.push(savedMatch.player1Id.email);
-//     if (savedMatch.player2Id?.email) playerEmails.push(savedMatch.player2Id.email);
-//     if (savedMatch.pair1Id?.player1?.email) playerEmails.push(savedMatch.pair1Id.player1.email);
-//     if (savedMatch.pair1Id?.player2?.email) playerEmails.push(savedMatch.pair1Id.player2.email);
-//     if (savedMatch.pair2Id?.player1?.email) playerEmails.push(savedMatch.pair2Id.player1.email);
-//     if (savedMatch.pair2Id?.player2?.email) playerEmails.push(savedMatch.pair2Id.player2.email);
-
-//     const uniqueEmails = [...new Set(playerEmails)];
-
-//     const matchDetails = {
-//       eventName:  savedMatch.tournamentId.tournamentName,
-//       matchType:  savedMatch.matchType,
-//       matchRound: savedMatch.round || "N/A",
-//       location:   savedMatch.location,
-//       date:       savedMatch.date,
-//       winner:     matchDetailsWinner?.fullName || "N/A"
-//     };
-
-//     if (savedMatch.matchType === "Single") {
-//       matchDetails.player1      = savedMatch.player1Id?.fullName || "N/A";
-//       matchDetails.player2      = savedMatch.player2Id?.fullName || "N/A";
-//       matchDetails.player1Score = savedMatch.player1Score || 0;
-//       matchDetails.player2Score = savedMatch.player2Score || 0;
-//     }
-
-//     if (savedMatch.matchType === "Pairs") {
-//       matchDetails.player1 = savedMatch.pair1Id
-//         ? `${savedMatch.pair1Id.player1?.fullName || "N/A"} & ${savedMatch.pair1Id.player2?.fullName || "N/A"}`
-//         : "N/A";
-//       matchDetails.player2 = savedMatch.pair2Id
-//         ? `${savedMatch.pair2Id.player1?.fullName || "N/A"} & ${savedMatch.pair2Id.player2?.fullName || "N/A"}`
-//         : "N/A";
-//       matchDetails.player1Score = savedMatch.pair1Score || 0;
-//       matchDetails.player2Score = savedMatch.pair2Score || 0;
-//     }
-
-//     // if (uniqueEmails.length > 0) {
-//     //   await sendEmail({
-//     //     to: uniqueEmails,
-//     //     subject: `Match Result Updated: ${savedMatch.tournamentId.tournamentName}`,
-//     //     html: matchResultUpdateTemplate({ matchDetails })
-//     //   });
-//     // }
-
-//     return await savedMatch.populate([
-//       { path: "tournamentId", select: "tournamentName sportName format" },
-//       { path: "roundId",      select: "roundName roundNumber date" },
-//       { path: "player1Id",    select: "fullName email" },
-//       { path: "player2Id",    select: "fullName email" },
-//       { path: "pair1Id",      select: "pairName player1 player2" },
-//       { path: "pair2Id",      select: "pairName player1 player2" },
-//       { path: "createdBy",    select: "fullName email" },
-//       { path: "updatedBy",    select: "fullName email" }
-//     ]);
-
-//   } catch (error) {
-//     console.error("❌ Service error:", error);
-//     throw new Error(`Failed to update match: ${error.message}`);
-//   }
-// }
-
-// async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = null) {
-//   try {
-
-//     if (!mongoose.Types.ObjectId.isValid(id)) {
-//       throw new Error("Invalid match ID");
-//     }
-
-//     console.log(`🔍 Fetching match by ID: ${id}`);
-//     // ── Populate match with tournament, players, and pairs ───────────────────
-//     const match = await Match.findById(id)
-//       .populate("tournamentId")
-//       .populate("roundId", "roundName roundNumber date")
-//       .populate("player1Id", "fullName email")
-//       .populate("player2Id", "fullName email")
-//       .populate({
-//         path: "pair1Id",
-//         populate: [
-//           { path: "player1", select: "fullName email" },
-//           { path: "player2", select: "fullName email" }
-//         ]
-//       })
-//       .populate({
-//         path: "pair2Id",
-//         populate: [
-//           { path: "player1", select: "fullName email" },
-//           { path: "player2", select: "fullName email" }
-//         ]
-//       })
-//       .populate("winner", "fullName email");
-
-//     if (!match) throw new Error("Match not found");
-
-//     if (match.tournamentId == null) {
-//       throw new Error("Tournament not found");
-//     }
-
-//     if (match.tournamentId.status !== "in progress") {
-//       throw new Error(
-//         "The tournament has not started yet. You can update the match only after the tournament begins."
-//       );
-//     }
-
-//     const isAdmin       = role === "Admin";
-//     const isOwner       =
-//       role !== "token-access" &&
-//       match.tournamentId.createdBy.toString() === userId.toString();
-//     const isTokenAccess = role === "token-access";
-
-//     if (!isAdmin && !isOwner && !isTokenAccess) {
-//       throw new Error("Not authorized to update this match");
-//     }
-
-//     // ── Validate status ──────────────────────────────────────────────────────
-//     if (
-//       updateData.status &&
-//       !["pending", "scheduled", "in-progress", "completed", "rescheduled"].includes(
-//         updateData.status
-//       )
-//     ) throw new Error("Invalid status");
-
-//     // ── Validate matchType ───────────────────────────────────────────────────
-//     if (
-//       updateData.matchType &&
-//       !["Single", "Pairs", "Team"].includes(updateData.matchType)
-//     ) {
-//       throw new Error("Invalid match type");
-//     }
-
-//     // ── Comments ─────────────────────────────────────────────────────────────
-//     if (updateData.comments !== undefined) match.comments = updateData.comments;
-
-//     // ── Photo upload ─────────────────────────────────────────────────────────
-//     if (files && Array.isArray(files) && files.length > 0) {
-//       const uploadedPhotos = [];
-//       for (let i = 0; i < files.length; i++) {
-//         const file = files[i];
-//         if (file?.buffer) {
-//           const uploadResult = await uploadToCloudinary(
-//             file.buffer,
-//             file.originalname || `match_photo_${i}`,
-//             "match_photos"
-//           );
-//           if (uploadResult?.secure_url) uploadedPhotos.push(uploadResult.secure_url);
-//         }
-//       }
-//       if (uploadedPhotos.length > 0) match.matchPhoto = uploadedPhotos;
-//     }
-
-//     // ── Apply all update fields ──────────────────────────────────────────────
-//     Object.assign(match, updateData);
-//     match.updatedBy = userId;
-
-//     // ── AUTO-SWAP: resolve all conflict scenarios before saving ──────────────
-//     //
-//     // swapPayload shape (built by controller):
-//     //   [{ matchId, fields: { player1Id?: "...", player2Id?: "...", ... } }]
-//     //
-//     // Each entry = ONE affected match with ALL its slot updates merged.
-//     // This design handles all 4 scenarios safely:
-//     //
-//     // [1] Single player change
-//     //     swapPayload = [{ matchId: M2, fields: { player1Id: "A" } }]
-//     //     → 1 update on M2
-//     //
-//     // [2] Both players from SAME sibling match (e.g. Match1: A,B → want C,D; C&D both in Match2)
-//     //     swapPayload = [{ matchId: M2, fields: { player1Id: "A", player2Id: "B" } }]
-//     //     → 1 merged update on M2 — NO race condition ✅
-//     //
-//     // [3] Both players from DIFFERENT sibling matches (e.g. C from Match2, D from Match3)
-//     //     swapPayload = [
-//     //       { matchId: M2, fields: { player1Id: "A" } },
-//     //       { matchId: M3, fields: { player2Id: "B" } }
-//     //     ]
-//     //     → 2 independent updates via Promise.all — safe, different targets ✅
-//     //
-//     // [4] No conflict (player was free / unassigned)
-//     //     swapPayload = null → block skipped entirely ✅
-//     //
-//     // ALL swaps run BEFORE match.save() — if any swap fails, the primary
-//     // match is NOT saved, preventing a half-broken state in the database.
-
-//     if (swapPayload && swapPayload.length > 0) {
-//       const swapOps = swapPayload.map(({ matchId, fields }) =>
-//         Match.findByIdAndUpdate(
-//           matchId,
-//           {
-//             $set: {
-//               ...fields,        // all slot updates merged into one atomic write
-//               updatedBy: userId
-//             }
-//           },
-//           { new: true }
-//         )
-//       );
-
-//       // Parallel execution — safe because each entry targets a different match
-//       await Promise.all(swapOps);
-//     }
-
-//     // ── Save primary match ───────────────────────────────────────────────────
-//     // Only reached if all swaps above succeeded
-//     const savedMatch = await match.save();
-
-//     // ── Build email notification details ─────────────────────────────────────
-//     const matchDetailsWinner = await User.findById(savedMatch.winner);
-
-//     const playerEmails = [];
-//     if (savedMatch.player1Id?.email) playerEmails.push(savedMatch.player1Id.email);
-//     if (savedMatch.player2Id?.email) playerEmails.push(savedMatch.player2Id.email);
-//     if (savedMatch.pair1Id?.player1?.email) playerEmails.push(savedMatch.pair1Id.player1.email);
-//     if (savedMatch.pair1Id?.player2?.email) playerEmails.push(savedMatch.pair1Id.player2.email);
-//     if (savedMatch.pair2Id?.player1?.email) playerEmails.push(savedMatch.pair2Id.player1.email);
-//     if (savedMatch.pair2Id?.player2?.email) playerEmails.push(savedMatch.pair2Id.player2.email);
-
-//     const uniqueEmails = [...new Set(playerEmails)];
-
-//     const matchDetails = {
-//       eventName:  savedMatch.tournamentId.tournamentName,
-//       matchType:  savedMatch.matchType,
-//       matchRound: savedMatch.round || "N/A",
-//       location:   savedMatch.location,
-//       date:       savedMatch.date,
-//       winner:     matchDetailsWinner?.fullName || "N/A"
-//     };
-
-//     if (savedMatch.matchType === "Single") {
-//       matchDetails.player1      = savedMatch.player1Id?.fullName || "N/A";
-//       matchDetails.player2      = savedMatch.player2Id?.fullName || "N/A";
-//       matchDetails.player1Score = savedMatch.player1Score || 0;
-//       matchDetails.player2Score = savedMatch.player2Score || 0;
-//     }
-
-//     if (savedMatch.matchType === "Pairs") {
-//       matchDetails.player1 = savedMatch.pair1Id
-//         ? `${savedMatch.pair1Id.player1?.fullName || "N/A"} & ${savedMatch.pair1Id.player2?.fullName || "N/A"}`
-//         : "N/A";
-//       matchDetails.player2 = savedMatch.pair2Id
-//         ? `${savedMatch.pair2Id.player1?.fullName || "N/A"} & ${savedMatch.pair2Id.player2?.fullName || "N/A"}`
-//         : "N/A";
-//       matchDetails.player1Score = savedMatch.pair1Score || 0;
-//       matchDetails.player2Score = savedMatch.pair2Score || 0;
-//     }
-
-//     // if (uniqueEmails.length > 0) {
-//     //   await sendEmail({
-//     //     to: uniqueEmails,
-//     //     subject: `Match Result Updated: ${savedMatch.tournamentId.tournamentName}`,
-//     //     html: matchResultUpdateTemplate({ matchDetails })
-//     //   });
-//     // }
-
-//     return await savedMatch.populate([
-//       { path: "tournamentId", select: "tournamentName sportName format" },
-//       { path: "roundId",      select: "roundName roundNumber date" },
-//       { path: "player1Id",    select: "fullName email" },
-//       { path: "player2Id",    select: "fullName email" },
-//       { path: "pair1Id",      select: "pairName player1 player2" },
-//       { path: "pair2Id",      select: "pairName player1 player2" },
-//       { path: "createdBy",    select: "fullName email" },
-//       { path: "updatedBy",    select: "fullName email" }
-//     ]);
-
-//   } catch (error) {
-//     console.error("❌ Service error:", error);
-//     throw new Error(`Failed to update match: ${error.message}`);
-//   }
-// }
-
-// async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = null) {
-//   try {
-
-//     if (!mongoose.Types.ObjectId.isValid(id)) {
-//       throw new Error("Invalid match ID");
-//     }
-
-//     // ── Populate match with tournament, players, and pairs ───────────────────
-//     const match = await Match.findById(id)
-//       .populate("tournamentId")
-//       .populate("roundId", "roundName roundNumber date")
-//       .populate("player1Id", "fullName email")
-//       .populate("player2Id", "fullName email")
-//       .populate({
-//         path: "pair1Id",
-//         populate: [
-//           { path: "player1", select: "fullName email" },
-//           { path: "player2", select: "fullName email" }
-//         ]
-//       })
-//       .populate({
-//         path: "pair2Id",
-//         populate: [
-//           { path: "player1", select: "fullName email" },
-//           { path: "player2", select: "fullName email" }
-//         ]
-//       })
-//       .populate("winner", "fullName email");
-
-//     if (!match) throw new Error("Match not found");
-
-//     if (match.tournamentId == null) {
-//       throw new Error("Tournament not found");
-//     }
-
-//     if (match.tournamentId.status !== "in progress") {
-//       throw new Error(
-//         "The tournament has not started yet. You can update the match only after the tournament begins."
-//       );
-//     }
-
-//     const isAdmin       = role === "Admin";
-//     const isOwner       =
-//       role !== "token-access" &&
-//       match.tournamentId.createdBy.toString() === userId.toString();
-//     const isTokenAccess = role === "token-access";
-
-//     if (!isAdmin && !isOwner && !isTokenAccess) {
-//       throw new Error("Not authorized to update this match");
-//     }
-
-//     // ── Validate status ──────────────────────────────────────────────────────
-//     if (
-//       updateData.status &&
-//       !["pending", "scheduled", "in-progress", "completed", "rescheduled"].includes(
-//         updateData.status
-//       )
-//     ) throw new Error("Invalid status");
-
-//     // ── Validate matchType ───────────────────────────────────────────────────
-//     if (
-//       updateData.matchType &&
-//       !["Single", "Pairs", "Team"].includes(updateData.matchType)
-//     ) {
-//       throw new Error("Invalid match type");
-//     }
-
-//     // ── Comments ─────────────────────────────────────────────────────────────
-//     if (updateData.comments !== undefined) match.comments = updateData.comments;
-
-//     // ── Photo upload ─────────────────────────────────────────────────────────
-//     if (files && Array.isArray(files) && files.length > 0) {
-//       const uploadedPhotos = [];
-//       for (let i = 0; i < files.length; i++) {
-//         const file = files[i];
-//         if (file?.buffer) {
-//           const uploadResult = await uploadToCloudinary(
-//             file.buffer,
-//             file.originalname || `match_photo_${i}`,
-//             "match_photos"
-//           );
-//           if (uploadResult?.secure_url) uploadedPhotos.push(uploadResult.secure_url);
-//         }
-//       }
-//       if (uploadedPhotos.length > 0) match.matchPhoto = uploadedPhotos;
-//     }
-
-//     // ── Apply all update fields ──────────────────────────────────────────────
-//     Object.assign(match, updateData);
-//     match.updatedBy = userId;
-
-//     // ── AUTO-SWAP: resolve all participant conflicts before saving ────────────
-//     //
-//     // swapPayload shape (built by controller):
-//     //   [{ matchId: ObjectId, fields: { slotName: displacedId, ... } }]
-//     //
-//     // Each entry = ONE sibling match + ALL its slot updates merged.
-//     //
-//     // ┌─────────────────────────────────────────────────────────────────────┐
-//     // │ SINGLE match swap scenarios (uses player1Id / player2Id)            │
-//     // ├─────────────────────────────────────────────────────────────────────┤
-//     // │ S1: Change one player, target is free (no conflict)                 │
-//     // │     { player1Id: "X" } — X not in any match                        │
-//     // │     swapPayload = null → skip, just save                            │
-//     // │                                                                     │
-//     // │ S2: Change one player, target is in another match                   │
-//     // │     { player1Id: "C" } — C is player1Id in Match2                  │
-//     // │     swapPayload = [{ matchId: M2, fields: { player1Id: "A" } }]    │
-//     // │     → Match2.player1Id = A (displaced), Match1.player1Id = C       │
-//     // │                                                                     │
-//     // │ S3: Change both players, both in the SAME sibling match             │
-//     // │     { player1Id: "C", player2Id: "D" } — C,D both in Match2        │
-//     // │     swapPayload = [{ matchId: M2,                                   │
-//     // │                      fields: { player1Id:"A", player2Id:"B" } }]   │
-//     // │     → ONE atomic update on Match2 — no race condition               │
-//     // │                                                                     │
-//     // │ S4: Change both players, each in a DIFFERENT sibling match          │
-//     // │     { player1Id: "C", player2Id: "E" } — C in Match2, E in Match3  │
-//     // │     swapPayload = [{ matchId: M2, fields: { player1Id: "A" } },    │
-//     // │                    { matchId: M3, fields: { player2Id: "B" } }]    │
-//     // │     → two independent updates via Promise.all — safe                │
-//     // ├─────────────────────────────────────────────────────────────────────┤
-//     // │ PAIRS match swap scenarios (uses pair1Id / pair2Id)                 │
-//     // │ Identical logic — only the field names differ                        │
-//     // │                                                                     │
-//     // │ P1: { pair1Id: "PairX" } — PairX free → swapPayload = null         │
-//     // │ P2: { pair1Id: "PairC" } — PairC in Match2.pair1Id                 │
-//     // │     → Match2.pair1Id = currentMatch.pair1Id (displaced)             │
-//     // │ P3: { pair1Id: "PairC", pair2Id: "PairD" } — both in Match2        │
-//     // │     → ONE atomic update on Match2                                   │
-//     // │ P4: { pair1Id: "PairC", pair2Id: "PairE" } — C in M2, E in M3     │
-//     // │     → two independent updates via Promise.all                       │
-//     // └─────────────────────────────────────────────────────────────────────┘
-//     //
-//     // ALL swaps execute BEFORE match.save() — if any swap fails, the primary
-//     // match is NOT saved, preventing a half-broken state in the database.
-
-//     if (swapPayload && swapPayload.length > 0) {
-//       const swapOps = swapPayload.map(({ matchId, fields }) =>
-//         Match.findByIdAndUpdate(
-//           matchId,
-//           {
-//             $set: {
-//               ...fields,         // all slot updates in ONE atomic write per match
-//               updatedBy: userId
-//             }
-//           },
-//           { new: true }
-//         )
-//       );
-
-//       // Parallel execution — safe because each entry targets a different match
-//       await Promise.all(swapOps);
-//     }
-
-//     // ── Save primary match — only after all swaps confirmed ──────────────────
-//     const savedMatch = await match.save();
-
-//     // ── Build email notification details ─────────────────────────────────────
-//     const matchDetailsWinner = await User.findById(savedMatch.winner);
-
-//     const playerEmails = [];
-//     if (savedMatch.player1Id?.email) playerEmails.push(savedMatch.player1Id.email);
-//     if (savedMatch.player2Id?.email) playerEmails.push(savedMatch.player2Id.email);
-//     if (savedMatch.pair1Id?.player1?.email) playerEmails.push(savedMatch.pair1Id.player1.email);
-//     if (savedMatch.pair1Id?.player2?.email) playerEmails.push(savedMatch.pair1Id.player2.email);
-//     if (savedMatch.pair2Id?.player1?.email) playerEmails.push(savedMatch.pair2Id.player1.email);
-//     if (savedMatch.pair2Id?.player2?.email) playerEmails.push(savedMatch.pair2Id.player2.email);
-
-//     const uniqueEmails = [...new Set(playerEmails)];
-
-//     const matchDetails = {
-//       eventName:  savedMatch.tournamentId.tournamentName,
-//       matchType:  savedMatch.matchType,
-//       matchRound: savedMatch.round || "N/A",
-//       location:   savedMatch.location,
-//       date:       savedMatch.date,
-//       winner:     matchDetailsWinner?.fullName || "N/A"
-//     };
-
-//     if (savedMatch.matchType === "Single"|| savedMatch.matchType === "Team") {
-//       matchDetails.player1      = savedMatch.player1Id?.fullName || "N/A";
-//       matchDetails.player2      = savedMatch.player2Id?.fullName || "N/A";
-//       matchDetails.player1Score = savedMatch.player1Score || 0;
-//       matchDetails.player2Score = savedMatch.player2Score || 0;
-//     }
-
-//     if (savedMatch.matchType === "Pairs") {
-//       matchDetails.player1 = savedMatch.pair1Id
-//         ? `${savedMatch.pair1Id.player1?.fullName || "N/A"} & ${savedMatch.pair1Id.player2?.fullName || "N/A"}`
-//         : "N/A";
-//       matchDetails.player2 = savedMatch.pair2Id
-//         ? `${savedMatch.pair2Id.player1?.fullName || "N/A"} & ${savedMatch.pair2Id.player2?.fullName || "N/A"}`
-//         : "N/A";
-//       matchDetails.player1Score = savedMatch.pair1Score || 0;
-//       matchDetails.player2Score = savedMatch.pair2Score || 0;
-//     }
-
-//     // if (uniqueEmails.length > 0) {
-//     //   await sendEmail({
-//     //     to: uniqueEmails,
-//     //     subject: `Match Result Updated: ${savedMatch.tournamentId.tournamentName}`,
-//     //     html: matchResultUpdateTemplate({ matchDetails })
-//     //   });
-//     // }
-
-//     return await savedMatch.populate([
-//       { path: "tournamentId", select: "tournamentName sportName format" },
-//       { path: "roundId",      select: "roundName roundNumber date" },
-//       { path: "player1Id",    select: "fullName email" },
-//       { path: "player2Id",    select: "fullName email" },
-//       { path: "pair1Id",      select: "pairName player1 player2" },
-//       { path: "pair2Id",      select: "pairName player1 player2" },
-//       { path: "createdBy",    select: "fullName email" },
-//       { path: "updatedBy",    select: "fullName email" }
-//     ]);
-
-//   } catch (error) {
-//     console.error("❌ Service error:", error);
-//     throw new Error(`Failed to update match: ${error.message}`);
-//   }
-// }
-
 // ─── add this import at the top of your match service file ───────────────────
 
 
@@ -1005,6 +391,9 @@ async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = n
     if (!isAdmin && !isOwner && !isTokenAccess) {
       throw new Error("Not authorized to update this match");
     }
+
+    const wasCompletedWithWinner =
+      match.status === "completed" && Boolean(match.winner);
 
     // ── Validate status / matchType ───────────────────────────────────────────
     if (
@@ -1052,6 +441,14 @@ async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = n
     Object.assign(match, updateData);
     match.updatedBy = userId;
 
+    if (!match.winner) {
+      applyWinnerFromScores(match);
+    }
+
+    if (match.winner && match.status !== "completed") {
+      match.status = "completed";
+    }
+
     // ── Execute swap operations BEFORE saving primary match ───────────────────
     if (swapPayload && swapPayload.length > 0) {
       const swapOps = swapPayload.map(({ matchId, fields }) =>
@@ -1066,6 +463,14 @@ async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = n
 
     // ── Save primary match ────────────────────────────────────────────────────
     const savedMatch = await match.save();
+
+    if (
+      savedMatch.status === "completed" &&
+      savedMatch.winner &&
+      !wasCompletedWithWinner
+    ) {
+      await updateSeedStatsFromCompletedMatch(savedMatch);
+    }
 
     // ── AUTO-ADVANCE: check if this save completed the round ──────────────────
     // Runs only when the match is marked "completed" with a winner set.
@@ -1348,6 +753,104 @@ async swapMatchPlayers(match1Id, match2Id, updateData, userId, role) {
     throw new Error(`Failed to swap match players: ${error.message}`);
   }
 }
+}
+
+async function updateSeedStatsFromCompletedMatch(match) {
+  if (match.matchType === "Pairs") {
+    await updatePairPlayerSeedStats(match);
+    return;
+  }
+
+  const participantIds = [match.player1Id, match.player2Id]
+    .map(getId)
+    .filter(Boolean);
+  const winnerId = getId(match.winner);
+
+  await updateUserSeedStats(participantIds, winnerId);
+}
+
+async function updatePairPlayerSeedStats(match) {
+  const pairIds = [match.pair1Id, match.pair2Id]
+    .map(getId)
+    .filter(Boolean);
+  const winnerPairId = getId(match.winner)?.toString();
+
+  await Promise.all(
+    pairIds.map(async (pairId) => {
+      const pair = await TournamentPair.findById(pairId).select("player1 player2");
+      if (!pair) return;
+
+      const pairWon = pairId.toString() === winnerPairId;
+      const playerIds = [pair.player1, pair.player2].map(getId).filter(Boolean);
+      await updateUserSeedStats(
+        playerIds,
+        null,
+        pairWon
+      );
+    })
+  );
+}
+
+async function updateUserSeedStats(playerIds, winnerId, allWon = false) {
+  const winnerIdText = winnerId?.toString();
+
+  await Promise.all(
+    playerIds.map(async (playerId) => {
+      const user = await User.findById(playerId).select("seedStats");
+      if (!user) return;
+
+      const isWinner = allWon || playerId.toString() === winnerIdText;
+      const nextStats = incrementSeedStats(user.seedStats, isWinner);
+
+      await User.findByIdAndUpdate(playerId, {
+        seedStats: nextStats,
+      });
+    })
+  );
+}
+
+function incrementSeedStats(seedStats, isWinner) {
+  const matchesPlayed = (Number(seedStats?.matchesPlayed) || 0) + 1;
+  const wins = (Number(seedStats?.wins) || 0) + (isWinner ? 1 : 0);
+
+  return {
+    matchesPlayed,
+    wins,
+    winRate: wins / matchesPlayed,
+    updatedAt: new Date(),
+  };
+}
+
+function getId(value) {
+  if (!value) return null;
+  return value._id ?? value;
+}
+
+function applyWinnerFromScores(match) {
+  if (match.matchType === "Pairs") {
+    const pair1Score = Number(match.pair1Score);
+    const pair2Score = Number(match.pair2Score);
+
+    if (!Number.isFinite(pair1Score) || !Number.isFinite(pair2Score)) return;
+    if (pair1Score === pair2Score) return;
+
+    match.winner = pair1Score > pair2Score
+      ? getId(match.pair1Id)
+      : getId(match.pair2Id);
+    match.winnerModel = "TournamentPair";
+    return;
+  }
+
+  const player1Score = Number(match.player1Score);
+  const player2Score = Number(match.player2Score);
+
+  if (!Number.isFinite(player1Score) || !Number.isFinite(player2Score)) return;
+  if (player1Score === player2Score) return;
+
+  match.winner = player1Score > player2Score
+    ? getId(match.player1Id)
+    : getId(match.player2Id);
+  match.winnerModel = "User";
 }
 
 export default new MatchService();

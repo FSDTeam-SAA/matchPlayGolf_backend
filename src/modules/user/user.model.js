@@ -15,6 +15,12 @@ const UserSchema = new mongoose.Schema(
     email:    { type: String, required: true, unique: true },
     password: { type: String, select:false },
     seeder:   { type: Number, default: 0 },
+    seedStats: {
+      matchesPlayed: { type: Number, default: 0 },
+      wins: { type: Number, default: 0 },
+      winRate: { type: Number, default: 0 },
+      updatedAt: { type: Date },
+    },
 
 
     username: { type: String },
