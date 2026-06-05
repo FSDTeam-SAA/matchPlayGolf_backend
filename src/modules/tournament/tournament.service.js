@@ -239,12 +239,14 @@ async registerPairPlayers(tournamentId, players, userIds) {
     return { pair: existingPair, count: 0 };
   }
   
+  const pairSeeder = await getPairSeeder(players, userIds);
+
   const pair = await TournamentPair.create({
     tournamentId,
     teamName: `${players[0].fullName} & ${players[1].fullName}`,
     player1: userIds[0],
     player2: userIds[1],
-    seeder: players[0].seeder ?? players[1].seeder,
+    seeder: pairSeeder,
   });
   const tournament = await Tournament.findById(tournamentId);
 
@@ -263,7 +265,7 @@ async registerPairPlayers(tournamentId, players, userIds) {
     tournamentId,
     playerId: null,
     pairId: pair._id,
-    seeder: pair.seeder,
+    seeder: pairSeeder,
   });
 
   return { pair, count: 2 };
@@ -602,19 +604,19 @@ async getTournamentMatchesService(
     .sort({ roundNumber: 1 });
 
   const matches = await Match.find(query)
-    .populate("player1Id player2Id", "fullName email profileImage score handicap clubName")
+    .populate("player1Id player2Id", "fullName email profileImage score handicap clubName seeder")
     .populate({
       path: "pair1Id",
       populate: {
         path: "player1 player2",
-        select: "fullName email profileImage score handicap clubName"
+        select: "fullName email profileImage score handicap clubName seeder"
       }
     })
     .populate({
       path: "pair2Id",
       populate: {
         path: "player1 player2",
-        select: "fullName email profileImage score handicap clubName"
+        select: "fullName email profileImage score handicap clubName seeder"
       }
     })
     .sort({ matchNumber: 1 })
@@ -640,5 +642,24 @@ async getTournamentMatchesService(
 function generateToken() {
    return crypto.randomBytes(32).toString("hex");
   }
+
+async function getPairSeeder(players, userIds) {
+  const requestSeeds = players
+    .map((player) => Number(player?.seeder))
+    .filter((seed) => Number.isFinite(seed) && seed > 0);
+
+  if (requestSeeds.length === players.length) {
+    return requestSeeds.reduce((total, seed) => total + seed, 0);
+  }
+
+  const users = await User.find({ _id: { $in: userIds } }).select("seeder");
+  const userSeeds = users
+    .map((user) => Number(user.seeder))
+    .filter((seed) => Number.isFinite(seed) && seed > 0);
+
+  return userSeeds.length === userIds.length
+    ? userSeeds.reduce((total, seed) => total + seed, 0)
+    : undefined;
+}
 
 export default new TournamentService();
