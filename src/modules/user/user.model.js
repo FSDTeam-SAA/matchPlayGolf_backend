@@ -18,7 +18,7 @@ const UserSchema = new mongoose.Schema(
     seedStats: {
       matchesPlayed: { type: Number, default: 0 },
       wins: { type: Number, default: 0 },
-      winRate: { type: Number, default: 0 },
+      winRate: { type: Number, default: 0, min: 0, max: 100 },
       updatedAt: { type: Date },
     },
 

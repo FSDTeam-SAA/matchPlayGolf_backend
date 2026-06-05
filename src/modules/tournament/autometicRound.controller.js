@@ -573,12 +573,13 @@ function getPairSeedValue(players) {
 function normalizeSeedStats(seedStats) {
   const matchesPlayed = Number(seedStats?.matchesPlayed) || 0;
   const wins = Number(seedStats?.wins) || 0;
-  const winRate = Number(seedStats?.winRate);
 
   return {
     matchesPlayed,
     wins,
-    winRate: Number.isFinite(winRate) ? winRate : matchesPlayed > 0 ? wins / matchesPlayed : 0,
+    winRate: matchesPlayed > 0
+      ? Number(((wins / matchesPlayed) * 100).toFixed(2))
+      : 0,
   };
 }
 
