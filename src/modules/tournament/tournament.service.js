@@ -255,9 +255,9 @@ async registerPairPlayers(tournamentId, players, userIds) {
   }
 
   const totalAfterAdd =
-    Number(tournament.totalParticipants) + 2;
+    Number(tournament.totalParticipants) + 1;
 
-  if (totalAfterAdd > Number(tournament.drawSize * 2)) {
+  if (totalAfterAdd * 2> Number(tournament.drawSize * 2)) {
     throw new Error("Participant size exceeds tournament draw size");
   }
 
@@ -268,7 +268,7 @@ async registerPairPlayers(tournamentId, players, userIds) {
     seeder: pairSeeder,
   });
 
-  return { pair, count: 2 };
+  return { pair, count: 1 };
 }
 
 async createOrUpdateRounds(tournamentId, rounds, createdBy) {
