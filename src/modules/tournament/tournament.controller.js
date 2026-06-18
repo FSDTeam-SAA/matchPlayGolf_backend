@@ -283,7 +283,10 @@ export const updateTournament = async (req, res) => {
     if (result.registration) {
       const count = result.registration.users.length;
       const regType = result.registration.type === "Pairs" ? "Pairs" : "Single player";
-      message = `${count} ${regType} registration(s) + Tournament updated successfully`;
+      message = regType === "Pairs"
+        ? `${Math.floor(count / 2)} ${regType} registration(s) + Tournament updated successfully`
+        : `${count} ${regType} registration(s) + Tournament updated successfully`;
+      // message = `${count} ${regType} registration(s) + Tournament updated successfully`;
     }
     
     return res.status(200).json({
