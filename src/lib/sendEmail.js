@@ -1,19 +1,30 @@
 import nodemailer from "nodemailer";
 import {
-  emailHost,
-  emailPort,
-  emailAddress,
-  emailPass,
-  emailFrom,
+  smtpHost,
+  smtpPort,
+  smtpSecure,
+  smtpPass,
+  smtpUser,
+  emailFrom
+
 } from "../config/config.js"; 
 
+// const transporter = nodemailer.createTransport({
+//   host: emailHost,
+//   port: emailPort,
+//   secure: false,
+//   auth: {
+//     user: emailAddress,
+//     pass: emailPass,
+//   },
+// });
 const transporter = nodemailer.createTransport({
-  host: emailHost,
-  port: emailPort,
-  secure: false,
+  host: smtpHost,
+  port: smtpPort,
+  secure: smtpSecure === "true", // true for port 465
   auth: {
-    user: emailAddress,
-    pass: emailPass,
+    user: smtpUser,
+    pass: smtpPass,
   },
 });
 

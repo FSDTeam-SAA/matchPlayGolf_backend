@@ -21,9 +21,17 @@ export const emailHost = process.env.EMAIL_HOST;
 export const emailPort = process.env.EMAIL_PORT;
 export const emailAddress = process.env.EMAIL_ADDRESS;
 export const emailPass = process.env.EMAIL_PASS;
-export const emailFrom = process.env.EMAIL_FROM;
+// export const emailFrom = process.env.EMAIL_FROM;
 export const adminMail= process.env.ADMIN_EMAIL; 
 export const emailTo = process.env.EMAIL_TO;
+
+//cofig smtp setup
+export const smtpHost = process.env.SMTP_HOST;
+export const smtpPort = process.env.SMTP_PORT;
+export const smtpSecure = process.env.SMTP_SECURE;
+export const smtpUser = process.env.SMTP_USER;
+export const smtpPass = process.env.SMTP_PASS;
+export const emailFrom = process.env.EMAIL_FROM;
 
 // Cloudinary config
 export const cloudinaryCloudName = process.env.CLOUDINARY_CLOUD_NAME;
