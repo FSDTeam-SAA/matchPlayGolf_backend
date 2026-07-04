@@ -197,7 +197,7 @@ async getTournamentMatchById(id) {
     console.log(`🔍 Fetching match by ID: ${id}`);
 
     const match = await Match.findById(id)
-      .populate("tournamentId", "tournamentName sportName format")
+      .populate("tournamentId", "tournamentName sportName format startDate endDate")
       .populate("roundId", "roundName roundNumber date")
       .populate("player1Id", "fullName email")
       .populate("player2Id", "fullName email")
