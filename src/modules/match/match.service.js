@@ -149,8 +149,8 @@ class MatchService {
     const matches = await Match.find(query)
       .populate("tournamentId", "tournamentName sportName format")
       .populate("roundId", "roundName roundNumber date")
-      .populate("player1Id", "fullName email")
-      .populate("player2Id", "fullName email")
+      .populate("player1Id", "fullName email captainName")
+      .populate("player2Id", "fullName email captainName")
       .populate({
         path: "pair1Id",
         populate: {
@@ -532,10 +532,10 @@ async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = n
 
     // ── Populate and return ───────────────────────────────────────────────────
     const populated = await savedMatch.populate([
-      { path: "tournamentId", select: "tournamentName sportName format" },
+      { path: "tournamentId", select: "tournamentName sportName format startDate endDate" },
       { path: "roundId",      select: "roundName roundNumber date" },
-      { path: "player1Id",    select: "fullName email" },
-      { path: "player2Id",    select: "fullName email" },
+      { path: "player1Id",    select: "fullName email captainName profileImage score handicap clubName seeder" },
+      { path: "player2Id",    select: "fullName email captainName profileImage score handicap clubName seeder" },
       { path: "pair1Id",      select: "pairName player1 player2" },
       { path: "pair2Id",      select: "pairName player1 player2" },
       { path: "createdBy",    select: "fullName email" },

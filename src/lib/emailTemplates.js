@@ -1,4 +1,15 @@
 // ✅ ESM
+const getEmailLogoUrl = () => {
+  const logoUrl = process.env.LOGO || "";
+  const googleDriveMatch = logoUrl.match(/\/file\/d\/([^/]+)\//);
+
+  if (googleDriveMatch?.[1]) {
+    return `https://drive.google.com/uc?export=view&id=${googleDriveMatch[1]}`;
+  }
+
+  return logoUrl;
+};
+
 export const verificationCodeTemplate = (code) => `
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px; background-color: #f9f9f9;">
     <h1 style="color: #333; text-align: center;">Verification Code</h1>
@@ -248,7 +259,7 @@ export const getPaymentSuccessForAdminTemplate = ({ name, email, phone, eventId,
 export const welcomeEmailTemplate = ({ user, verifyToken }) => {
   const setPasswordUrl = `${process.env.FRONTEND_URL}/set-password?token=${verifyToken}`;
   const accountUrl = `${process.env.FRONTEND_URL}/login`;
-  const logoUrl = `${process.env.LOGO || ""}`;
+  const logoUrl = getEmailLogoUrl();
 
   return `
 <!DOCTYPE html>
@@ -352,7 +363,7 @@ export const invitetationEmailTemplate = ({tournament, match, updateResultUrl, u
   const tournamentUrl = `${process.env.FRONTEND_URL}/tournaments/${tournament._id}`;
   const dashboardUrl = `${process.env.FRONTEND_URL}`;
   const contactUrl = `${process.env.FRONTEND_URL}/contact`;
-  const logoUrl = `${process.env.LOGO || ""}`;
+  const logoUrl = getEmailLogoUrl();
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -521,7 +532,7 @@ export const invitetationEmailTemplate = ({tournament, match, updateResultUrl, u
 export const matchResultUpdateTemplate = ({ 
   matchDetails
 }) => {
-  const logoUrl = `${process.env.LOGO || ""}`;
+  const logoUrl = getEmailLogoUrl();
   const websiteUrl = `${process.env.WEBSITE_URL || "http://www.golfko.co.uk"}`;
   const matchReportUrl = `${process.env.FRONTEND_URL}/event/match`;
 
@@ -634,7 +645,7 @@ export const eventStartInvitationTemplate = ({
   contactUrl,
   createEventUrl 
 }) => {
-  const logoUrl = `${process.env.LOGO || ""}`;
+  const logoUrl = getEmailLogoUrl();
   
   return `
 <!DOCTYPE html>

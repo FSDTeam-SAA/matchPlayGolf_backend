@@ -49,7 +49,7 @@ const UserSchema = new mongoose.Schema(
 
     clubName:  { type: String, default: "" },
     country:   { type: String, default: "" },
-    handicap:  { type: String, default: "4.5" },
+    handicap:  { type: String, default: "0" },
     whsNumber: { type: String, default: "" },
 
     tournamentId: {

@@ -1,5 +1,5 @@
+import './config/env.js';
 import express from 'express';
-import dotenv from 'dotenv';
 import cors from 'cors';
 import { applyMiddleware } from './middleware/security.js';
 import { notFound } from './middleware/notFound.js';
@@ -9,8 +9,6 @@ import cookieParser from 'cookie-parser';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
-
-dotenv.config();
 
 const app = express();
 app.use(cookieParser());

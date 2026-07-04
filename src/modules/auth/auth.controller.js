@@ -9,9 +9,8 @@ import {
   setPasswordService,
   importMultipleUsersService
 } from './auth.service.js';
-import dotenv from 'dotenv';
 import User from '../user/user.model.js';
-dotenv.config();
+import '../../config/env.js';
 
 
 export const registerUser = async (req, res, next) => {
