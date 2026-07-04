@@ -22,7 +22,7 @@ const tournamentPlayerSchema = new mongoose.Schema({
   handicap: {
     type: Number,
     min: 0,
-    max: 54,
+    max: 100,
   },
   // invitationStatus: {
   //   type: String,

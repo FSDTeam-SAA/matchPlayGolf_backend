@@ -37,3 +37,9 @@ export const emailFrom = process.env.EMAIL_FROM;
 export const cloudinaryCloudName = process.env.CLOUDINARY_CLOUD_NAME;
 export const cloudinaryApiKey = process.env.CLOUDINARY_API_KEY;
 export const cloudinarySecret = process.env.CLOUDINARY_API_SECRET;
+
+//stripe config
+export const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+export const stripePublishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
+export const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+export const logo = process.env.LOGO;

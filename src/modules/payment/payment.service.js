@@ -1,10 +1,9 @@
 import Payment from "./payment.model.js";
 import Stripe from "stripe";
 import AppError from "../../middleware/errorHandler.js";
-import dotenv from 'dotenv';
-dotenv.config();
+import { stripeSecretKey } from "../../config/config.js";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(stripeSecretKey);
 
 class PaymentService {
   async createCheckoutSession(tournamentData, userId) {

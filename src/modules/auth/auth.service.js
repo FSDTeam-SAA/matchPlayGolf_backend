@@ -5,8 +5,7 @@ import { emailExpires } from '../../config/config.js';
 import sendEmail from '../../lib/sendEmail.js';
 import { verificationCodeTemplate } from '../../lib/emailTemplates.js';
 import bcrypt from 'bcrypt';
-import dotenv from 'dotenv';
-dotenv.config();
+import '../../config/env.js';
 
 
 /**

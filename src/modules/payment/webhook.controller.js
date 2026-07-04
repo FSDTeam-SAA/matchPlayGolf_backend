@@ -1,8 +1,9 @@
 import Stripe from "stripe";
 import Payment from "../payment/payment.model.js";
 import Tournament from "../tournament/tournament.model.js";
+import { stripeSecretKey, stripeWebhookSecret } from "../../config/config.js";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = new Stripe(stripeSecretKey);
 
 /**
  * @desc    Handle Stripe webhook events
@@ -11,7 +12,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
  */
 export const handleStripeWebhook = async (req, res) => {
   const sig = req.headers["stripe-signature"];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecret = stripeWebhookSecret;
 
   let event;
 

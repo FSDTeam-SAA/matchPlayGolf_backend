@@ -604,7 +604,7 @@ async getTournamentMatchesService(
     .sort({ roundNumber: 1 });
 
   const matches = await Match.find(query)
-    .populate("player1Id player2Id", "fullName email profileImage score handicap clubName seeder")
+    .populate("player1Id player2Id", "fullName email profileImage score handicap clubName seeder captainName")
     .populate({
       path: "pair1Id",
       populate: {

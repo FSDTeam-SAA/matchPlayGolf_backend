@@ -32,4 +32,5 @@ router.use('/admin-dashboard', adminDashboardRoutes);
 router.use('/admin-team', adminTeam);
 router.use('/players', playerManagement);
 
-export default router;  
+export default router;
+
