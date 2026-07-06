@@ -383,12 +383,13 @@ async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = n
     if (!match.tournamentId) throw new Error("Tournament not found");
 
     const isAdmin       = role === "Admin";
+    const isOrganizer   = role === "Organizer";
     const isOwner       =
       role !== "token-access" &&
       match.tournamentId.createdBy.toString() === userId.toString();
     const isTokenAccess = role === "token-access";
 
-    if (!isAdmin && !isOwner && !isTokenAccess) {
+    if (!isAdmin && !isOrganizer && !isOwner && !isTokenAccess) {
       throw new Error("Not authorized to update this match");
     }
 
@@ -408,13 +409,24 @@ async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = n
       !["Single", "Pairs", "Team"].includes(updateData.matchType)
     ) throw new Error("Invalid match type");
 
-    if(updateData.winner && match.tournamentId.status !== "in progress"||
-      updateData.player1Score != null && match.tournamentId.status !== "in progress"||
-      updateData.player2Score != null && match.tournamentId.status !== "in progress"||
-      updateData.pair1Score != null && match.tournamentId.status !== "in progress"||
-      updateData.pair2Score != null && match.tournamentId.status !== "in progress"
+    const isResultUpdate =
+      updateData.winner !== undefined ||
+      updateData.player1Score != null ||
+      updateData.player2Score != null ||
+      updateData.pair1Score != null ||
+      updateData.pair2Score != null;
+
+    const canUpdateCompletedTournamentResult =
+      match.tournamentId.status === "completed" && (isAdmin || isOrganizer);
+
+    if (
+      isResultUpdate &&
+      match.tournamentId.status !== "in progress" &&
+      !canUpdateCompletedTournamentResult
     ) {
-      throw new Error("Cannot update winner for a tournament that is not in progress");
+      throw new Error(
+        "Result updates are only allowed when the tournament is in progress, or after completion by Admin or Organizer"
+      );
     }
 
     // ── Comments ──────────────────────────────────────────────────────────────
