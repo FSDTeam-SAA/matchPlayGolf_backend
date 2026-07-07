@@ -697,6 +697,8 @@ async function generateFirstRoundMatches(entries, tournamentId, knockoutStageId,
 /**
  * Rounds 2+: pair up winners from previous round by matchNumber order.
  * Winner of M1 vs Winner of M2, Winner of M3 vs Winner of M4, …
+ * Bracket mapping stays fixed, but the winner from the feeder match that
+ * completed earlier takes the left/home slot in the next round.
  */
 async function generateNextRoundMatches(
   completedMatches,
@@ -718,6 +720,13 @@ async function generateNextRoundMatches(
 
     if (!match1?.winner)
       throw new AppError(500, false, `Match ${i + 1} does not have a winner`);
+    if (!match2?.winner)
+      throw new AppError(500, false, `Match ${i + 2} does not have a winner`);
+
+    const [leftSideMatch, rightSideMatch] = orderFeederMatchesByCompletion(
+      match1,
+      match2
+    );
 
     const matchData = {
       tournamentId,
@@ -731,17 +740,49 @@ async function generateNextRoundMatches(
     };
 
     if (tournament.format === "Pairs") {
-      matchData.pair1Id = match1.winner;
-      matchData.pair2Id = match2?.winner || null;
+      matchData.pair1Id = leftSideMatch.winner;
+      matchData.pair2Id = rightSideMatch.winner;
     } else {
-      matchData.player1Id = match1.winner;
-      matchData.player2Id = match2?.winner || null;
+      matchData.player1Id = leftSideMatch.winner;
+      matchData.player2Id = rightSideMatch.winner;
     }
 
     matches.push(matchData);
   }
 
   return matches;
+}
+
+function orderFeederMatchesByCompletion(matchA, matchB) {
+  const completionTimeA = getMatchCompletionTime(matchA);
+  const completionTimeB = getMatchCompletionTime(matchB);
+
+  if (completionTimeA < completionTimeB) {
+    return [matchA, matchB];
+  }
+
+  if (completionTimeB < completionTimeA) {
+    return [matchB, matchA];
+  }
+
+  // Stable fallback when completion timestamps are identical or missing:
+  // preserve the original bracket order by match number.
+  return matchA.matchNumber <= matchB.matchNumber
+    ? [matchA, matchB]
+    : [matchB, matchA];
+}
+
+function getMatchCompletionTime(match) {
+  const timestampCandidates = [match.updatedAt, match.date, match.createdAt];
+
+  for (const value of timestampCandidates) {
+    const time = value ? new Date(value).getTime() : Number.NaN;
+    if (!Number.isNaN(time)) {
+      return time;
+    }
+  }
+
+  return Number.MAX_SAFE_INTEGER;
 }
 
 
