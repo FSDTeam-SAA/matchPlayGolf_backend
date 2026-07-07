@@ -179,7 +179,7 @@ export const updateTournamentMatch = async (req, res) => {
     const role = req.user?.role || "token-access";
     const matchId = req.params.matchId;
 
-    console.log("Received update data:", updateData);
+    // console.log("Received update data:", updateData, role);
 
     const matchExists = await Match.findById(matchId)
                         .populate('tournamentId', 'status').lean();
@@ -191,11 +191,20 @@ export const updateTournamentMatch = async (req, res) => {
       });
     }
 
-    if(matchExists.tournamentId.status === "completed" || matchExists.tournamentId.status === "cancelled" ||
-       matchExists.status === "completed" || matchExists.status === "cancelled") {
+    if(matchExists.tournamentId.status === "cancelled" || matchExists.status === "cancelled") {
       return res.status(400).json({
         success: false,
         message: "Cannot update a completed or cancelled match"
+      });
+    }
+
+   if ((matchExists.tournamentId.status === "completed" || matchExists.status === "completed") &&
+      role !== "Admin" &&
+      role !== "Organizer"
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to update this match"
       });
     }
 
