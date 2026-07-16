@@ -7,6 +7,7 @@ import { matchResultUpdateTemplate } from "../../lib/emailTemplates.js";
 import sendEmail from '../../lib/sendEmail.js';
 import User from "../user/user.model.js";
 import TournamentPair from "../others/tournamentPair.model.js";
+import KnockoutStage from "../others/knockoutSchema.model.js";
 import { checkAndAutoAdvanceRound } from "../tournament/autometicRound.controller.js";
 // import { checkAndAutoAdvanceRound } from "../knockout/knockout.service.js"; // adjust path
 
@@ -395,6 +396,7 @@ async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = n
 
     const wasCompletedWithWinner =
       match.status === "completed" && Boolean(match.winner);
+    const previousWinnerId = getId(match.winner)?.toString() || null;
 
     // ── Validate status / matchType ───────────────────────────────────────────
     if (
@@ -475,6 +477,15 @@ async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = n
 
     // ── Save primary match ────────────────────────────────────────────────────
     const savedMatch = await match.save();
+    const nextWinnerId = getId(savedMatch.winner)?.toString() || null;
+    const winnerCorrected =
+      previousWinnerId !== null &&
+      nextWinnerId !== null &&
+      previousWinnerId !== nextWinnerId;
+
+    if (winnerCorrected) {
+      await propagateWinnerCorrection(savedMatch, userId);
+    }
 
     if (
       savedMatch.status === "completed" &&
@@ -836,6 +847,167 @@ function incrementSeedStats(seedStats, isWinner) {
 function getId(value) {
   if (!value) return null;
   return value._id ?? value;
+}
+
+async function propagateWinnerCorrection(match, userId) {
+  if (!match.knockoutStageId || !match.round || !match.matchNumber) {
+    return;
+  }
+
+  const knockoutStage = await KnockoutStage.findById(match.knockoutStageId);
+  if (!knockoutStage) {
+    return;
+  }
+
+  let feederRound = Number(match.round);
+  let feederMatchNumber = Number(match.matchNumber);
+  let earliestResetRound = null;
+
+  while (feederRound < knockoutStage.totalRounds) {
+    const nextRound = feederRound + 1;
+    const parentMatchNumber = Math.ceil(feederMatchNumber / 2);
+    const feederMatchNumbers = [parentMatchNumber * 2 - 1, parentMatchNumber * 2];
+
+    const [feederMatches, nextRoundMatch] = await Promise.all([
+      Match.find({
+        knockoutStageId: match.knockoutStageId,
+        round: feederRound,
+        matchNumber: { $in: feederMatchNumbers },
+      }).sort({ matchNumber: 1 }),
+      Match.findOne({
+        knockoutStageId: match.knockoutStageId,
+        round: nextRound,
+        matchNumber: parentMatchNumber,
+      }),
+    ]);
+
+    if (feederMatches.length < 2 || !nextRoundMatch) {
+      break;
+    }
+
+    const [leftFeeder, rightFeeder] = orderMatchesForNextRound(
+      feederMatches[0],
+      feederMatches[1]
+    );
+
+    const nextAssignments = buildNextRoundAssignments(
+      nextRoundMatch.matchType,
+      leftFeeder,
+      rightFeeder
+    );
+
+    const participantChanged = applyNextRoundAssignments(nextRoundMatch, nextAssignments);
+
+    if (participantChanged) {
+      const resetApplied = resetDependentMatchResult(nextRoundMatch);
+
+      nextRoundMatch.updatedBy = userId;
+      await nextRoundMatch.save();
+
+      if (resetApplied && earliestResetRound === null) {
+        earliestResetRound = nextRoundMatch.round;
+      }
+    }
+
+    feederRound = nextRound;
+    feederMatchNumber = parentMatchNumber;
+  }
+
+  if (earliestResetRound !== null) {
+    await reopenTournamentProgress(match.tournamentId, knockoutStage, earliestResetRound);
+  }
+}
+
+function orderMatchesForNextRound(matchA, matchB) {
+  const completionTimeA = getMatchHomePriorityTime(matchA);
+  const completionTimeB = getMatchHomePriorityTime(matchB);
+
+  if (completionTimeA < completionTimeB) {
+    return [matchA, matchB];
+  }
+
+  if (completionTimeB < completionTimeA) {
+    return [matchB, matchA];
+  }
+
+  return matchA.matchNumber <= matchB.matchNumber
+    ? [matchA, matchB]
+    : [matchB, matchA];
+}
+
+function getMatchHomePriorityTime(match) {
+  const matchDateTime = match.date ? new Date(match.date).getTime() : Number.NaN;
+  return Number.isNaN(matchDateTime) ? Number.MAX_SAFE_INTEGER : matchDateTime;
+}
+
+function buildNextRoundAssignments(matchType, leftFeeder, rightFeeder) {
+  const leftWinnerId = getId(leftFeeder.winner) ?? null;
+  const rightWinnerId = getId(rightFeeder.winner) ?? null;
+
+  if (matchType === "Pairs") {
+    return {
+      pair1Id: leftWinnerId,
+      pair2Id: rightWinnerId,
+    };
+  }
+
+  return {
+    player1Id: leftWinnerId,
+    player2Id: rightWinnerId,
+  };
+}
+
+function applyNextRoundAssignments(match, nextAssignments) {
+  let changed = false;
+
+  for (const [field, value] of Object.entries(nextAssignments)) {
+    const currentValue = getId(match[field])?.toString() || null;
+    const nextValue = value?.toString() || null;
+
+    if (currentValue !== nextValue) {
+      match[field] = value;
+      changed = true;
+    }
+  }
+
+  return changed;
+}
+
+function resetDependentMatchResult(match) {
+  const hadResult =
+    Boolean(match.winner) ||
+    Number(match.player1Score) !== 0 ||
+    Number(match.player2Score) !== 0 ||
+    Number(match.pair1Score) !== 0 ||
+    Number(match.pair2Score) !== 0 ||
+    match.status === "completed" ||
+    match.status === "in-progress";
+
+  match.winner = null;
+  match.winnerModel = match.matchType === "Pairs" ? "TournamentPair" : "User";
+  match.player1Score = 0;
+  match.player2Score = 0;
+  match.pair1Score = 0;
+  match.pair2Score = 0;
+  match.status = "scheduled";
+
+  return hadResult;
+}
+
+async function reopenTournamentProgress(tournamentId, knockoutStage, earliestResetRound) {
+  knockoutStage.isActive = true;
+  knockoutStage.status = "in progress";
+  knockoutStage.currentRound = Math.min(
+    Number(knockoutStage.currentRound) || earliestResetRound,
+    earliestResetRound
+  );
+  await knockoutStage.save();
+
+  const tournament = await Tournament.findById(tournamentId);
+  if (tournament) {
+    tournament.status = "in progress";
+    await tournament.save();
+  }
 }
 
 function applyWinnerFromScores(match) {
