@@ -181,7 +181,7 @@ class TournamentPlayerService {
     try {
       const player = await TournamentPlayer.findById(playerId)
         // .populate('tournamentId')
-        .populate('playerId', 'fullName email phone seeder clubName')
+        .populate('playerId', 'fullName email phone seeder clubName captainName')
         .populate({
           path: 'pairId',
           populate: [
