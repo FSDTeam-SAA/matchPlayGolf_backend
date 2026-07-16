@@ -75,7 +75,7 @@ class TournamentPlayerService {
         })
         .populate({
           path: "playerId",
-          select: "fullName email profileImage status handicap clubName country phone"
+          select: "fullName email profileImage status handicap clubName country phone captainName",
         })
         .populate({
           path: "pairId",

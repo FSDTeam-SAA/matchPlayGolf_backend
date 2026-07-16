@@ -5,17 +5,12 @@ import TournamentPlayer from "../others/tournamentPlayer.model.js";
 import User from "../user/user.model.js";
 import Round from "../round/round.model.js";
 import { parse } from 'csv-parse/sync';
-import { invitetationEmailTemplate, eventStartInvitationTemplate } from "../../lib/emailTemplates.js";
-import crypto from "crypto";
+import { eventStartInvitationTemplate } from "../../lib/emailTemplates.js";
 import Match from "../match/match.model.js";
 import KnockoutStage from '../others/knockoutSchema.model.js';
 import { initializeKnockout, generateNextRound } from './autometicRound.controller.js';
 import mongoose from "mongoose";
-
-
-function generateToken() {
-  return crypto.randomBytes(32).toString("hex");
-}
+import { sendMatchInvitationEmails } from "./tournamentInvitation.service.js";
 export const progressTournament = async (req, res,next) => {
   try {
     const { tournamentId } = req.params;
@@ -468,46 +463,17 @@ export const sendInvitationRegisteredUsers = async (req, res) => {
       });
     }
 
-    const frontendUrl = process.env.FRONTEND_URL;
-    let emailCount = 0;
-
-    for (const match of matches) {
-  
-      const verifyToken = generateToken();
-
-      match.verifyToken = verifyToken;
-      match.updateResultUrl = `${frontendUrl}/match/${match._id}?token=${verifyToken}`;
-      await match.save();
-
-      const recipients = new Set();
-
-      match.player1Id?.email && recipients.add(match.player1Id.email);
-      match.player2Id?.email && recipients.add(match.player2Id.email);
-      match.pair1Id?.player1?.email && recipients.add(match.pair1Id.player1.email);
-      match.pair1Id?.player2?.email && recipients.add(match.pair1Id.player2.email);
-      match.pair2Id?.player1?.email && recipients.add(match.pair2Id.player1.email);
-      match.pair2Id?.player2?.email && recipients.add(match.pair2Id.player2.email);
-
-      for (const email of recipients) {
-        await sendEmail({
-          to: email,
-          subject: `Match Result Update: ${tournament.tournamentName}`,
-          html: invitetationEmailTemplate({
-            tournament,
-            match,
-            updateResultUrl: match.updateResultUrl
-          })
-        });
-        emailCount++;
-      }
-    }
+    const invitationSummary = await sendMatchInvitationEmails({
+      tournament,
+      matchIds: matches.map((match) => match._id),
+    });
 
     return res.json({
       success: true,
       message: "Match links sent to current round players only",
       currentRound,
-      totalMatches: matches.length,
-      totalEmails: emailCount
+      totalMatches: invitationSummary.totalMatches,
+      totalEmails: invitationSummary.totalEmails
     });
 
   } catch (error) {
