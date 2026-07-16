@@ -729,8 +729,8 @@ async function generateFirstRoundMatches(entries, tournamentId, knockoutStageId,
 /**
  * Rounds 2+: pair up winners from previous round by matchNumber order.
  * Winner of M1 vs Winner of M2, Winner of M3 vs Winner of M4, …
- * Bracket mapping stays fixed, but the winner from the feeder match that
- * completed earlier takes the left/home slot in the next round.
+ * Bracket mapping stays fixed, but the winner from the feeder match with the
+ * earlier scheduled match date takes the left/home slot in the next round.
  */
 async function generateNextRoundMatches(
   completedMatches,
@@ -786,8 +786,8 @@ async function generateNextRoundMatches(
 }
 
 function orderFeederMatchesByCompletion(matchA, matchB) {
-  const completionTimeA = getMatchCompletionTime(matchA);
-  const completionTimeB = getMatchCompletionTime(matchB);
+  const completionTimeA = getMatchHomePriorityTime(matchA);
+  const completionTimeB = getMatchHomePriorityTime(matchB);
 
   if (completionTimeA < completionTimeB) {
     return [matchA, matchB];
@@ -804,17 +804,9 @@ function orderFeederMatchesByCompletion(matchA, matchB) {
     : [matchB, matchA];
 }
 
-function getMatchCompletionTime(match) {
-  const timestampCandidates = [match.updatedAt, match.date, match.createdAt];
-
-  for (const value of timestampCandidates) {
-    const time = value ? new Date(value).getTime() : Number.NaN;
-    if (!Number.isNaN(time)) {
-      return time;
-    }
-  }
-
-  return Number.MAX_SAFE_INTEGER;
+function getMatchHomePriorityTime(match) {
+  const matchDateTime = match.date ? new Date(match.date).getTime() : Number.NaN;
+  return Number.isNaN(matchDateTime) ? Number.MAX_SAFE_INTEGER : matchDateTime;
 }
 
 
