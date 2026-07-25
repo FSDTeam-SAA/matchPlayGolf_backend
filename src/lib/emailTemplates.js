@@ -358,12 +358,57 @@ export const welcomeEmailTemplate = ({ user, verifyToken }) => {
 };
 
 
-export const invitetationEmailTemplate = ({tournament, match, updateResultUrl, user}) =>{
-  
-  const tournamentUrl = `${process.env.FRONTEND_URL}/tournaments/${tournament._id}`;
-  const dashboardUrl = `${process.env.FRONTEND_URL}`;
-  const contactUrl = `${process.env.FRONTEND_URL}/contact`;
-  const logoUrl = getEmailLogoUrl();
+const formatInvitationDate = (date) => {
+  if (!date) return "N/A";
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return date;
+
+  return parsed.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
+const getPairPlayerNames = (pair) =>
+  [pair?.player1?.fullName, pair?.player2?.fullName].filter(Boolean).join(" & ");
+
+const getInvitationOpponentName = (match, recipientEmail) => {
+  if (!recipientEmail) return "<Player Name>";
+
+  if (match.matchType === "Pairs") {
+    const pair1Emails = [match.pair1Id?.player1?.email, match.pair1Id?.player2?.email];
+    const pair2Emails = [match.pair2Id?.player1?.email, match.pair2Id?.player2?.email];
+
+    if (pair1Emails.includes(recipientEmail)) {
+      return getPairPlayerNames(match.pair2Id) || "<Player Name>";
+    }
+
+    if (pair2Emails.includes(recipientEmail)) {
+      return getPairPlayerNames(match.pair1Id) || "<Player Name>";
+    }
+  }
+
+  if (match.player1Id?.email === recipientEmail) {
+    return match.player2Id?.fullName || "<Player Name>";
+  }
+
+  if (match.player2Id?.email === recipientEmail) {
+    return match.player1Id?.fullName || "<Player Name>";
+  }
+
+  return "<Player Name>";
+};
+
+export const invitetationEmailTemplate = ({ tournament, match, updateResultUrl, recipientEmail }) =>{
+  const frontendUrl = (process.env.FRONTEND_URL || "https://golfko.co.uk").replace(/\/$/, "");
+  const tournamentUrl = `${frontendUrl}/event/${tournament._id}/`;
+  const dashboardUrl = frontendUrl;
+  const roundName = match.roundName || match.roundId?.roundName || `Round ${match.round || "N/A"}`;
+  const opponentName = getInvitationOpponentName(match, recipientEmail);
+  const matchVenue = match.venue || tournament.location || "<Home Golf Club>";
+  const deadlineDate = formatInvitationDate(match.date || match.roundId?.date);
+
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -379,31 +424,8 @@ export const invitetationEmailTemplate = ({tournament, match, updateResultUrl, u
 
         body {
             font-family: Arial, sans-serif;
-            background-color: #f5f5f5;
-            padding: 20px;
-        }
-
-        .email-container {
-            max-width: 600px;
-            margin: 0 auto;
             background-color: #ffffff;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .subject-line {
-            font-size: 16px;
-            font-weight: bold;
-            margin-bottom: 30px;
-            color: #000000;
-        }
-
-        .logo {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 40px;
-            color: #333333;
+            padding: 20px;
         }
 
         .content {
@@ -431,99 +453,44 @@ export const invitetationEmailTemplate = ({tournament, match, updateResultUrl, u
             margin-bottom: 5px;
             color: #000000;
         }
-
-        .highlight {
-            background-color: #fff9e6;
-            padding: 2px 4px;
-            border-radius: 3px;
-        }
-
-        .footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e0e0e0;
-        }
-
-        .contact-info {
-            color: #666666;
-            font-size: 13px;
-        }
     </style>
 </head>
 <body>
-    <div class="email-container">
-        <!-- Subject Line -->
-        <div class="subject-line">
-            Subject: Invitation to Participate in ${tournament.tournamentName}
-        </div>
+    <div class="content">
+        <p>Hi.</p>
 
-        <tr>
-            <td style="padding-bottom:30px; align-items: center;">
-              ${
-                logoUrl
-                  ? `<img src="${logoUrl}" alt="GolfKO Logo" style="max-width:150px; height:auto; align-items: center;" />`
-                  : `<strong>GolfKO</strong>`
-              }
-            </td>
-        </tr>
+        <p>
+            Your opponent in ${roundName} of the ${tournament.tournamentName} is ${opponentName} and you can view the
+            full draw at <a href="${tournamentUrl}" target="_blank">${tournamentUrl}</a>.
+        </p>
 
-        <!-- Main Content -->
-        <div class="content">
-            <p>
-                Hi. Your opponent in Round ${match.round} of the  <strong>${tournament.tournamentName}</strong> and 
-                you can view the full draw at 
-                <a href="${tournamentUrl}" target="_blank">${tournamentUrl}</a>
-            </p>
+        <p>Your match is due to be played at ${matchVenue}.</p>
 
-            <p>
-                Your match is due to be played at ${tournament.location}
-            </p>
+        <p>
+            Please contact your opponent and arrange for the match to be played before the deadline of ${deadlineDate}.
+            When you have arranged your match please enter the date in the draw on Golfko website to avoid reminders.
+        </p>
 
-            <p>
-                Please contact your opponent and arrange for the match to be played before the 
-                deadline of <strong>${match.date}</strong>. When you have arranged your match please enter the 
-                date in the draw on Golfko website to avoid reminders.
-            </p>
+        <p class="section-title">Register As A Player</p>
+        <p>
+            If you register as a player you can view your opponent's details, enter the date of your match and
+            submit the result of your match. To register click this link here.<br>
+            <a href="${dashboardUrl}" target="_blank">${dashboardUrl}</a>
+        </p>
 
-            <p class="section-title">Register As A Player</p>
-            <p>
-                If you register as a player you can view your opponent's details, enter the date of 
-                your match and submit the result of your match. To register click this link here. 
-                <a href="${dashboardUrl}" target="_blank">${dashboardUrl}</a>
-            </p>
+        <p>
+            If your opponent is also a registered player then you can view their contact details by logging into the
+            Golfko website and clicking the "VS" for your opponent's profile.
+        </p>
 
-            <p>
-                If your opponent is also a registered player then you can view their contact details 
-                by logging into the Golfko site and clicking your opponent's profile.
-            </p>
+        <p>
+            When you have played your match, please enter the result on the Golfko website as soon as possible.<br>
+            <a href="${updateResultUrl}" target="_blank">${updateResultUrl}</a>
+        </p>
 
-            <p>
-                When you have played your match, please enter the result on the GolfKO as soon 
-                as possible.
-            </p>
+        <p>For any questions please contact your event organiser.</p>
 
-            <p>
-                <a href="${updateResultUrl}" target="_blank">${updateResultUrl}</a>
-            </p>
-
-            <p>
-                For any questions please contact your event organiser.
-            </p>
-
-            <p>
-                Thank you and good luck!
-            </p>
-
-            <!-- Footer -->
-            <div class="footer">
-                <p class="contact-info">
-                    GolfKO – <a href="mailto:info@golfko.co.uk">info@golfko.co.uk</a>
-                </p>
-                <p class="contact-info">
-                   Contact Us: <a href="${contactUrl}" target="_blank">${contactUrl}</a>
-                </p>
-            </div>
-        </div>
+        <p>Thank you and good luck!</p>
     </div>
 </body>
 </html>`;
