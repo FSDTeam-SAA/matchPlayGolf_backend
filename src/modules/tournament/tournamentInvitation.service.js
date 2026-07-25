@@ -24,6 +24,7 @@ async function getMatchesForInvitation(matchIds) {
   return Match.find({ _id: { $in: matchIds } })
     .populate("player1Id", "fullName email")
     .populate("player2Id", "fullName email")
+    .populate("roundId", "roundName roundNumber date")
     .populate({
       path: "pair1Id",
       populate: { path: "player1 player2", select: "fullName email" },
@@ -57,6 +58,7 @@ export async function sendMatchInvitationEmails({ tournament, matchIds }) {
           tournament,
           match,
           updateResultUrl,
+          recipientEmail: email,
         }),
       });
       emailCount++;
