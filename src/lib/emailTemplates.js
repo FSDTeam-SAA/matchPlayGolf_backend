@@ -605,7 +605,61 @@ export const matchResultUpdateTemplate = ({
 `;
 };
 
-export const eventStartInvitationTemplate = ({ 
+export const eventStartInvitationTemplate = ({
+  eventName,
+  eventDrawUrl,
+  dashboardUrl,
+  contactUrl,
+  createEventUrl
+}) => `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; background-color: #ffffff; padding: 20px; }
+        .content { line-height: 1.6; color: #333333; font-size: 14px; }
+        .content p { margin-bottom: 15px; }
+        .content a { color: #4a90e2; text-decoration: none; }
+        .content a:hover { text-decoration: underline; }
+        .section-title { font-weight: bold; margin-top: 20px; margin-bottom: 5px; color: #000000; }
+    </style>
+</head>
+<body>
+    <div class="content">
+        <p>Hi.</p>
+
+        <p>
+            You have been added to the ${eventName} event on Golfko!
+        </p>
+
+        <p>
+            You can see the draw here;<br>
+            <a href="${eventDrawUrl}" target="_blank">${eventDrawUrl}</a>
+        </p>
+
+        <p>
+            Please sign in with your account by clicking on the link below;<br>
+            <a href="${dashboardUrl}" target="_blank">${dashboardUrl}</a>
+        </p>
+
+        <p>
+            For more information or if you need to contact us<br>
+            <a href="${contactUrl}" target="_blank">${contactUrl}</a>
+        </p>
+
+        <p>
+            Create your own event at Golfko<br>
+            <a href="${createEventUrl}" target="_blank">${createEventUrl}</a>
+        </p>
+    </div>
+</body>
+</html>
+`;
+
+const eventStartInvitationTemplateLegacy = ({ 
   eventName,
   eventDrawUrl,
   dashboardUrl,

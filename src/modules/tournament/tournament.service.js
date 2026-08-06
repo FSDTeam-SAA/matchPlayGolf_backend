@@ -168,6 +168,15 @@ async findOrCreateUsers(players) {
 async registerSinglePlayers(tournamentId, userIds, players = []) {
   const registrations = [];
   // console.log("Registering single players:", userIds);
+
+  await Promise.all(
+    userIds.map((userId, index) =>
+      User.findByIdAndUpdate(userId, {
+        fullName: players[index]?.fullName,
+        phone: players[index]?.phone,
+      })
+    )
+  );
   
   const existingRegistrations = await TournamentPlayer.find({
     tournamentId,
@@ -226,6 +235,15 @@ async registerPairPlayers(tournamentId, players, userIds) {
   if (userIds.length !== 2) {
     throw new Error("Pair format requires exactly 2 players");
   }
+
+  await Promise.all(
+    userIds.map((userId, index) =>
+      User.findByIdAndUpdate(userId, {
+        fullName: players[index]?.fullName,
+        phone: players[index]?.phone,
+      })
+    )
+  );
   
   const existingPair = await TournamentPair.findOne({
     tournamentId,
