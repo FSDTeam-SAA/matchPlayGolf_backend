@@ -269,10 +269,11 @@ async updatePlayer(playerId, updateData, userId, userRole) {
     }
 
     // ✅ Update main user (optional)
-    if (updateData.userInfo && player.playerId) {
+    const userInfo = updateData.userInfo || updateData;
+    if (userInfo && player.playerId) {
       await User.findByIdAndUpdate(
         player.playerId._id,
-        updateData.userInfo,
+        userInfo,
         { new: true }
       );
     }
