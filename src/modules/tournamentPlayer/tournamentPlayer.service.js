@@ -3,6 +3,11 @@ import TournamentPlayer from '../others/tournamentPlayer.model.js';
 import Tournament from '../tournament/tournament.model.js';
 import User from "../user/user.model.js";
 
+const playerUpdateFields = [
+  "fullName", "email", "phone", "seeder", "handicap", "clubName",
+  "country", "captainName", "profileImage", "status",
+];
+
 class TournamentPlayerService {
 
   async getAllPlayers(userId, userRole, queryParams) {
@@ -269,33 +274,51 @@ async updatePlayer(playerId, updateData, userId, userRole) {
     }
 
     // ✅ Update main user (optional)
-    const userInfo = updateData.userInfo || updateData;
-    if (userInfo && player.playerId) {
-      await User.findByIdAndUpdate(
-        player.playerId._id,
-        userInfo,
-        { new: true }
-      );
-    }
+    const updateUser = async (user, userInfo) => {
+      if (!user || !userInfo || typeof userInfo !== "object") return;
+
+      const updates = {};
+      for (const field of playerUpdateFields) {
+        if (Object.prototype.hasOwnProperty.call(userInfo, field)) {
+          updates[field] = userInfo[field];
+        }
+      }
+
+      if (Object.prototype.hasOwnProperty.call(updates, "email")) {
+        const incomingEmail = String(updates.email || "").trim();
+        const currentEmail = String(user.email || "").trim();
+
+        if (incomingEmail.toLowerCase() === currentEmail.toLowerCase()) {
+          delete updates.email;
+        } else if (incomingEmail) {
+          const existingUser = await User.findOne({ email: incomingEmail });
+          if (existingUser && existingUser._id.toString() !== user._id.toString()) {
+            throw new Error("This email is already associated with another player.");
+          }
+          updates.email = incomingEmail;
+        } else {
+          delete updates.email;
+        }
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await User.findByIdAndUpdate(user._id, { $set: updates }, { new: true });
+      }
+    };
+
+    const userInfo = updateData.userInfo || (!updateData.pairInfo ? updateData : null);
+    await updateUser(player.playerId, userInfo);
     // console.log("Main user updated with:", updateData.pairInfo);
     // ✅ Update pair users (optional)
     if (updateData.pairInfo && player.pairId) {
       const { player1Info, player2Info } = updateData.pairInfo;
 
       if (player1Info && player.pairId.player1) {
-        await User.findByIdAndUpdate(
-          player.pairId.player1._id,
-          player1Info,
-          { new: true }
-        );
+        await updateUser(player.pairId.player1, player1Info);
       }
 
       if (player2Info && player.pairId.player2) {
-        await User.findByIdAndUpdate(
-          player.pairId.player2._id,
-          player2Info,
-          { new: true }
-        );
+        await updateUser(player.pairId.player2, player2Info);
       }
     }
 
