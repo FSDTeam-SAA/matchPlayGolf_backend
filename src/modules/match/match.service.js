@@ -262,7 +262,7 @@ async getTournamentMatchById(id) {
     // Map ensures no duplicates in both cases
     const playerMap = new Map();
 
-    if (match.matchType === "Single") {
+    if (match.matchType === "Single" || match.matchType === "Team") {
       roundMatches.forEach((m) => {
         if (m.player1Id?._id) {
           playerMap.set(m.player1Id._id.toString(), {
