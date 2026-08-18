@@ -297,22 +297,39 @@ export const updateTournamentMatch = async (req, res) => {
           // ── Step 2: Build round filter — safe null roundId handling ─────────
           // If roundId is null, fall back to round number so sibling matches
           // are always found regardless of how the draw was created.
-          const roundFilter = matchExists.roundId
-            ? { roundId: matchExists.roundId }
-            : { round: matchExists.round ?? 1 };
+          const roundConditions = [];
+          if (matchExists.roundId) {
+            roundConditions.push({ roundId: matchExists.roundId });
+          }
+          if (matchExists.round !== undefined && matchExists.round !== null) {
+            roundConditions.push({ round: matchExists.round });
+          }
+
+          const roundFilter = {
+            ...(matchExists.knockoutStageId
+              ? { knockoutStageId: matchExists.knockoutStageId }
+              : {}),
+            $or: roundConditions.length > 0
+              ? roundConditions
+              : [{ round: 1 }],
+          };
 
           // ── Step 3: Find sibling matches with conflicting IDs ────────────────
           // Scoped to same tournamentId + same round + same matchType.
           // matchType scope ensures Single conflicts only search player slots
           // and Pairs conflicts only search pair slots — never cross-pollinate.
           const conflictingMatches = await Match.find({
-            _id:          { $ne: matchExists._id },  // exclude current match
+            _id:          { $ne: matchExists._id },
             tournamentId: matchExists.tournamentId,
-            matchType:    resolvedMatchType,           // same type only
-            ...roundFilter,                            // same round
-            $or: participantFields.map((field) => ({
-              [field]: { $in: incomingIds }            // holds one of incoming IDs
-            }))
+            matchType:    resolvedMatchType,
+            $and: [
+              roundFilter,
+              {
+                $or: participantFields.map((field) => ({
+                  [field]: { $in: incomingIds },
+                })),
+              },
+            ],
           }).lean();
 
           // ── Step 4: Build swap map — grouped by conflicting match _id ────────

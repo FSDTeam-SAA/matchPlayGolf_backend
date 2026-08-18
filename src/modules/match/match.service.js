@@ -232,6 +232,9 @@ async getTournamentMatchById(id) {
     // number field so we still return useful players data.
     const roundQuery = {
       tournamentId: match.tournamentId._id,
+      ...(match.knockoutStageId
+        ? { knockoutStageId: match.knockoutStageId }
+        : {}),
       ...(roundId
         ? { roundId }                          // preferred — filter by roundId
         : { round: match.round ?? 1 })         // fallback  — filter by round number
@@ -361,6 +364,54 @@ async getTournamentMatchById(id) {
 // ─── add this import at the top of your match service file ───────────────────
 
 
+  async assertRoundParticipantIntegrity({ match, session }) {
+    const participantFields =
+      match.matchType === "Pairs"
+        ? ["pair1Id", "pair2Id"]
+        : ["player1Id", "player2Id"];
+
+    const roundConditions = [];
+    const tournamentId = match.tournamentId?._id ?? match.tournamentId;
+    const roundId = match.roundId?._id ?? match.roundId;
+
+    if (roundId) roundConditions.push({ roundId });
+    if (match.round !== undefined && match.round !== null) {
+      roundConditions.push({ round: match.round });
+    }
+
+    const query = {
+      tournamentId,
+      matchType: match.matchType,
+      ...(match.knockoutStageId
+        ? { knockoutStageId: match.knockoutStageId }
+        : {}),
+      $or: roundConditions.length > 0 ? roundConditions : [{ round: 1 }],
+    };
+
+    const roundMatches = await Match.find(query)
+      .select(participantFields.join(" "))
+      .session(session)
+      .lean();
+
+    const seen = new Set();
+    for (const roundMatch of roundMatches) {
+      for (const field of participantFields) {
+        const participantId = roundMatch[field]?.toString();
+        if (!participantId) continue;
+
+        if (seen.has(participantId)) {
+          const error = new Error(
+            "Duplicate participant detected in the current round"
+          );
+          error.code = "MATCH_CONFLICT";
+          throw error;
+        }
+
+        seen.add(participantId);
+      }
+    }
+  }
+
   /**
    * Saves a primary match and all derived participant swaps atomically.
    * Every document is guarded by its version and expected participant values.
@@ -414,6 +465,7 @@ async getTournamentMatchById(id) {
         }
 
         await match.save({ session });
+        await this.assertRoundParticipantIntegrity({ match, session });
       });
     } finally {
       await session.endSession();
@@ -766,6 +818,10 @@ async getTournamentMatchById(id) {
 
         await currentMatch1.save({ session });
         await currentMatch2.save({ session });
+        await this.assertRoundParticipantIntegrity({
+          match: currentMatch1,
+          session,
+        });
         updatedMatch1 = currentMatch1;
         updatedMatch2 = currentMatch2;
       });
