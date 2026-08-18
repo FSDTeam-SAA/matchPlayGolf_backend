@@ -348,11 +348,18 @@ export const updateTournamentMatch = async (req, res) => {
                 const matchKey    = conflict._id.toString();
 
                 if (!swapMap.has(matchKey)) {
-                  swapMap.set(matchKey, { matchId: conflict._id, fields: {} });
+                  swapMap.set(matchKey, {
+                    matchId: conflict._id,
+                    expectedVersion: conflict.__v,
+                    expectedFields: {},
+                    fields: {},
+                  });
                 }
 
-                // Merge — handles same-match multi-slot swap correctly
-                swapMap.get(matchKey).fields[conflictSlot] = displacedId;
+                // Keep the expected sibling state for optimistic locking.
+                const swapEntry = swapMap.get(matchKey);
+                swapEntry.expectedFields[conflictSlot] = conflict[conflictSlot];
+                swapEntry.fields[conflictSlot] = displacedId;
               }
             }
           }
@@ -373,7 +380,8 @@ export const updateTournamentMatch = async (req, res) => {
       userId,
       role,
       req.files || null,
-      swapPayload
+      swapPayload,
+      hasPlayerChange ? matchExists.__v : null
     );
 
     // ── Emit socket notification ─────────────────────────────────────────────
@@ -389,7 +397,9 @@ export const updateTournamentMatch = async (req, res) => {
     });
 
   } catch (error) {
-    const statusCode = error.message.includes("not found")
+    const statusCode = error.code === "MATCH_CONFLICT"
+      ? 409
+      : error.message.includes("not found")
       ? 404
       : error.message.includes("Not authorized")
       ? 403
@@ -1217,7 +1227,7 @@ export const swapMatchPlayers = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    return res.status(400).json({
+    return res.status(error.code === "MATCH_CONFLICT" ? 409 : 400).json({
       success: false,
       message: error.message,
     });

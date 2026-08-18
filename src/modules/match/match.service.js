@@ -350,7 +350,74 @@ async getTournamentMatchById(id) {
 // ─── add this import at the top of your match service file ───────────────────
 
 
-async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = null) {
+  /**
+   * Saves a primary match and all derived participant swaps atomically.
+   * Every document is guarded by its version and expected participant values.
+   */
+  async saveMatchWithParticipantSwap({
+    match,
+    swapPayload,
+    userId,
+    expectedPrimaryVersion,
+  }) {
+    const session = await mongoose.startSession();
+
+    try {
+      await session.withTransaction(async () => {
+        if (
+          expectedPrimaryVersion !== null &&
+          match.__v !== expectedPrimaryVersion
+        ) {
+          const error = new Error("Match was modified by another request");
+          error.code = "MATCH_CONFLICT";
+          throw error;
+        }
+
+        match.$session(session);
+
+        for (const swap of swapPayload) {
+          const expected = {
+            _id: swap.matchId,
+            ...(swap.expectedVersion !== undefined
+              ? { __v: swap.expectedVersion }
+              : {}),
+            ...Object.fromEntries(
+              Object.entries(swap.expectedFields || {}).map(([field, value]) => [
+                field,
+                value,
+              ])
+            ),
+          };
+
+          const sibling = await Match.findOne(expected).session(session);
+          if (!sibling) {
+            const error = new Error(
+              "A match was modified before the player swap could complete"
+            );
+            error.code = "MATCH_CONFLICT";
+            throw error;
+          }
+
+          Object.assign(sibling, swap.fields, { updatedBy: userId });
+          await sibling.save({ session });
+        }
+
+        await match.save({ session });
+      });
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  async updateTournamentMatch(
+  id,
+  updateData,
+  userId,
+  role,
+  files,
+  swapPayload = null,
+  expectedPrimaryVersion = null
+) {
   try {
     console.log('updatedate', updateData);
 
@@ -465,18 +532,18 @@ async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = n
 
     // ── Execute swap operations BEFORE saving primary match ───────────────────
     if (swapPayload && swapPayload.length > 0) {
-      const swapOps = swapPayload.map(({ matchId, fields }) =>
-        Match.findByIdAndUpdate(
-          matchId,
-          { $set: { ...fields, updatedBy: userId } },
-          { new: true }
-        )
-      );
-      await Promise.all(swapOps);
+      await this.saveMatchWithParticipantSwap({
+        match,
+        swapPayload,
+        userId,
+        expectedPrimaryVersion,
+      });
+    } else {
+      await match.save();
     }
 
     // ── Save primary match ────────────────────────────────────────────────────
-    const savedMatch = await match.save();
+    const savedMatch = match;
     const nextWinnerId = getId(savedMatch.winner)?.toString() || null;
     const winnerCorrected =
       previousWinnerId !== null &&
@@ -572,7 +639,9 @@ async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = n
 
   } catch (error) {
     console.error("❌ Service error:", error);
-    throw new Error(`Failed to update match: ${error.message}`);
+    const wrappedError = new Error(`Failed to update match: ${error.message}`);
+    wrappedError.code = error.code;
+    throw wrappedError;
   }
 }
   async updateTournamentMatchScores(id, scoresData, userId) {
@@ -648,7 +717,55 @@ async updateTournamentMatch(id, updateData, userId, role, files, swapPayload = n
       throw new Error(`Failed to delete match: ${error.message}`);
     }
   }
-async swapMatchPlayers(match1Id, match2Id, updateData, userId, role) {
+  async swapMatchDocumentsAtomically({
+    match1,
+    match2,
+    match1Slot,
+    match2Slot,
+    userId,
+  }) {
+    const session = await mongoose.startSession();
+
+    try {
+      let updatedMatch1;
+      let updatedMatch2;
+
+      await session.withTransaction(async () => {
+        const [currentMatch1, currentMatch2] = await Promise.all([
+          Match.findOne({ _id: match1._id, __v: match1.__v }).session(session),
+          Match.findOne({ _id: match2._id, __v: match2.__v }).session(session),
+        ]);
+
+        if (
+          !currentMatch1 ||
+          !currentMatch2 ||
+          currentMatch1.__v !== match1.__v ||
+          currentMatch2.__v !== match2.__v
+        ) {
+          const error = new Error("Match was modified by another request");
+          error.code = "MATCH_CONFLICT";
+          throw error;
+        }
+
+        const temp = currentMatch1[match1Slot];
+        currentMatch1[match1Slot] = currentMatch2[match2Slot];
+        currentMatch2[match2Slot] = temp;
+        currentMatch1.updatedBy = userId;
+        currentMatch2.updatedBy = userId;
+
+        await currentMatch1.save({ session });
+        await currentMatch2.save({ session });
+        updatedMatch1 = currentMatch1;
+        updatedMatch2 = currentMatch2;
+      });
+
+      return [updatedMatch1, updatedMatch2];
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  async swapMatchPlayers(match1Id, match2Id, updateData, userId, role) {
   try {
     if (!mongoose.Types.ObjectId.isValid(match1Id) || !mongoose.Types.ObjectId.isValid(match2Id)) {
       throw new Error("Invalid match ID(s)");
@@ -658,7 +775,7 @@ async swapMatchPlayers(match1Id, match2Id, updateData, userId, role) {
       throw new Error("Cannot swap players within the same match");
     }
 
-    const [match1, match2] = await Promise.all([
+    let [match1, match2] = await Promise.all([
       Match.findById(match1Id).populate("tournamentId"),
       Match.findById(match2Id).populate("tournamentId"),
     ]);
@@ -708,11 +825,6 @@ async swapMatchPlayers(match1Id, match2Id, updateData, userId, role) {
 
       // console.log(`🔁 Swapping match1.${match1Slot} (${match1[match1Slot]}) with match2.${match2Slot} (${match2[match2Slot]})`);
 
-      // Direct slot swap
-      const temp = match1[match1Slot];
-      match1[match1Slot] = match2[match2Slot];
-      match2[match2Slot] = temp;
-
     } else if (matchType === "Pairs") {
       if (!match1Slot || !match2Slot) {
         throw new Error("match1Slot and match2Slot are required");
@@ -728,19 +840,17 @@ async swapMatchPlayers(match1Id, match2Id, updateData, userId, role) {
 
       // console.log(`🔁 Swapping match1.${match1Slot} (${match1[match1Slot]}) with match2.${match2Slot} (${match2[match2Slot]})`);
 
-      // Direct slot swap
-      const temp = match1[match1Slot];
-      match1[match1Slot] = match2[match2Slot];
-      match2[match2Slot] = temp;
-
     } else {
       throw new Error("Swap is only supported for Single, Pairs, and Team match types");
     }
 
-    match1.updatedBy = userId;
-    match2.updatedBy = userId;
-
-    await Promise.all([match1.save(), match2.save()]);
+    [match1, match2] = await this.swapMatchDocumentsAtomically({
+      match1,
+      match2,
+      match1Slot,
+      match2Slot,
+      userId,
+    });
 
     const populate = [
       { path: "tournamentId", select: "tournamentName sportName format" },
@@ -773,7 +883,11 @@ async swapMatchPlayers(match1Id, match2Id, updateData, userId, role) {
 
   } catch (error) {
     console.error("❌ Swap service error:", error);
-    throw new Error(`Failed to swap match players: ${error.message}`);
+    const wrappedError = new Error(
+      `Failed to swap match players: ${error.message}`
+    );
+    wrappedError.code = error.code;
+    throw wrappedError;
   }
 }
 }
