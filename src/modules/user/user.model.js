@@ -47,6 +47,8 @@ const UserSchema = new mongoose.Schema(
       type: String,
     },
 
+    teamName: { type: String, default: "" },
+
     clubName:  { type: String, default: "" },
     country:   { type: String, default: "" },
     handicap:  { type: String, default: "0" },
