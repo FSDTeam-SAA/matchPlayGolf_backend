@@ -237,6 +237,15 @@ async getTournamentMatchById(id) {
         : { round: match.round ?? 1 })         // fallback  — filter by round number
     };
 
+    // Some legacy matches have only `round`, while newer matches also have
+    // `roundId`. Include both representations so a current-round list does
+    // not lose matches because of inconsistent historical data.
+    if (roundId && match.round !== undefined && match.round !== null) {
+      roundQuery.$or = [{ roundId }, { round: match.round }];
+      delete roundQuery.roundId;
+      delete roundQuery.round;
+    }
+
     const roundMatches = await Match.find(roundQuery)
       .select("player1Id player2Id pair1Id pair2Id")
       .populate("player1Id", "fullName")
@@ -263,48 +272,41 @@ async getTournamentMatchById(id) {
     const playerMap = new Map();
 
     if (match.matchType === "Single" || match.matchType === "Team") {
-      // Use all active tournament registrations instead of only players
-      // already present in this round's matches.
-      const tournamentPlayers = await TournamentPlayer.find({
-        tournamentId: match.tournamentId._id,
-        isActive: true,
-        playerId: { $ne: null },
-      })
-        .populate("playerId", "fullName")
-        .select("playerId")
-        .sort({ createdAt: 1 });
-
-      tournamentPlayers.forEach((registration) => {
-        const player = registration.playerId;
-        if (player?._id) {
-          playerMap.set(player._id.toString(), {
-            _id: player._id,
-            name: player.fullName || "N/A",
+      // Only players participating in the current round are selectable.
+      roundMatches.forEach((m) => {
+        if (m.player1Id?._id) {
+          playerMap.set(m.player1Id._id.toString(), {
+            _id: m.player1Id._id,
+            name: m.player1Id.fullName || "N/A",
+          });
+        }
+        if (m.player2Id?._id) {
+          playerMap.set(m.player2Id._id.toString(), {
+            _id: m.player2Id._id,
+            name: m.player2Id.fullName || "N/A",
           });
         }
       });
 
     } else if (match.matchType === "Pairs") {
-      // The selector must contain every active pair registered in the
-      // tournament. Building this list from roundMatches drops pairs that
-      // have not yet been placed in a match, have a null slot, or appear in
-      // another round.
-      const tournamentPairs = await TournamentPair.find({
-        tournamentId: match.tournamentId._id,
-        isActive: true,
-      })
-        .populate("player1", "fullName")
-        .populate("player2", "fullName")
-        .select("teamName player1 player2")
-        .sort({ createdAt: 1 });
-
-      tournamentPairs.forEach((pair) => {
-        playerMap.set(pair._id.toString(), {
-          _id: pair._id,
-          player1: pair.player1?.fullName || "N/A",
-          player2: pair.player2?.fullName || "N/A",
-          team: pair.teamName || "N/A",
-        });
+      // Only pairs participating in the current round are selectable.
+      roundMatches.forEach((m) => {
+        if (m.pair1Id?._id) {
+          playerMap.set(m.pair1Id._id.toString(), {
+            _id: m.pair1Id._id,
+            player1: m.pair1Id.player1?.fullName || "N/A",
+            player2: m.pair1Id.player2?.fullName || "N/A",
+            team: m.pair1Id.teamName || "N/A",
+          });
+        }
+        if (m.pair2Id?._id) {
+          playerMap.set(m.pair2Id._id.toString(), {
+            _id: m.pair2Id._id,
+            player1: m.pair2Id.player1?.fullName || "N/A",
+            player2: m.pair2Id.player2?.fullName || "N/A",
+            team: m.pair2Id.teamName || "N/A",
+          });
+        }
       });
     }
 
