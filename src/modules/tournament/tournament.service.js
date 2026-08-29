@@ -142,7 +142,7 @@ async findOrCreateUsers(players) {
         fullName: player.fullName,
         email: player.email,
         phone: player.phone,
-        captainName:player.captainName || null,
+        teamName: player.teamName || "",
         seeder: player.seeder,
         verifyToken
       });
