@@ -174,6 +174,9 @@ async registerSinglePlayers(tournamentId, userIds, players = []) {
       User.findByIdAndUpdate(userId, {
         fullName: players[index]?.fullName,
         phone: players[index]?.phone,
+        ...(players[index]?.teamName
+          ? { teamName: players[index].teamName }
+          : {}),
       })
     )
   );
@@ -241,9 +244,14 @@ async registerPairPlayers(tournamentId, players, userIds) {
       User.findByIdAndUpdate(userId, {
         fullName: players[index]?.fullName,
         phone: players[index]?.phone,
+        ...(players[index]?.teamName
+          ? { teamName: players[index].teamName }
+          : {}),
       })
     )
   );
+
+  const providedTeamName = players.find(player => player?.teamName)?.teamName;
   
   const existingPair = await TournamentPair.findOne({
     tournamentId,
@@ -254,6 +262,10 @@ async registerPairPlayers(tournamentId, players, userIds) {
   });
   
   if (existingPair) {
+    if (providedTeamName) {
+      existingPair.teamName = providedTeamName;
+      await existingPair.save();
+    }
     return { pair: existingPair, count: 0 };
   }
   
@@ -261,7 +273,7 @@ async registerPairPlayers(tournamentId, players, userIds) {
 
   const pair = await TournamentPair.create({
     tournamentId,
-    teamName: `${players[0].fullName} & ${players[1].fullName}`,
+    teamName: providedTeamName || `${players[0].fullName} & ${players[1].fullName}`,
     player1: userIds[0],
     player2: userIds[1],
     seeder: pairSeeder,

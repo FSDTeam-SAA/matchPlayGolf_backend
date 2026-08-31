@@ -230,6 +230,7 @@ export const updateTournament = async (req, res) => {
           fullName: record.fullName || record.name || '',
           email: record.email || '',
           phone: record.phone || '',
+          teamName: record.teamName || '',
           seeder: record.seeder ? Number(record.seeder) : undefined,
         }));
         
