@@ -5,7 +5,7 @@ import User from "../user/user.model.js";
 
 const playerUpdateFields = [
   "fullName", "email", "phone", "seeder", "handicap", "clubName",
-  "country", "captainName", "profileImage", "status",
+  "country", "captainName", "teamName", "profileImage", "status",
 ];
 
 class TournamentPlayerService {
