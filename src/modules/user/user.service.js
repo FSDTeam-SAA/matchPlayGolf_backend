@@ -4,7 +4,7 @@ import { uploadToCloudinary } from '../../lib/uploadToCloudinary.js';
 
 // Fields we allow returning in profile responses (keeps address out)
 const profileProjection =
-  'fullName email phone gender dob country clubName handicap whsNumber organizationName sportNationalId profileImage organizerLogo role isVerified color newsletterPreference receiveOrderUpdates createdAt updatedAt';
+  'fullName email phone gender dob country clubName handicap whsNumber organizationName sportNationalId profileImage organizerLogo role isVerified color newsletterPreference receiveOrderUpdates createdAt updatedAt teamName captainName';
 
 // =============== GET PROFILE SERVICE ===============
 export const getUserProfile = async (userId) => {
