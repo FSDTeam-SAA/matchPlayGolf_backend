@@ -31,6 +31,8 @@ export const updateUserProfile = async (userId, updateData) => {
     "color",
     "newsletterPreference",
     "receiveOrderUpdates",
+    'teamName',
+    'captainName',
   ];
 
   const user = await User.findById(userId).select(profileProjection);
