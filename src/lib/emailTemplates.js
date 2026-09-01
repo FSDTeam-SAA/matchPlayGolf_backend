@@ -256,7 +256,7 @@ export const getPaymentSuccessForAdminTemplate = ({ name, email, phone, eventId,
   `;
 };
 
-export const welcomeEmailTemplate = ({ user, verifyToken }) => {
+export const welcomeEmailTemplate = ({ user, verifyToken, showTeamDetails = false }) => {
   const setPasswordUrl = `${process.env.FRONTEND_URL}/set-password?token=${verifyToken}`;
   const accountUrl = `${process.env.FRONTEND_URL}/login`;
   const logoUrl = getEmailLogoUrl();
@@ -307,6 +307,24 @@ export const welcomeEmailTemplate = ({ user, verifyToken }) => {
               <strong>Username:</strong> ${user.fullName || "Player"}
             </td>
           </tr>
+
+          ${
+            showTeamDetails
+              ? `
+          <!-- Team Details -->
+          <tr>
+            <td style="font-size:16px; padding-bottom:10px;">
+              <strong>Team Name:</strong> ${user.teamName || "N/A"}
+            </td>
+          </tr>
+          <tr>
+            <td style="font-size:16px; padding-bottom:25px;">
+              <strong>Email:</strong> ${user.email}
+            </td>
+          </tr>
+          `
+              : ""
+          }
 
           <!-- Set Password -->
           <tr>
@@ -402,7 +420,7 @@ const getInvitationOpponentName = (match, recipientEmail) => {
 
 export const invitetationEmailTemplate = ({ tournament, match, updateResultUrl, recipientEmail }) =>{
   const frontendUrl = (process.env.FRONTEND_URL || "https://golfko.co.uk").replace(/\/$/, "");
-  const tournamentUrl = `${frontendUrl}/event/${tournament._id}/`;
+  const tournamentUrl = `${frontendUrl}/tournaments/${tournament._id}/`;
   const dashboardUrl = frontendUrl;
   const roundName = match.roundName || match.roundId?.roundName || `Round ${match.round || "N/A"}`;
   const opponentName = getInvitationOpponentName(match, recipientEmail);

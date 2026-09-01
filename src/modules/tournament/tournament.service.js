@@ -124,7 +124,7 @@ class TournamentService {
       throw new Error(`Failed to fetch tournament: ${error.message}`);
     }
   }
-async findOrCreateUsers(players) {
+async findOrCreateUsers(players, showTeamDetails = false) {
   const userIds = [];
   
   for (const player of players) {
@@ -151,7 +151,7 @@ async findOrCreateUsers(players) {
         await sendEmail({
           to: user.email,
           subject: "Welcome to GolfKO",
-          html: welcomeEmailTemplate({ user, verifyToken })
+          html: welcomeEmailTemplate({ user, verifyToken, showTeamDetails })
         });
         // console.log(`Welcome email sent to ${user.email}`);
       } catch (emailError) {
@@ -438,7 +438,7 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
     
     if (format === "Single" || format === "Team") {
 
-      const userIds = await this.findOrCreateUsers(players);
+      const userIds = await this.findOrCreateUsers(players, format === "Team");
       const { registrations, count } = await this.registerSinglePlayers(tournamentId, userIds, players);
       
       allUserIds.push(...userIds);
@@ -634,7 +634,7 @@ async getTournamentMatchesService(
     .sort({ roundNumber: 1 });
 
   const matches = await Match.find(query)
-    .populate("player1Id player2Id", "fullName email profileImage score handicap clubName seeder captainName")
+    .populate("player1Id player2Id", "fullName email profileImage score handicap clubName seeder teamName")
     .populate({
       path: "pair1Id",
       populate: {

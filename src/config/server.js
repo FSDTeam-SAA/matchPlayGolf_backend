@@ -6,7 +6,8 @@ import http from 'http';
 import { connectDatabase } from './database.js';
 import { initializeSocket } from './socket.js';
 import { logger } from '../utils/logger.js';
-import { startTournamentReminderScheduler } from '../modules/tournament/tournamentReminder.scheduler.js';
+// Tournament reminder scheduler is temporarily disabled.
+// import { startTournamentReminderScheduler } from '../modules/tournament/tournamentReminder.scheduler.js';
 // import app from './src/app.js';
 
 const PORT = process.env.PORT || 4000;
@@ -17,7 +18,7 @@ export const startServer = async (app) => {
     await connectDatabase();
     logger.info('✅ Database connected successfully');
 
-    startTournamentReminderScheduler();
+    // startTournamentReminderScheduler();
 
     // // Create HTTP server
     const httpServer = http.createServer(app);
