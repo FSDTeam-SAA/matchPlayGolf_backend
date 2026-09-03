@@ -22,8 +22,8 @@ function collectRecipientEmails(match) {
 
 async function getMatchesForInvitation(matchIds) {
   return Match.find({ _id: { $in: matchIds } })
-    .populate("player1Id", "fullName email")
-    .populate("player2Id", "fullName email")
+    .populate("player1Id", "fullName email teamName")
+    .populate("player2Id", "fullName email teamName")
     .populate("roundId", "roundName roundNumber date")
     .populate({
       path: "pair1Id",

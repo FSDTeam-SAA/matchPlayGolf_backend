@@ -11,6 +11,43 @@ import KnockoutStage from "../others/knockoutSchema.model.js";
 import { checkAndAutoAdvanceRound } from "../tournament/autometicRound.controller.js";
 // import { checkAndAutoAdvanceRound } from "../knockout/knockout.service.js"; // adjust path
 
+// Public player fields that are safe to expose from match endpoints. Keeping the
+// projection explicit prevents credentials/tokens from being returned when a
+// User reference is populated.
+const PLAYER_PROFILE_FIELDS = [
+  "fullName",
+  "email",
+  "phone",
+  "gender",
+  "dob",
+  "country",
+  "clubName",
+  "handicap",
+  "whsNumber",
+  "organizationName",
+  "sportNationalId",
+  "profileImage",
+  "role",
+  "status",
+  "isVerified",
+  "color",
+  "teamName",
+  "captainName",
+  "seeder",
+  "seedStats",
+  "createdAt",
+  "updatedAt",
+].join(" ");
+
+const getPairPopulate = (path) => ({
+  path,
+  select: "teamName seeder player1 player2",
+  populate: [
+    { path: "player1", select: PLAYER_PROFILE_FIELDS },
+    { path: "player2", select: PLAYER_PROFILE_FIELDS },
+  ],
+});
+
 class MatchService {
   /**
    * Create a new match
@@ -200,10 +237,10 @@ async getTournamentMatchById(id) {
     const match = await Match.findById(id)
       .populate("tournamentId", "tournamentName sportName format startDate endDate")
       .populate("roundId", "roundName roundNumber date")
-      .populate("player1Id", "fullName email")
-      .populate("player2Id", "fullName email")
-      .populate("pair1Id", "teamName")
-      .populate("pair2Id", "teamName");
+      .populate("player1Id", PLAYER_PROFILE_FIELDS)
+      .populate("player2Id", PLAYER_PROFILE_FIELDS)
+      .populate(getPairPopulate("pair1Id"))
+      .populate(getPairPopulate("pair2Id"));
 
     if (!match) {
       throw new Error("Match not found");
@@ -251,22 +288,10 @@ async getTournamentMatchById(id) {
 
     const roundMatches = await Match.find(roundQuery)
       .select("player1Id player2Id pair1Id pair2Id")
-      .populate("player1Id", "fullName")
-      .populate("player2Id", "fullName")
-      .populate({
-        path: "pair1Id",
-        populate: [
-          { path: "player1", select: "fullName" },
-          { path: "player2", select: "fullName" }
-        ]
-      })
-      .populate({
-        path: "pair2Id",
-        populate: [
-          { path: "player1", select: "fullName" },
-          { path: "player2", select: "fullName" }
-        ]
-      });
+      .populate("player1Id", PLAYER_PROFILE_FIELDS)
+      .populate("player2Id", PLAYER_PROFILE_FIELDS)
+      .populate(getPairPopulate("pair1Id"))
+      .populate(getPairPopulate("pair2Id"));
 
     // ── Build players list based on matchType ────────────────────────────────
     // Single → [{ _id, name }]
@@ -279,12 +304,14 @@ async getTournamentMatchById(id) {
       roundMatches.forEach((m) => {
         if (m.player1Id?._id) {
           playerMap.set(m.player1Id._id.toString(), {
+            ...m.player1Id.toObject(),
             _id: m.player1Id._id,
             name: m.player1Id.fullName || "N/A",
           });
         }
         if (m.player2Id?._id) {
           playerMap.set(m.player2Id._id.toString(), {
+            ...m.player2Id.toObject(),
             _id: m.player2Id._id,
             name: m.player2Id.fullName || "N/A",
           });
@@ -492,22 +519,10 @@ async getTournamentMatchById(id) {
     const match = await Match.findById(id)
       .populate("tournamentId")
       .populate("roundId", "roundName roundNumber date")
-      .populate("player1Id", "fullName email")
-      .populate("player2Id", "fullName email")
-      .populate({
-        path: "pair1Id",
-        populate: [
-          { path: "player1", select: "fullName email" },
-          { path: "player2", select: "fullName email" },
-        ],
-      })
-      .populate({
-        path: "pair2Id",
-        populate: [
-          { path: "player1", select: "fullName email" },
-          { path: "player2", select: "fullName email" },
-        ],
-      })
+      .populate("player1Id", PLAYER_PROFILE_FIELDS)
+      .populate("player2Id", PLAYER_PROFILE_FIELDS)
+      .populate(getPairPopulate("pair1Id"))
+      .populate(getPairPopulate("pair2Id"))
       .populate("winner", "fullName email");
 
     if (!match) throw new Error("Match not found");
@@ -687,10 +702,10 @@ async getTournamentMatchById(id) {
     const populated = await savedMatch.populate([
       { path: "tournamentId", select: "tournamentName sportName format startDate endDate" },
       { path: "roundId",      select: "roundName roundNumber date" },
-      { path: "player1Id",    select: "fullName email captainName profileImage score handicap clubName seeder" },
-      { path: "player2Id",    select: "fullName email captainName profileImage score handicap clubName seeder" },
-      { path: "pair1Id",      select: "pairName player1 player2" },
-      { path: "pair2Id",      select: "pairName player1 player2" },
+      { path: "player1Id",    select: PLAYER_PROFILE_FIELDS },
+      { path: "player2Id",    select: PLAYER_PROFILE_FIELDS },
+      getPairPopulate("pair1Id"),
+      getPairPopulate("pair2Id"),
       { path: "createdBy",    select: "fullName email" },
       { path: "updatedBy",    select: "fullName email" },
     ]);

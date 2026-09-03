@@ -407,6 +407,18 @@ const getInvitationOpponentName = (match, recipientEmail) => {
     }
   }
 
+  if (match.matchType === "Team") {
+    if (match.player1Id?.email === recipientEmail) {
+      return match.player2Id?.teamName || match.player2Id?.fullName || "<Team Name>";
+    }
+
+    if (match.player2Id?.email === recipientEmail) {
+      return match.player1Id?.teamName || match.player1Id?.fullName || "<Team Name>";
+    }
+
+    return "<Team Name>";
+  }
+
   if (match.player1Id?.email === recipientEmail) {
     return match.player2Id?.fullName || "<Player Name>";
   }
