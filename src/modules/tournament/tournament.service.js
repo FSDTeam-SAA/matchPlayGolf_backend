@@ -414,7 +414,12 @@ async updateTournamentService(tournamentId, updateData, userId, role) {
     tournamentUpdateData.totalRounds = Math.log2(updateDrawSize);
   }
   
-  tournamentUpdateData.status= "scheduled";
+  // Preserve the current tournament status when the update request does not
+  // include a status. The tournament start flow is responsible for changing
+  // it to "in progress".
+  if (status !== undefined && status !== null && status !== "") {
+    tournamentUpdateData.status = status;
+  }
   
   if (rules !== undefined) {
     tournamentUpdateData.rules = rules;
