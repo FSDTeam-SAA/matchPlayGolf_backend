@@ -11,6 +11,24 @@ import { welcomeEmailTemplate } from "../../lib/emailTemplates.js";
 import sendEmail from '../../lib/sendEmail.js';
 import AppError from "../../middleware/errorHandler.js";
 
+const hasValue = value => value !== undefined && value !== null && value !== "";
+
+const getPlayerUserUpdate = player => ({
+  ...(hasValue(player?.fullName) ? { fullName: player.fullName } : {}),
+  ...(hasValue(player?.phone) ? { phone: player.phone } : {}),
+  ...(hasValue(player?.teamName) ? { teamName: player.teamName } : {}),
+  ...(hasValue(player?.clubName) ? { clubName: player.clubName } : {}),
+  ...(player?.handicap !== undefined
+    ? { handicap: String(player.handicap) }
+    : {}),
+});
+
+const getRegistrationUpdate = player => ({
+  ...(player?.seeder !== undefined ? { seeder: player.seeder } : {}),
+  ...(player?.handicap !== undefined ? { handicap: player.handicap } : {}),
+  ...(hasValue(player?.clubName) ? { clubName: player.clubName } : {}),
+});
+
 class TournamentService {
 
   async createTournament(tournamentData) {
@@ -141,9 +159,13 @@ async findOrCreateUsers(players, showTeamDetails = false) {
       user = await User.create({
         fullName: player.fullName,
         email: player.email,
-        phone: player.phone,
+        phone: player.phone || "",
         teamName: player.teamName || "",
-        seeder: player.seeder,
+        ...(hasValue(player.clubName) ? { clubName: player.clubName } : {}),
+        ...(player.handicap !== undefined
+          ? { handicap: String(player.handicap) }
+          : {}),
+        ...(player.seeder !== undefined ? { seeder: player.seeder } : {}),
         verifyToken
       });
       // console.log("Created new user:", user);
@@ -172,11 +194,7 @@ async registerSinglePlayers(tournamentId, userIds, players = []) {
   await Promise.all(
     userIds.map((userId, index) =>
       User.findByIdAndUpdate(userId, {
-        fullName: players[index]?.fullName,
-        phone: players[index]?.phone,
-        ...(players[index]?.teamName
-          ? { teamName: players[index].teamName }
-          : {}),
+        $set: getPlayerUserUpdate(players[index]),
       })
     )
   );
@@ -188,6 +206,23 @@ async registerSinglePlayers(tournamentId, userIds, players = []) {
   
   const existingPlayerIds = new Set(
     existingRegistrations.map(reg => reg.playerId.toString())
+  );
+
+  const playersByUserId = new Map(
+    userIds.map((userId, index) => [userId.toString(), players[index]])
+  );
+
+  // Re-uploading a CSV should also refresh data for players already
+  // registered in this tournament.
+  await Promise.all(
+    existingRegistrations.map(registration => {
+      const player = playersByUserId.get(registration.playerId.toString());
+      const update = getRegistrationUpdate(player);
+
+      return Object.keys(update).length > 0
+        ? TournamentPlayer.findByIdAndUpdate(registration._id, { $set: update })
+        : Promise.resolve();
+    })
   );
   
   const newUserIds = userIds.filter(
@@ -213,15 +248,11 @@ async registerSinglePlayers(tournamentId, userIds, players = []) {
   }
 
   if (newUserIds.length > 0) {
-    const playersByUserId = new Map(
-      userIds.map((userId, index) => [userId.toString(), players[index]])
-    );
-
     const newRegistrations = newUserIds.map(userId => ({
       tournamentId,
       playerId: userId,
       pairId: null,
-      seeder: playersByUserId.get(userId.toString())?.seeder,
+      ...getRegistrationUpdate(playersByUserId.get(userId.toString())),
     }));
     
     const inserted = await TournamentPlayer.insertMany(newRegistrations);
@@ -242,11 +273,7 @@ async registerPairPlayers(tournamentId, players, userIds) {
   await Promise.all(
     userIds.map((userId, index) =>
       User.findByIdAndUpdate(userId, {
-        fullName: players[index]?.fullName,
-        phone: players[index]?.phone,
-        ...(players[index]?.teamName
-          ? { teamName: players[index].teamName }
-          : {}),
+        $set: getPlayerUserUpdate(players[index]),
       })
     )
   );

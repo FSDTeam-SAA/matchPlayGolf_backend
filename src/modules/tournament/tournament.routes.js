@@ -54,7 +54,6 @@ router.post("/:id", verifyToken, sendInvitationRegisteredUsers);
 router.put("/:tournamentId", verifyToken, multerUpload.single('csvFile'), updateTournament);
 router.delete("/:id", verifyToken, deleteTournament);
 router.get("/:id", getTournamentById);
-router.put('/:tournamentId', verifyToken, approvedTournament);
 
 
 

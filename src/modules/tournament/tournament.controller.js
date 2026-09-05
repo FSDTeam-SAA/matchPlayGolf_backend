@@ -210,7 +210,13 @@ export const updateTournament = async (req, res) => {
       allPlayers = [...jsonPlayers];
     }
     
-    if (req.file && req.file.mimetype === 'text/csv') {
+    const isCsvFile = req.file && (
+      req.file.mimetype === 'text/csv' ||
+      req.file.mimetype === 'application/vnd.ms-excel' ||
+      req.file.originalname?.toLowerCase().endsWith('.csv')
+    );
+
+    if (isCsvFile) {
       try {
         const csvData = req.file.buffer.toString('utf-8');
         const records = parse(csvData, {
@@ -226,13 +232,20 @@ export const updateTournament = async (req, res) => {
           });
         }
         
-        const csvPlayers = records.map(record => ({
-          fullName: record.fullName || record.name || '',
-          email: record.email || '',
-          phone: record.phone || '',
-          teamName: record.teamName || '',
-          seeder: record.seeder ? Number(record.seeder) : undefined,
-        }));
+        const csvPlayers = records.map(record => {
+          const rawHandicap = String(record.handicap ?? '').trim();
+          const rawSeeder = String(record.seeder ?? '').trim();
+
+          return {
+            fullName: String(record.fullName || record.name || '').trim(),
+            email: String(record.email || '').trim().toLowerCase(),
+            phone: String(record.phone || '').trim(),
+            teamName: String(record.teamName || '').trim(),
+            clubName: String(record.clubName || '').trim() || undefined,
+            handicap: rawHandicap === '' ? undefined : Number(rawHandicap),
+            seeder: rawSeeder === '' ? undefined : Number(rawSeeder),
+          };
+        });
         
         for (let i = 0; i < csvPlayers.length; i++) {
           if (!csvPlayers[i].fullName || !csvPlayers[i].email) {
@@ -249,6 +262,18 @@ export const updateTournament = async (req, res) => {
             return res.status(400).json({
               success: false,
               message: `CSV Row ${i + 1}: seeder must be a positive number when provided`,
+            });
+          }
+
+          if (
+            csvPlayers[i].handicap !== undefined &&
+            (!Number.isFinite(csvPlayers[i].handicap) ||
+              csvPlayers[i].handicap < 0 ||
+              csvPlayers[i].handicap > 100)
+          ) {
+            return res.status(400).json({
+              success: false,
+              message: `CSV Row ${i + 1}: handicap must be a number between 0 and 100 when provided`,
             });
           }
         }
