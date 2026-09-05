@@ -19,6 +19,7 @@ const tournamentPlayerSchema = new mongoose.Schema({
   firstName: String,
   lastName: String,
   seeder: Number,
+  clubName: String,
   handicap: {
     type: Number,
     min: 0,
