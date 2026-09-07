@@ -440,6 +440,15 @@ export const generateUniqueOrderCode = async () => {
 
 export const sendInvitationRegisteredUsers = async (req, res) => {
   try {
+    const role = req.user?.role;
+
+    if (role !== "Admin" && role !== "Organizer") {
+      return res.status(403).json({
+        success: false,
+        message: "Only Admin or Organizer can send match invitation emails"
+      });
+    }
+
     const tournamentId = req.params.id;
 
     if (!mongoose.Types.ObjectId.isValid(tournamentId)) {

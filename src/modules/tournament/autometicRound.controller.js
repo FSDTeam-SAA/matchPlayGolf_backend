@@ -4,7 +4,6 @@ import KnockoutStage from "../others/knockoutSchema.model.js";
 import Match from "../match/match.model.js";
 import Round from "../round/round.model.js";
 import AppError from "../../middleware/errorHandler.js";
-import { sendMatchInvitationEmails } from "./tournamentInvitation.service.js";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INITIALIZE KNOCKOUT  (called once – creates Round 1 matches)
@@ -617,35 +616,15 @@ async function createNextRound(knockoutStage, completedMatches, tournamentId, us
   knockoutStage.matchIds.push(...nextRoundMatches.map((m) => m._id));
   await knockoutStage.save();
 
-  let invitationEmails = {
-    sent: false,
-    totalMatches: nextRoundMatches.length,
-    totalEmails: 0,
-  };
-
-  try {
-    const invitationSummary = await sendMatchInvitationEmails({
-      tournament,
-      matchIds: nextRoundMatches.map((match) => match._id),
-    });
-
-    invitationEmails = {
-      sent: true,
-      totalMatches: invitationSummary.totalMatches,
-      totalEmails: invitationSummary.totalEmails,
-    };
-  } catch (emailError) {
-    console.error(
-      `Failed to send round ${nextRoundNumber} invitation emails:`,
-      emailError.message
-    );
-    invitationEmails.error = emailError.message;
-  }
-
   return {
     message: `Round ${nextRoundNumber} generated successfully`,
     nextRoundMatches,
-    invitationEmails,
+    invitationEmails: {
+      sent: false,
+      totalMatches: nextRoundMatches.length,
+      totalEmails: 0,
+      reason: "manual_send_required",
+    },
   };
 }
 
